@@ -1,0 +1,15 @@
+{
+  "name": "webwire",
+  "version": "0.0.1",
+  "description": "WebWire - AI-powered web application framework",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "devDependencies": {
+    "vite": "^5.0.0"
+  },
+  "dependencies": {}
+} 
