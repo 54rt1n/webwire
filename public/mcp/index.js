@@ -1,6 +1,18 @@
 /**
- * MCP Test Page - Business Logic
- * Handles MCP connection, tool execution, and chat functionality
+ * MCP Test Application - Main business logic for testing MCP server connections.
+ * Handles MCP connection management, tool execution, AI chat integration,
+ * and conversation persistence for the MCP testing interface.
+ * 
+ * @example
+ * const app = new MCPTestApp();
+ * await app.initialize();
+ * 
+ * // App automatically handles:
+ * // - MCP server connections
+ * // - Tool discovery and execution
+ * // - AI chat with tool calling
+ * // - Conversation history persistence
+ * // - Error handling and reconnection
  */
 
 import { MCPTestPanel } from './panel.js';

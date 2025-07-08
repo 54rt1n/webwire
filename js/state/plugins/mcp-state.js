@@ -1,49 +1,55 @@
 import { EVENTS } from '../../constants/events.js';
 
 /**
- * Plugin for handling MCP (Model Context Protocol) related state management.
+ * MCP State Plugin - Manages Model Context Protocol related state
+ * Handles connection state, tool management, request tracking, and system messages
+ * for MCP server communication within the state management system.
  */
 export class MCPStatePlugin {
+    /**
+     * Create an MCP State Plugin instance
+     * @param {Object} stateService - The parent state service instance
+     */
     constructor(stateService) {
         this.stateService = stateService;
         this.eventBus = stateService.eventBus;
     }
 
     /**
-     * Gets the complete MCP state.
-     * @returns {Object} The current MCP state
+     * Get the complete MCP state object
+     * @returns {Object} The current MCP state containing connection, tools, and requests
      */
     getMcpState() {
         return this.stateService.state.mcp;
     }
 
     /**
-     * Gets the MCP connection state.
-     * @returns {Object} The current connection state
+     * Get the MCP connection state object
+     * @returns {Object} The current connection state with status and connection details
      */
     getMcpConnectionState() {
         return this.stateService.state.mcp.connection;
     }
 
     /**
-     * Checks if MCP is connected.
-     * @returns {boolean} True if connected
+     * Check if MCP is currently connected to a server
+     * @returns {boolean} True if connected, false otherwise
      */
     isMcpConnected() {
         return this.stateService.state.mcp.connection.isConnected;
     }
 
     /**
-     * Checks if MCP is initialized.
-     * @returns {boolean} True if initialized
+     * Check if MCP has completed initialization (handshake and tool fetching)
+     * @returns {boolean} True if initialized, false otherwise
      */
     isMcpInitialized() {
         return this.stateService.state.mcp.connection.isInitialized;
     }
 
     /**
-     * Sets the MCP server URL.
-     * @param {string} serverUrl - The server URL
+     * Set the MCP server URL in settings
+     * @param {string} serverUrl - The MCP server URL to connect to
      */
     setMcpServerUrl(serverUrl) {
         this.stateService.state.settings.mcp.serverUrl = serverUrl;
@@ -53,8 +59,11 @@ export class MCPStatePlugin {
     // Connection Management Methods
 
     /**
-     * Sets MCP connection details.
-     * @param {Object} connectionData - { sessionId?, postEndpoint? }
+     * Update MCP connection details with new information
+     * @param {Object} connectionData - Connection data to update
+     * @param {string} [connectionData.serverUrl] - Server URL to set
+     * @param {string} [connectionData.sessionId] - Session ID for this connection
+     * @param {string} [connectionData.postEndpoint] - POST endpoint URL for requests
      */
     setMcpConnection(connectionData) {
         const connection = this.stateService.state.mcp.connection;
@@ -74,8 +83,8 @@ export class MCPStatePlugin {
     }
 
     /**
-     * Sets MCP connection error.
-     * @param {string} error - Error message
+     * Set an MCP connection error and update connection state
+     * @param {string} error - Error message describing the connection failure
      */
     setMcpConnectionError(error) {
         this.stateService.state.mcp.connection.connectionError = error;
@@ -87,15 +96,15 @@ export class MCPStatePlugin {
     }
 
     /**
-     * Clears MCP connection error.
+     * Clear any existing MCP connection error
      */
     clearMcpConnectionError() {
         this.stateService.state.mcp.connection.connectionError = undefined;
     }
 
     /**
-     * Sets MCP connected status.
-     * @param {boolean} isConnected - Connection status
+     * Set the MCP connection status and emit appropriate events
+     * @param {boolean} isConnected - Whether MCP is currently connected
      */
     setMcpConnected(isConnected) {
         const wasConnected = this.stateService.state.mcp.connection.isConnected;
@@ -115,8 +124,8 @@ export class MCPStatePlugin {
     }
 
     /**
-     * Sets MCP initialized status.
-     * @param {boolean} isInitialized - Initialization status
+     * Set the MCP initialization status and emit events
+     * @param {boolean} isInitialized - Whether MCP has completed initialization
      */
     setMcpInitialized(isInitialized) {
         const wasInitialized = this.stateService.state.mcp.connection.isInitialized;
@@ -131,8 +140,8 @@ export class MCPStatePlugin {
     // Tools Management Methods
 
     /**
-     * Sets the available MCP tools.
-     * @param {Array} tools - Array of tools in OpenAI format
+     * Set the available MCP tools and emit update events
+     * @param {Array<Object>} tools - Array of tool definitions in OpenAI format
      */
     setMcpTools(tools) {
         this.stateService.state.mcp.tools = tools || [];
@@ -144,15 +153,15 @@ export class MCPStatePlugin {
     }
 
     /**
-     * Gets the available MCP tools.
-     * @returns {Array} Array of tools
+     * Get the currently available MCP tools
+     * @returns {Array<Object>} Array of tool definitions
      */
     getMcpTools() {
         return this.stateService.state.mcp.tools;
     }
 
     /**
-     * Clears all MCP tools.
+     * Clear all MCP tools from state
      */
     clearMcpTools() {
         this.setMcpTools([]);
@@ -161,10 +170,10 @@ export class MCPStatePlugin {
     // Request Management Methods
 
     /**
-     * Adds a pending MCP request.
-     * @param {number} requestId - Request ID
-     * @param {string} method - Request method
-     * @param {Object} params - Request parameters
+     * Add a pending MCP request to track its lifecycle
+     * @param {number} requestId - Unique identifier for the request
+     * @param {string} method - MCP method name being called
+     * @param {Object} [params={}] - Parameters passed to the method
      */
     addMcpPendingRequest(requestId, method, params = {}) {
         this.stateService.state.mcp.pendingRequests[requestId] = {
@@ -182,9 +191,9 @@ export class MCPStatePlugin {
     }
 
     /**
-     * Marks an MCP request as completed.
-     * @param {number} requestId - Request ID
-     * @param {Object} response - Response data
+     * Mark an MCP request as completed with response data
+     * @param {number} requestId - The request ID to complete
+     * @param {Object} response - The response data from the server
      */
     completeMcpRequest(requestId, response) {
         const request = this.stateService.state.mcp.pendingRequests[requestId];
@@ -198,9 +207,9 @@ export class MCPStatePlugin {
     }
 
     /**
-     * Marks an MCP request as failed.
-     * @param {number} requestId - Request ID
-     * @param {string} error - Error message
+     * Mark an MCP request as failed with error information
+     * @param {number} requestId - The request ID that failed
+     * @param {string} error - Error message describing the failure
      */
     failMcpRequest(requestId, error) {
         const request = this.stateService.state.mcp.pendingRequests[requestId];
@@ -214,8 +223,8 @@ export class MCPStatePlugin {
     }
 
     /**
-     * Marks an MCP request as timed out.
-     * @param {number} requestId - Request ID
+     * Mark an MCP request as timed out
+     * @param {number} requestId - The request ID that timed out
      */
     timeoutMcpRequest(requestId) {
         const request = this.stateService.state.mcp.pendingRequests[requestId];
@@ -229,23 +238,23 @@ export class MCPStatePlugin {
     }
 
     /**
-     * Removes a pending MCP request.
-     * @param {number} requestId - Request ID
+     * Remove a pending MCP request from tracking
+     * @param {number} requestId - The request ID to remove
      */
     removeMcpPendingRequest(requestId) {
         delete this.stateService.state.mcp.pendingRequests[requestId];
     }
 
     /**
-     * Gets all pending MCP requests.
-     * @returns {Object} Map of pending requests
+     * Get all currently pending MCP requests
+     * @returns {Object} Map of request IDs to request objects
      */
     getMcpPendingRequests() {
         return this.stateService.state.mcp.pendingRequests;
     }
 
     /**
-     * Clears all pending MCP requests.
+     * Clear all pending MCP requests
      */
     clearMcpPendingRequests() {
         this.stateService.state.mcp.pendingRequests = {};
@@ -253,8 +262,8 @@ export class MCPStatePlugin {
     }
 
     /**
-     * Gets MCP state summary for debugging.
-     * @returns {Object} Summary object
+     * Get a summary of MCP state for debugging and status display
+     * @returns {Object} Summary object containing connection status, tool count, and request counts
      */
     getMcpSummary() {
         const mcp = this.stateService.state.mcp;
@@ -270,9 +279,10 @@ export class MCPStatePlugin {
     }
 
     /**
-     * Sets the MCP system message.
-     * @param {string} systemMessage - The system message
-     * @param {boolean} setSettings - Whether to set the system message in settings
+     * Set the MCP system message for tool usage
+     * @param {string} systemMessage - The system message to set
+     * @param {Object} [options={}] - Additional options
+     * @param {boolean} [options.setSettings=false] - Whether to also save to persistent settings
      */
     setSystemMessage(systemMessage, { setSettings = false } = {}) {
         this.stateService.state.mcp.systemMessage = systemMessage;
@@ -282,8 +292,10 @@ export class MCPStatePlugin {
     }
 
     /**
-     * Gets the MCP system message.
-     * @returns {string} The system message
+     * Get the current MCP system message
+     * @param {Object} [options={}] - Options for retrieval
+     * @param {boolean} [options.getSettings=false] - Whether to get from persistent settings instead
+     * @returns {string} The current system message
      */
     getSystemMessage({ getSettings = false } = {}) {
         if (getSettings) {
@@ -293,19 +305,18 @@ export class MCPStatePlugin {
     }
 
     /**
-     * Has the message been changed?
-     * @returns {boolean} True if the message has been changed
+     * Check if the system message has been modified from the saved version
+     * @returns {boolean} True if the message has unsaved changes
      */
     hasSystemMessageChanged() {
         return this.stateService.state.mcp.systemMessage !== this.stateService.state.settings.mcp.systemMessage;
     }
 
     /**
-     * Clears the MCP system message.
+     * Clear the MCP system message
      */
     clearSystemMessage() {
         this.stateService.state.mcp.systemMessage = undefined;
         this.stateService.state.settings.mcp.systemMessage = undefined;
     }
-
 } 

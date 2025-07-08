@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <style>
+        body {
+            width: 300px;
+            padding: 16px;
+            margin: 0;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f8fafc;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .logo {
+            width: 48px;
+            height: 48px;
+            background: #3b82f6;
+            border-radius: 12px;
+            margin: 0 auto 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 24px;
+        }
+
+        .title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #1e293b;
+            margin: 0;
+        }
+
+        .subtitle {
+            font-size: 14px;
+            color: #64748b;
+            margin: 4px 0 0 0;
+        }
+
+        .status {
+            background: white;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 16px;
+        }
+
+        .status-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .status-row:last-child {
+            margin-bottom: 0;
+        }
+
+        .status-label {
+            font-size: 14px;
+            color: #64748b;
+        }
+
+        .status-value {
+            font-size: 14px;
+            font-weight: 500;
+            color: #1e293b;
+        }
+
+        .status-indicator {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            margin-left: 8px;
+        }
+
+        .status-indicator.connected {
+            background: #10b981;
+        }
+
+        .status-indicator.disconnected {
+            background: #ef4444;
+        }
+
+        .actions {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 12px 16px;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            background: white;
+            color: #1e293b;
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn:hover {
+            background: #f1f5f9;
+            border-color: #cbd5e1;
+        }
+
+        .btn.primary {
+            background: #3b82f6;
+            color: white;
+            border-color: #3b82f6;
+        }
+
+        .btn.primary:hover {
+            background: #2563eb;
+            border-color: #2563eb;
+        }
+
+        .btn-icon {
+            width: 16px;
+            height: 16px;
+        }
+
+        .footer {
+            margin-top: 16px;
+            padding-top: 16px;
+            border-top: 1px solid #e2e8f0;
+            text-align: center;
+        }
+
+        .footer-link {
+            color: #64748b;
+            text-decoration: none;
+            font-size: 12px;
+        }
+
+        .footer-link:hover {
+            color: #3b82f6;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+            color: #64748b;
+        }
+
+        .spinner {
+            width: 20px;
+            height: 20px;
+            border: 2px solid #e2e8f0;
+            border-top: 2px solid #3b82f6;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 12px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="logo">🤖</div>
+        <h1 class="title">WebWire</h1>
+        <p class="subtitle">AI-Powered Web Assistant</p>
+    </div>
+
+    <div class="loading" id="loading">
+        <div class="spinner"></div>
+        <div>Loading...</div>
+    </div>
+
+    <div id="content" style="display: none;">
+        <div class="status">
+            <div class="status-row">
+                <span class="status-label">Panel Status</span>
+                <div style="display: flex; align-items: center;">
+                    <span class="status-value" id="panel-status">Unknown</span>
+                    <div class="status-indicator disconnected" id="panel-indicator"></div>
+                </div>
+            </div>
+            <div class="status-row">
+                <span class="status-label">MCP Connection</span>
+                <div style="display: flex; align-items: center;">
+                    <span class="status-value" id="mcp-status">Disconnected</span>
+                    <div class="status-indicator disconnected" id="mcp-indicator"></div>
+                </div>
+            </div>
+            <div class="status-row">
+                <span class="status-label">Available Tools</span>
+                <span class="status-value" id="tools-count">0</span>
+            </div>
+        </div>
+
+        <div class="actions">
+            <button class="btn primary" id="toggle-panel">
+                <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                </svg>
+                Toggle Panel
+            </button>
+
+            <button class="btn" id="analyze-page">
+                <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/>
+                    <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>
+                </svg>
+                Analyze Page
+            </button>
+
+            <button class="btn" id="open-options">
+                <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="3"/>
+                    <path d="M12 1v6m0 6v6m11-7h-6m-6 0H1"/>
+                </svg>
+                Settings
+            </button>
+        </div>
+    </div>
+
+    <div class="footer">
+        <a href="#" class="footer-link" id="help-link">Help & Documentation</a>
+    </div>
+
+    <script>
+        class WebWirePopup {
+            constructor() {
+                this.currentTab = null;
+                this.initialize();
+            }
+
+            async initialize() {
+                try {
+                    // Get current tab
+                    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+                    this.currentTab = tab;
+
+                    // Setup event listeners
+                    this.setupEventListeners();
+
+                    // Load initial status
+                    await this.loadStatus();
+
+                    // Show content
+                    document.getElementById('loading').style.display = 'none';
+                    document.getElementById('content').style.display = 'block';
+
+                } catch (error) {
+                    console.error('Failed to initialize popup:', error);
+                    this.showError('Failed to initialize');
+                }
+            }
+
+            setupEventListeners() {
+                document.getElementById('toggle-panel').addEventListener('click', () => {
+                    this.togglePanel();
+                });
+
+                document.getElementById('analyze-page').addEventListener('click', () => {
+                    this.analyzePage();
+                });
+
+                document.getElementById('open-options').addEventListener('click', () => {
+                    this.openOptions();
+                });
+
+                document.getElementById('help-link').addEventListener('click', (e) => {
+                    e.preventDefault();
+                    this.openHelp();
+                });
+            }
+
+            async loadStatus() {
+                try {
+                    // Get WebWire state from background
+                    const response = await chrome.runtime.sendMessage({
+                        action: 'GET_WEBWIRE_STATE'
+                    });
+
+                    if (response.success) {
+                        this.updateStatus(response.state);
+                    } else {
+                        this.updateStatus({});
+                    }
+
+                } catch (error) {
+                    console.error('Failed to load status:', error);
+                    this.updateStatus({});
+                }
+            }
+
+            updateStatus(state) {
+                // Update panel status
+                const panelActive = state.panelInjected || false;
+                document.getElementById('panel-status').textContent = panelActive ? 'Active' : 'Inactive';
+                document.getElementById('panel-indicator').className = 
+                    `status-indicator ${panelActive ? 'connected' : 'disconnected'}`;
+
+                // Update MCP status
+                const mcpConnected = state.mcpConnected || false;
+                document.getElementById('mcp-status').textContent = mcpConnected ? 'Connected' : 'Disconnected';
+                document.getElementById('mcp-indicator').className = 
+                    `status-indicator ${mcpConnected ? 'connected' : 'disconnected'}`;
+
+                // Update tools count
+                const toolsCount = (state.tools && state.tools.length) || 0;
+                document.getElementById('tools-count').textContent = toolsCount.toString();
+
+                // Update button text
+                const toggleBtn = document.getElementById('toggle-panel');
+                toggleBtn.textContent = panelActive ? 'Hide Panel' : 'Show Panel';
+            }
+
+            async togglePanel() {
+                try {
+                    const response = await chrome.runtime.sendMessage({
+                        action: 'TOGGLE_WEBWIRE_PANEL'
+                    });
+
+                    if (response.success) {
+                        // Refresh status
+                        await this.loadStatus();
+                        // Close popup after successful toggle
+                        window.close();
+                    } else {
+                        this.showError('Failed to toggle panel');
+                    }
+
+                } catch (error) {
+                    console.error('Failed to toggle panel:', error);
+                    this.showError('Failed to toggle panel');
+                }
+            }
+
+            async analyzePage() {
+                try {
+                    // First ensure panel is active
+                    await chrome.runtime.sendMessage({
+                        action: 'INJECT_WEBWIRE_PANEL'
+                    });
+
+                    // Send analyze message to content script
+                    await chrome.tabs.sendMessage(this.currentTab.id, {
+                        action: 'ANALYZE_PAGE'
+                    });
+
+                    // Close popup
+                    window.close();
+
+                } catch (error) {
+                    console.error('Failed to analyze page:', error);
+                    this.showError('Failed to analyze page');
+                }
+            }
+
+            async openOptions() {
+                try {
+                    await chrome.runtime.openOptionsPage();
+                    window.close();
+                } catch (error) {
+                    console.error('Failed to open options:', error);
+                    this.showError('Failed to open options');
+                }
+            }
+
+            openHelp() {
+                chrome.tabs.create({
+                    url: 'https://github.com/your-repo/webwire/wiki'
+                });
+                window.close();
+            }
+
+            showError(message) {
+                // Simple error display - in a real implementation you might want a better UI
+                console.error(message);
+                const content = document.getElementById('content');
+                content.innerHTML = `
+                    <div style="text-align: center; padding: 20px; color: #ef4444;">
+                        <p>Error: ${message}</p>
+                        <button onclick="window.close()" style="margin-top: 10px;">Close</button>
+                    </div>
+                `;
+                content.style.display = 'block';
+                document.getElementById('loading').style.display = 'none';
+            }
+        }
+
+        // Initialize popup when DOM is ready
+        document.addEventListener('DOMContentLoaded', () => {
+            new WebWirePopup();
+        });
+    </script>
+</body>
+</html>

@@ -1,11 +1,13 @@
 /**
  * ID Generator Utility - Provides consistent UUID generation across browsers
- * Handles crypto.randomUUID fallback for older browsers
+ * Handles crypto.randomUUID fallback for older browsers and provides
+ * specialized ID generators for different application components.
  */
 
 /**
- * Generate a UUID v4 string
- * @returns {string} UUID v4 formatted string
+ * Generate a UUID v4 string with cross-browser compatibility
+ * Uses crypto.randomUUID when available, falls back to manual implementation
+ * @returns {string} A valid UUID v4 formatted string (e.g., "123e4567-e89b-12d3-a456-426614174000")
  */
 export function generateUUID() {
     // Use crypto.randomUUID if available (modern browsers)
@@ -22,41 +24,41 @@ export function generateUUID() {
 }
 
 /**
- * Generate a turn ID
- * @returns {string} Turn ID with 'turn-' prefix
+ * Generate a unique identifier for conversation turns
+ * @returns {string} Turn ID with 'turn-' prefix followed by UUID (e.g., "turn-123e4567-...")
  */
 export function generateTurnId() {
     return 'turn-' + generateUUID();
 }
 
 /**
- * Generate a session ID
- * @returns {string} Session ID with 'session-' prefix
+ * Generate a unique identifier for user sessions
+ * @returns {string} Session ID with 'session-' prefix followed by UUID (e.g., "session-123e4567-...")
  */
 export function generateSessionId() {
     return 'session-' + generateUUID();
 }
 
 /**
- * Generate a listener ID
- * @returns {string} Listener ID with 'listener-' prefix
+ * Generate a unique identifier for event listeners
+ * @returns {string} Listener ID with 'listener-' prefix followed by UUID (e.g., "listener-123e4567-...")
  */
 export function generateListenerId() {
     return 'listener-' + generateUUID();
 }
 
 /**
- * Generate a generic ID with custom prefix
- * @param {string} prefix - Prefix for the ID
- * @returns {string} ID with custom prefix
+ * Generate a generic ID with custom prefix for application-specific use cases
+ * @param {string} [prefix='id'] - Custom prefix to prepend to the UUID
+ * @returns {string} ID with custom prefix followed by UUID (e.g., "myprefix-123e4567-...")
  */
 export function generateId(prefix = 'id') {
     return prefix + '-' + generateUUID();
 }
 
 /**
- * Generate just the UUID without any prefix
- * @returns {string} Raw UUID string
+ * Generate a raw UUID without any prefix (alias for generateUUID for clarity)
+ * @returns {string} Raw UUID string without prefix (e.g., "123e4567-e89b-12d3-a456-426614174000")
  */
 export function generateRawUUID() {
     return generateUUID();

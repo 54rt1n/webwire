@@ -3,8 +3,22 @@ import { StateAdapter, StateValidator } from './adapters/state-adapter.js';
 import { UiAdapter } from './adapters/ui-adapter.js';
 
 /**
- * Storage Manager - Clean adapter factory and container
- * Provides specialized storage adapters for different data types
+ * Factory and container for specialized storage adapters handling different data types.
+ * Provides unified access to settings, state, and UI persistence with automatic
+ * validation and version management.
+ * 
+ * @example
+ * const storageManager = new StorageManager(eventBus, {
+ *   storage: {
+ *     keys: { settings: 'my-app-settings' },
+ *     maxSaveSize: 10 * 1024 * 1024
+ *   }
+ * });
+ * 
+ * // Access specialized adapters
+ * await storageManager.storage.settings.set('theme', 'dark');
+ * await storageManager.storage.state.save(appState);
+ * const uiState = await storageManager.storage.ui.getAll();
  */
 
 export class StorageManager {

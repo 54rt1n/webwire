@@ -1,14 +1,31 @@
 import { generateUUID } from '../utils/id-generator.js';
 
 /**
- * MCP Connector Module
- * Lightweight module to connect to MCP SSE endpoints and manage tool execution
+ * Model Context Protocol (MCP) connector for managing server communication.
+ * Handles SSE connections, tool execution, and protocol handshakes with MCP servers.
+ * Provides a bridge between the WebWire application and MCP-compatible tools.
  * 
- * This implementation is modeled after the official @modelcontextprotocol/sdk
- * and best practices for handling Server-Sent Events in a browser environment.
+ * @example
+ * const connector = new MCPConnector('http://localhost:3000', stateService);
+ * 
+ * // Initialize connection and get available tools
+ * const tools = await connector.initialize();
+ * console.log(`Connected with ${tools.length} tools`);
+ * 
+ * // Execute tools
+ * const result = await connector.executeTool('list_files', { 
+ *   path: '/home/user' 
+ * });
+ * 
+ * // Cleanup
+ * connector.disconnect();
  */
-
 class MCPConnector {
+    /**
+     * Create an MCP Connector instance
+     * @param {string} mcpServerUrl - The base URL of the MCP server
+     * @param {Object} stateService - State service instance for managing connection state
+     */
     constructor(mcpServerUrl, stateService) {
       this.mcpServerUrl = mcpServerUrl;
       this.stateService = stateService;
@@ -24,7 +41,10 @@ class MCPConnector {
     }
   
     /**
-     * Initialize connection to MCP server
+     * Initialize connection to MCP server and perform full setup
+     * Establishes SSE connection, performs handshake, and fetches available tools
+     * @returns {Promise<Array>} Promise resolving to array of available tools
+     * @throws {Error} If initialization fails at any step
      */
     async initialize() {
       // Initialize state
@@ -60,7 +80,9 @@ class MCPConnector {
     }
   
     /**
-     * Connect to SSE endpoint
+     * Establish Server-Sent Events connection to the MCP server
+     * @returns {Promise<void>} Promise that resolves when SSE connection is established
+     * @throws {Error} If connection fails or times out
      */
     async connectSSE() {
       return new Promise((resolve, reject) => {
@@ -88,7 +110,8 @@ class MCPConnector {
     }
   
     /**
-     * Create the EventSource with the correct URL, including session_id
+     * Create the EventSource with the correct URL, including session_id parameter
+     * @returns {EventSource} Configured EventSource instance
      */
     createEventSource() {
       const sseUrl = new URL(this.mcpServerUrl);
@@ -98,7 +121,8 @@ class MCPConnector {
     }
     
     /**
-     * Handle connection opening
+     * Handle SSE connection opening event
+     * Updates connection state and logs successful connection
      */
     handleOpen() {
       console.log('SSE connection established');
@@ -106,7 +130,9 @@ class MCPConnector {
     }
     
     /**
-     * Handle incoming SSE messages (for responses to requests)
+     * Handle incoming SSE messages containing responses to requests
+     * Parses JSON responses and resolves pending request promises
+     * @param {MessageEvent} event - The SSE message event
      */
     handleMessage(event) {
       try {
@@ -133,7 +159,8 @@ class MCPConnector {
     }
     
     /**
-     * Handle SSE errors
+     * Handle SSE connection errors and manage connection state
+     * @param {Event} error - The error event from EventSource
      */
     handleError(error) {
       console.error('SSE error:', error);
@@ -154,7 +181,8 @@ class MCPConnector {
     }
 
     /**
-     * Handle the 'endpoint' event from the server
+     * Handle the 'endpoint' event from the server containing POST endpoint information
+     * @param {MessageEvent} event - The endpoint event containing POST URL data
      */
     handleEndpoint(event) {
       console.log('Received "endpoint" event with data:', event.data);
@@ -205,7 +233,9 @@ class MCPConnector {
     }
   
     /**
-     * Perform MCP protocol handshake
+     * Perform MCP protocol handshake to establish communication protocol
+     * @returns {Promise<Object>} Promise resolving to handshake response
+     * @throws {Error} If handshake fails or times out
      */
     async performHandshake() {
       // Initialize
@@ -232,7 +262,9 @@ class MCPConnector {
     }
   
     /**
-     * Fetch available tools from MCP server
+     * Fetch available tools from the MCP server
+     * @returns {Promise<Array>} Promise resolving to array of tool definitions
+     * @throws {Error} If tool fetching fails
      */
     async fetchTools() {
       const response = await this.sendRequest({
@@ -259,7 +291,11 @@ class MCPConnector {
     }
   
     /**
-     * Execute a tool call
+     * Execute a specific tool with given parameters
+     * @param {string} toolName - Name of the tool to execute
+     * @param {Object} [parameters={}] - Parameters to pass to the tool
+     * @returns {Promise<Object>} Promise resolving to tool execution result
+     * @throws {Error} If tool execution fails
      */
     async executeTool(toolName, parameters = {}) {
       const executionStart = Date.now();
@@ -315,7 +351,13 @@ class MCPConnector {
     }
   
     /**
-     * Send request to MCP server
+     * Send a request to the MCP server via POST endpoint
+     * @param {Object} request - The request object to send
+     * @param {string} request.method - The MCP method name
+     * @param {Object} [request.params] - Parameters for the method
+     * @param {number} [request.id] - Request ID for tracking responses
+     * @returns {Promise<Object>} Promise resolving to the server response
+     * @throws {Error} If request fails or times out
      */
     async sendRequest(request) {
       const connectionState = this.stateService.mcp.getMcpConnectionState();
@@ -376,14 +418,16 @@ class MCPConnector {
     }
   
     /**
-     * Get next request ID
+     * Get the next sequential request ID for tracking requests
+     * @returns {number} The next request ID
      */
     getNextId() {
       return ++this.requestId;
     }
   
     /**
-     * Disconnect and clean up all resources
+     * Disconnect from the MCP server and clean up all resources
+     * Closes SSE connection and clears pending requests
      */
     disconnect() {
       if (this.eventSource) {

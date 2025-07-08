@@ -4,8 +4,22 @@ import { AIStudioClient } from './providers/aistudio-client.js';
 import { AIMindClient } from './providers/aimind-client.js';
 
 /**
- * AI Client Factory - Creates appropriate AI client based on configuration
- * Supports multiple providers with a unified interface
+ * Factory for creating AI clients from configuration with unified interface support.
+ * Supports multiple providers (OpenAI, Google, Featherless, etc.) and handles
+ * automatic configuration and API compatibility layers.
+ * 
+ * @example
+ * const client = AIClientFactory.createClient(eventBus, {
+ *   provider: 'openai',
+ *   model: 'gpt-4-turbo',
+ *   api_key: 'sk-...',
+ *   sampler_config: { temperature: 0.7 }
+ * });
+ * 
+ * // Check provider support
+ * if (AIClientFactory.isProviderSupported('anthropic')) {
+ *   // Create Anthropic client
+ * }
  */
 
 export class AIClientFactory {

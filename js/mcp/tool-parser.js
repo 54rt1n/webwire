@@ -1,8 +1,30 @@
 /**
- * ToolParser - Extracts JSON tool calls from AI responses
- * Provides robust parsing for MCP tool-calling responses
+ * Parser for extracting MCP tool calls from AI responses with JSON code blocks.
+ * Handles multiple tool calls, error recovery, fuzzy matching, and validation
+ * with comprehensive error reporting.
+ * 
+ * @example
+ * const parser = new ToolParser();
+ * 
+ * // Parse AI response containing tool calls
+ * const result = parser.parseResponse(aiResponse);
+ * if (result.success) {
+ *   for (const toolCall of result.toolCalls) {
+ *     console.log(`Tool: ${toolCall.name}`, toolCall.parameters);
+ *   }
+ * } else {
+ *   console.error('Parse errors:', result.errors);
+ * }
+ * 
+ * // Quick check for JSON blocks
+ * if (parser.hasJsonBlocks(response)) {
+ *   // Process the response
+ * }
  */
 export class ToolParser {
+    /**
+     * Create a ToolParser instance with predefined regex patterns
+     */
     constructor() {
         // Regex patterns for extraction
         this.patterns = {
@@ -15,18 +37,19 @@ export class ToolParser {
     }
 
     /**
-     * Check if content contains JSON blocks (stateless)
-     * @param {string} content - Content to check
-     * @returns {boolean} True if JSON block detected
+     * Check if content contains JSON code blocks (stateless utility method)
+     * @param {string} content - Content to check for JSON blocks
+     * @returns {boolean} True if JSON block detected, false otherwise
      */
     hasJsonBlocks(content) {
         return this.patterns.partialJson.test(content);
     }
 
     /**
-     * Remove thinking blocks from response content
-     * @param {string} response - The AI response text
-     * @returns {string} Response with thinking blocks removed
+     * Remove thinking blocks from response content to clean up parsing
+     * Handles both properly closed and unclosed thinking blocks
+     * @param {string} response - The AI response text containing potential thinking blocks
+     * @returns {string} Response with all thinking blocks removed
      */
     filterThinkingBlocks(response) {
         let filtered = response;
@@ -47,9 +70,13 @@ export class ToolParser {
     }
 
     /**
-     * Parse an AI response for MCP tool calls
-     * @param {string} response - The AI response text
+     * Parse an AI response for MCP tool calls with comprehensive error handling
+     * @param {string} response - The AI response text to parse for tool calls
      * @returns {Object} Parsed result with tool calls and metadata
+     * @returns {boolean} returns.success - Whether parsing succeeded
+     * @returns {Array} returns.toolCalls - Array of successfully parsed tool calls
+     * @returns {Array} returns.errors - Array of error messages encountered during parsing
+     * @returns {string} returns.raw - Original response text for debugging
      */
     parseResponse(response) {
         const result = {
@@ -83,9 +110,11 @@ export class ToolParser {
     }
 
     /**
-     * Extract and validate all tool calls from response
-     * @param {string} response - The AI response
+     * Extract and validate all tool calls from a response containing multiple JSON blocks
+     * @param {string} response - The filtered AI response text
      * @returns {Object} Tool calls extraction result
+     * @returns {Array} returns.toolCalls - Array of successfully parsed and validated tool calls
+     * @returns {Array} returns.errors - Array of error messages for failed extractions
      */
     extractAllToolCalls(response) {
         const result = {
@@ -140,9 +169,13 @@ export class ToolParser {
     }
 
     /**
-     * Extract and validate tool call from response
-     * @param {string} response - The AI response
+     * Extract and validate a single tool call from response (legacy method)
+     * @deprecated Use extractAllToolCalls for better multi-tool support
+     * @param {string} response - The AI response text
      * @returns {Object} Tool call extraction result
+     * @returns {boolean} returns.success - Whether extraction succeeded
+     * @returns {Object|null} returns.toolCall - The extracted tool call or null
+     * @returns {Array} returns.errors - Array of error messages
      */
     extractToolCall(response) {
         const result = {
@@ -189,9 +222,11 @@ export class ToolParser {
     }
 
     /**
-     * Validate a parsed tool call object
-     * @param {Object} toolCall - The parsed tool call
+     * Validate a parsed tool call object against expected structure
+     * @param {Object} toolCall - The parsed tool call object to validate
      * @returns {Object} Validation result
+     * @returns {boolean} returns.valid - Whether the tool call is valid
+     * @returns {Array} returns.errors - Array of validation error messages
      */
     validateToolCall(toolCall) {
         const result = {
@@ -217,8 +252,9 @@ export class ToolParser {
 
     /**
      * Apply fuzzy matching to normalize tool call field names
-     * @param {Object} toolCall - The parsed tool call object
-     * @returns {Object} Normalized tool call object
+     * Helps handle minor variations in field names from AI responses
+     * @param {Object} toolCall - The parsed tool call object to normalize
+     * @returns {Object} Normalized tool call object with standardized field names
      */
     applyFuzzyMatching(toolCall) {
         // Create a copy to avoid mutating the original
@@ -260,9 +296,9 @@ export class ToolParser {
     }
 
     /**
-     * Preprocess JSON string to fix common formatting issues
-     * @param {string} jsonString - Raw JSON string
-     * @returns {string} Preprocessed JSON string
+     * Preprocess JSON string to fix common formatting issues from AI responses
+     * @param {string} jsonString - Raw JSON string from AI response
+     * @returns {string} Preprocessed JSON string with common issues fixed
      */
     preprocessJsonString(jsonString) {
         try {
@@ -345,9 +381,11 @@ export class ToolParser {
     }
 
     /**
-     * Extract all code blocks from response (utility method)
-     * @param {string} response - The AI response
-     * @returns {Array} Array of code block objects
+     * Extract all code blocks from response text (utility method)
+     * @param {string} response - The AI response text containing code blocks
+     * @returns {Array<Object>} Array of code block objects
+     * @returns {string} returns[].language - The language identifier of the code block
+     * @returns {string} returns[].content - The content of the code block
      */
     extractCodeBlocks(response) {
         const blocks = [];

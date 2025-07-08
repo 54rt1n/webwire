@@ -9,10 +9,28 @@ import { SettingsStatePlugin } from './plugins/settings-state.js';
 import { UiStatePlugin } from './plugins/ui-state.js';
 
 /**
- * State Service - Centralized state management for Webwire
- * Uses a plugin architecture to manage different aspects of state.
+ * Centralized state management service using a plugin architecture.
+ * Manages conversations, settings, MCP connections, UI state, and persistence
+ * with automatic state validation and event-driven updates.
+ * 
+ * @example
+ * const stateService = new StateService(eventBus, storage);
+ * stateService.initialize();
+ * 
+ * // Access plugin functionality
+ * stateService.conversation.storeMessage(conversationId, userMsg, aiMsg);
+ * stateService.settings.saveSettings();
+ * stateService.mcp.setMcpConnected(true);
+ * 
+ * // State is automatically persisted and validated
  */
 class StateService {
+    /**
+     * Create a StateService instance with required dependencies
+     * @param {Object} eventBus - Event bus instance for inter-component communication
+     * @param {Object} storage - Storage adapter for persistence operations
+     * @throws {Error} If eventBus or storage are not provided
+     */
     constructor(eventBus, storage) {
         if (!eventBus || !storage) {
             throw new Error('Event bus and storage are required');
@@ -35,6 +53,10 @@ class StateService {
         this.validator = new StateValidator();
     }
 
+    /**
+     * Initialize the state service and its plugins
+     * Performs any necessary setup operations for the state management system
+     */
     initialize() {
         console.log('[StateService]', 'StateService initialized');
     }
@@ -42,8 +64,9 @@ class StateService {
     // ==== UTILITY & STATUS METHODS ====
 
     /**
-     * Check if state is empty
-     * @returns {boolean}
+     * Check if the state is empty or uninitialized
+     * @returns {boolean} True if state is empty, false otherwise
+     * @deprecated This method currently always returns false and may be removed
      */
     isEmpty() {
         return false;

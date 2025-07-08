@@ -1,6 +1,20 @@
 /**
- * Tool Formatter Module
- * Stateless module for generating AI prompts with MCP tool information
+ * Utility class for formatting MCP tools into AI-readable prompts and descriptions.
+ * Provides static methods to generate system prompts, tool descriptions, and user headers
+ * for AI interactions with MCP tools.
+ * 
+ * @example
+ * // Generate system prompt with tool descriptions
+ * const systemPrompt = ToolFormatter.generateSystemPrompt(tools);
+ * 
+ * // Create user header with available tools
+ * const userHeader = ToolFormatter.generateUserHeader(tools, toolResults);
+ * 
+ * // Validate tool format
+ * const validation = ToolFormatter.validateToolsFormat(tools);
+ * if (!validation.valid) {
+ *   console.error('Invalid tools:', validation.errors);
+ * }
  */
 
 export class ToolFormatter {

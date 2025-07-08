@@ -1,12 +1,36 @@
 import { AbstractAIClient } from '../abstract-ai-client.js';
 
 /**
- * OpenAI Client - Handles communication with OpenAI API
- * Implements streaming responses and robust error handling
+ * OpenAI API client implementation for GPT models with streaming support.
+ * Handles authentication, message formatting, and robust error handling
+ * for OpenAI's chat completion endpoints.
+ * 
+ * @example
+ * const client = new OpenAIClient(eventBus, {
+ *   apiKey: 'sk-...',
+ *   model: 'gpt-4-turbo',
+ *   baseUrl: 'https://api.openai.com/v1'
+ * });
+ * 
+ * const response = await client.generateTurn(
+ *   "Explain quantum computing",
+ *   [], // conversation history
+ *   { systemPrompt: "You are a physics professor" }
+ * );
+ * 
  * @extends AbstractAIClient
  */
 
 export class OpenAIClient extends AbstractAIClient {
+    /**
+     * Create an OpenAI Client instance
+     * @param {Object} eventBus - Event bus instance for communication
+     * @param {Object} [config={}] - Configuration options
+     * @param {string} [config.model='gpt-4-turbo'] - OpenAI model to use
+     * @param {string} [config.baseUrl='https://api.openai.com/v1'] - API base URL
+     * @param {string} [config.apiKey] - OpenAI API key for authentication
+     * @param {Object} [config.samplerConfig] - Sampling configuration
+     */
     constructor(eventBus, config = {}) {
         super('OpenAIClient', eventBus, config);
 
@@ -16,11 +40,15 @@ export class OpenAIClient extends AbstractAIClient {
     }
 
     /**
-     * Generate a turn using AI
-     * @param {string} userTurn - What the user wants to do
-     * @param {Array} history - Previous turns for context
-     * @param {Object} options - Additional options including system prompt
-     * @returns {Promise<string>} AI response
+     * Generate a conversational turn using OpenAI's API
+     * @param {string} userTurn - The user's input message
+     * @param {Array} history - Array of previous conversation turns with role and content
+     * @param {Object} [options={}] - Additional options for generation
+     * @param {string} [options.systemPrompt] - System prompt to guide AI behavior
+     * @param {number} [options.maxHistory] - Maximum number of history turns to include
+     * @param {Function} [options.onChunk] - Callback for streaming chunks
+     * @returns {Promise<string>} Promise resolving to the AI's response text
+     * @throws {Error} If API key is not configured or request fails
      */
     async generateTurn(userTurn, history = [], { systemPrompt, ...options } = {}) {
         if (!this.isConfigured()) {
@@ -46,12 +74,15 @@ export class OpenAIClient extends AbstractAIClient {
     }
 
     /**
-     * Build messages array for OpenAI API
-     * @param {string} currentMessage
-     * @param {Array} gameHistory - role, content
-     * @param {string} systemPrompt
-     * @param {Object} options - Additional options including maxHistory
-     * @returns {Array}
+     * Build the messages array for OpenAI API format
+     * @param {string} currentMessage - The current user message
+     * @param {Array} gameHistory - Array of previous conversation turns
+     * @param {string} systemPrompt - System prompt to include at the beginning
+     * @param {Object} [options={}] - Additional options
+     * @param {number|null} [options.maxHistory=null] - Maximum number of history turns to include
+     * @returns {Array<Object>} Array of message objects formatted for OpenAI API
+     * @returns {string} returns[].role - The role of the message sender ('system', 'user', 'assistant')
+     * @returns {string} returns[].content - The content of the message
      */
     buildMessages(currentMessage, gameHistory, systemPrompt, { maxHistory = null } = {}) {
         const messages = [

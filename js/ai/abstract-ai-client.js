@@ -1,7 +1,35 @@
 // js/ai/abstract-ai-client.js
 import { EVENTS } from '../constants/events.js';
 
+/**
+ * Abstract base class for AI client implementations providing common functionality
+ * for connection management, error handling, and streaming capabilities.
+ * 
+ * @example
+ * // Use a concrete implementation like OpenAIClient
+ * const client = new OpenAIClient(eventBus, {
+ *   apiKey: 'your-key',
+ *   model: 'gpt-4-turbo'
+ * });
+ * 
+ * const response = await client.generateTurn("Hello", [], {
+ *   systemPrompt: "You are helpful"
+ * });
+ * 
+ * @abstract
+ */
 export class AbstractAIClient {
+    /**
+     * Create an Abstract AI Client
+     * @param {string} clientName - Name identifier for this client instance
+     * @param {Object} eventBus - Event bus instance for communication
+     * @param {Object} [config={}] - Configuration options
+     * @param {string} [config.apiKey] - API key for authentication
+     * @param {Object} [config.samplerConfig] - Sampling configuration for AI generation
+     * @param {number} [config.samplerConfig.temperature=0.8] - Controls randomness in responses
+     * @param {number} [config.samplerConfig.minP=0.05] - Minimum probability threshold
+     * @param {number} [config.samplerConfig.maxTokens=2048] - Maximum tokens to generate
+     */
     constructor(clientName, eventBus, config = {}) {
         this.clientName = clientName;
         this.eventBus = eventBus;
@@ -30,25 +58,45 @@ export class AbstractAIClient {
         };
     }
 
+    /**
+     * Check if the client is properly configured with required credentials
+     * @returns {boolean} True if client has valid API key, false otherwise
+     */
     isConfigured() {
         return !!(this.apiKey && this.apiKey.trim().length > 0);
     }
 
+    /**
+     * Set the API key for authentication
+     * @param {string} apiKey - The API key to use for requests
+     */
     setApiKey(apiKey) {
         this.apiKey = apiKey;
         this.state.connected = !!apiKey;
         console.log(`[AbstractAIClient] API key configured`);
     }
 
+    /**
+     * Set the AI model to use for requests
+     * @param {string} model - The model identifier (e.g., 'gpt-4', 'claude-3')
+     */
     setModel(model) {
         this.model = model;
         console.log(`[AbstractAIClient] Model set to: ${model}`);
     }
 
+    /**
+     * Set the temperature for AI generation, clamped to valid range
+     * @param {number} temperature - Temperature value between 0 and 2
+     */
     setTemperature(temperature) {
         this.temperature = Math.max(0, Math.min(2, temperature));
     }
 
+    /**
+     * Get the current sampler configuration with snake_case keys for API compatibility
+     * @returns {Object} Sampler configuration object with snake_case keys
+     */
     getSamplerConfig() {
         const config = {
             temperature: 0.8,
@@ -65,13 +113,22 @@ export class AbstractAIClient {
         );
     }
 
+    /**
+     * Generate a turn response from the AI (must be implemented by subclasses)
+     * @abstract
+     * @param {string} userTurn - The user's input text
+     * @param {Array} history - Array of previous conversation turns
+     * @param {Object} [options] - Additional options for generation
+     * @returns {Promise<string>} Promise resolving to the AI's response
+     * @throws {Error} Always throws since this is an abstract method
+     */
     async generateTurn(userTurn, history, options) {
         throw new Error("generateTurn must be implemented by subclass");
     }
 
     /**
-     * Handle errors with reconnection logic
-     * @param {Error} error 
+     * Handle errors with intelligent reconnection logic and state management
+     * @param {Error} error - The error that occurred during a request
      */
     handleError(error) {
         console.log(`[${this.clientName}]`, `Request error: ${error.message}`);
@@ -90,7 +147,8 @@ export class AbstractAIClient {
     }
 
     /**
-     * Start reconnection process
+     * Start the reconnection process with exponential backoff
+     * Prevents multiple simultaneous reconnection attempts
      */
     startReconnection() {
         if (this.state.reconnecting) return;
@@ -112,8 +170,14 @@ export class AbstractAIClient {
     }
 
     /**
-     * Get client statistics
-     * @returns {Object}
+     * Get comprehensive statistics about the client's current state and performance
+     * @returns {Object} Statistics object containing configuration and state information
+     * @returns {boolean} returns.configured - Whether the client is properly configured
+     * @returns {string} returns.model - Current model identifier
+     * @returns {number} returns.temperature - Current temperature setting
+     * @returns {Object} returns.state - Current client state (errors, timeouts, etc.)
+     * @returns {number} returns.lastRequestTime - Timestamp of last request
+     * @returns {number} returns.timeSinceLastRequest - Milliseconds since last request
      */
     getStats() {
         return {
@@ -127,7 +191,7 @@ export class AbstractAIClient {
     }
 
     /**
-     * Reset client state
+     * Reset the client state to initial values, clearing error counters and flags
      */
     reset() {
         this.state = {
@@ -142,19 +206,24 @@ export class AbstractAIClient {
     }
 
     /**
-     * Emit streaming chunk for real-time updates
-     * @param {string} chunk 
+     * Emit a streaming chunk for real-time updates via the event bus
+     * @param {string} chunk - The text chunk to emit for streaming display
      */
     emitStreamingChunk(chunk) {
         this.eventBus.emit(EVENTS.AI.STREAM_CHUNK, { chunk });
     }
 
     /**
-     * Stream chat completion from OpenAI API
-     * @param {Array} messages 
-     * @param {Object} apiArgs - Additional API arguments
-     * @param {Object} options - Optional parameters, including onChunk callback
-     * @returns {Promise<string>}
+     * Stream chat completion from AI API with robust error handling and timeout management
+     * @param {Array} messages - Array of message objects for the conversation
+     * @param {Object} [options={}] - Configuration options for the request
+     * @param {Function} [options.onChunk] - Callback function for streaming chunks
+     * @param {Object} [options.apiArgs={}] - Additional API arguments
+     * @param {Object} [options.apiHeaders={}] - Additional HTTP headers
+     * @param {Object} [options.metadata={}] - Metadata to include with request
+     * @param {Array} [options.tools=[]] - Available tools for the AI to use
+     * @returns {Promise<string>} Promise resolving to the complete AI response
+     * @throws {Error} If the request fails or times out
      */
     async streamChatCompletion(messages, { onChunk = null, apiArgs = {}, apiHeaders = {}, metadata = {}, tools = [], ...options } = {}) {
         const controller = new AbortController();
@@ -212,10 +281,12 @@ export class AbstractAIClient {
     }
 
     /**
-     * Process streaming response
-     * @param {Response} response 
-     * @param {Object} options - Optional parameters, including onChunk callback
-     * @returns {Promise<string>}
+     * Process a streaming response from the AI API, handling chunked data
+     * @param {Response} response - The fetch Response object with streaming data
+     * @param {Object} [options={}] - Processing options
+     * @param {Function} [options.onChunk] - Callback function for each chunk
+     * @returns {Promise<string>} Promise resolving to the complete response text
+     * @throws {Error} If stream processing fails
      */
     async processStreamResponse(response, { onChunk = null } = {}) {
         const reader = response.body.getReader();

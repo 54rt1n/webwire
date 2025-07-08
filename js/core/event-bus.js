@@ -1,6 +1,26 @@
 /**
- * Event Bus - Centralized event system for component communication
- * Implements pub/sub pattern for loose coupling between components
+ * Centralized event system for component communication using the pub/sub pattern.
+ * Enables loose coupling between components with priority support, once listeners,
+ * and comprehensive error handling.
+ * 
+ * @example
+ * const eventBus = new EventBus();
+ * 
+ * // Subscribe to events
+ * const unsubscribe = eventBus.on('user-message', (data) => {
+ *   console.log('Received:', data);
+ * });
+ * 
+ * // Emit events
+ * eventBus.emit('user-message', { text: 'Hello' });
+ * 
+ * // One-time listeners
+ * eventBus.once('initialization-complete', () => {
+ *   console.log('App initialized');
+ * });
+ * 
+ * // Cleanup
+ * unsubscribe();
  */
 
 import { generateListenerId } from '../utils/id-generator.js';
@@ -16,11 +36,14 @@ export class EventBus {
     }
 
     /**
-     * Subscribe to an event
-     * @param {string} eventName 
-     * @param {Function} callback 
-     * @param {Object} options - Optional configuration
-     * @returns {Function} Unsubscribe function
+     * Subscribe to an event with optional priority and configuration
+     * @param {string} eventName - The name of the event to listen for
+     * @param {Function} callback - Function to call when event is emitted
+     * @param {Object} [options={}] - Optional configuration
+     * @param {boolean} [options.once=false] - If true, listener will be removed after first execution
+     * @param {number} [options.priority=0] - Higher priority listeners execute first
+     * @returns {Function} Unsubscribe function to remove this listener
+     * @throws {Error} If eventName is not a string or callback is not a function
      */
     on(eventName, callback, options = {}) {
         if (typeof eventName !== 'string' || typeof callback !== 'function') {
@@ -61,12 +84,13 @@ export class EventBus {
     }
 
     /**
-     * Subscribe to an event exclusively
-     *   This will remove all other listeners for the event
-     * @param {string} eventName    
-     * @param {Function} callback 
-     * @param {Object} options 
-     * @returns {Function} Unsubscribe function
+     * Subscribe to an event exclusively, removing all other listeners for that event
+     * This will remove all existing listeners for the event before adding the new one
+     * @param {string} eventName - The name of the event to listen for
+     * @param {Function} callback - Function to call when event is emitted
+     * @param {Object} [options={}] - Optional configuration (same as on() method)
+     * @returns {Function} Unsubscribe function to remove this listener
+     * @throws {Error} If eventName is not a string or callback is not a function
      */
     onExclusive(eventName, callback, options = {}) {
         // Remove all existing listeners for this event
@@ -77,21 +101,22 @@ export class EventBus {
     }
 
     /**
-     * Subscribe to an event once
-     * @param {string} eventName 
-     * @param {Function} callback 
-     * @param {Object} options 
-     * @returns {Function} Unsubscribe function
+     * Subscribe to an event that will only fire once
+     * @param {string} eventName - The name of the event to listen for
+     * @param {Function} callback - Function to call when event is emitted
+     * @param {Object} [options={}] - Optional configuration (priority, etc.)
+     * @returns {Function} Unsubscribe function to remove this listener
+     * @throws {Error} If eventName is not a string or callback is not a function
      */
     once(eventName, callback, options = {}) {
         return this.on(eventName, callback, { ...options, once: true });
     }
 
     /**
-     * Unsubscribe from an event
-     * @param {string} eventName 
-     * @param {string|Function} listenerIdOrCallback 
-     * @returns {boolean} Success status
+     * Unsubscribe from an event by listener ID or callback function
+     * @param {string} eventName - The name of the event to unsubscribe from
+     * @param {string|Function} listenerIdOrCallback - Listener ID or original callback function
+     * @returns {boolean} True if a listener was removed, false otherwise
      */
     off(eventName, listenerIdOrCallback) {
         const listeners = this.events.get(eventName);
@@ -123,13 +148,13 @@ export class EventBus {
     }
 
     /**
-     * Emit an event to all subscribers
-     * @param {string} eventName 
-     * @param {Object} [message] - Optional message to pass to listeners
+     * Emit an event to all subscribers with optional message and configuration
+     * @param {string} eventName - The name of the event to emit
+     * @param {*} [message] - Optional message to pass to listeners
      * @param {Object} [options] - Optional configuration
      * @param {Function} [options.notify] - Optional callback function that receives (response, error)
-     * @param {...any} args - Arguments to pass to listeners
-     * @returns {boolean} True if event had listeners
+     * @param {...*} args - Additional arguments to pass to listeners
+     * @returns {boolean} True if event had listeners, false otherwise
      */
     emit(eventName, message, options, ...args) {
         const listeners = this.events.get(eventName);
@@ -177,7 +202,12 @@ export class EventBus {
     }
 
     /**
-     * Asynchronously emit an event with the notify, error pattern 
+     * Asynchronously emit an event and wait for a response using notify/error pattern
+     * @param {string} eventName - The name of the event to emit
+     * @param {*} [message] - Optional message to pass to listeners
+     * @param {Object} [options={}] - Optional configuration
+     * @param {...*} args - Additional arguments to pass to listeners
+     * @returns {Promise<*>} Promise that resolves with the response or rejects with error
      */
     async emitAsync(eventName, message, { ...options } = {}, ...args) {
         return new Promise((resolve, reject) => {
@@ -186,10 +216,10 @@ export class EventBus {
     }
 
     /**
-     * Emit error event for listener failures
-     * @param {string} originalEvent 
-     * @param {Error} error 
-     * @param {Object} listener 
+     * Emit an error event for listener failures to prevent infinite recursion
+     * @param {string} originalEvent - The original event name that failed
+     * @param {Error} error - The error that occurred
+     * @param {Object} listener - The listener object that failed
      */
     emitError(originalEvent, error, listener) {
         // Prevent infinite recursion by not emitting error events for error event failures
@@ -204,9 +234,9 @@ export class EventBus {
     }
 
     /**
-     * Remove all listeners for an event
-     * @param {string} eventName 
-     * @returns {number} Number of listeners removed
+     * Remove all listeners for a specific event
+     * @param {string} eventName - The name of the event to clear
+     * @returns {number} Number of listeners that were removed
      */
     removeAllListeners(eventName) {
         if (eventName) {
@@ -229,17 +259,17 @@ export class EventBus {
     }
 
     /**
-     * Get all event names that have listeners
-     * @returns {Array<string>}
+     * Get all event names that currently have listeners
+     * @returns {string[]} Array of event names
      */
     getEventNames() {
         return Array.from(this.events.keys());
     }
 
     /**
-     * Get listener count for an event
-     * @param {string} eventName 
-     * @returns {number}
+     * Get the number of listeners for a specific event
+     * @param {string} eventName - The name of the event
+     * @returns {number} Number of listeners for the event
      */
     listenerCount(eventName) {
         const listeners = this.events.get(eventName);
@@ -247,9 +277,9 @@ export class EventBus {
     }
 
     /**
-     * Get all listeners for an event
-     * @param {string} eventName 
-     * @returns {Array<Object>}
+     * Get all listeners for a specific event
+     * @param {string} eventName - The name of the event
+     * @returns {Object[]} Array of listener objects
      */
     getListeners(eventName) {
         const listeners = this.events.get(eventName);
@@ -257,17 +287,18 @@ export class EventBus {
     }
 
     /**
-     * Check if an event has listeners
-     * @param {string} eventName 
-     * @returns {boolean}
+     * Check if an event has any listeners
+     * @param {string} eventName - The name of the event to check
+     * @returns {boolean} True if the event has listeners, false otherwise
      */
     hasListeners(eventName) {
         return this.listenerCount(eventName) > 0;
     }
 
     /**
-     * Set maximum number of listeners per event
-     * @param {number} max 
+     * Set the maximum number of listeners allowed per event
+     * @param {number} max - Maximum number of listeners (must be positive)
+     * @throws {Error} If max is not a positive number
      */
     setMaxListeners(max) {
         if (typeof max !== 'number' || max < 0) {
@@ -278,8 +309,8 @@ export class EventBus {
     }
 
     /**
-     * Enable or disable debug logging
-     * @param {boolean} enabled 
+     * Enable or disable debug logging for the event bus
+     * @param {boolean} enabled - Whether to enable debug logging
      */
     setDebug(enabled) {
         this.debug = !!enabled;
@@ -287,8 +318,8 @@ export class EventBus {
     }
 
     /**
-     * Get total number of listeners
-     * @returns {number}
+     * Get the total number of listeners across all events
+     * @returns {number} Total number of registered listeners
      */
     getTotalListeners() {
         let totalListeners = 0;
@@ -300,13 +331,17 @@ export class EventBus {
     }
 
     /**
-     * Cleanup and destroy event bus
+     * Clean up and destroy the event bus, removing all listeners
      */
     destroy() {
         this.removeAllListeners();
         console.log('[EventBus]', `EventBus destroyed. Had ${this.getTotalListeners()} listeners across ${this.events.size} events.`);
     }
 
+    /**
+     * Get the event history (if tracking is enabled)
+     * @returns {Array} Array of historical events
+     */
     getEventHistory() {
         return [...this.history];
     }

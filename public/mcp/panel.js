@@ -1,6 +1,23 @@
 /**
- * MCP Test Page Panel - UI Management
- * Handles all UI interactions and state updates for the MCP test interface
+ * UI management for the MCP test interface providing all user interaction controls.
+ * Handles connection status, tool display, chat interface, system configuration,
+ * and real-time updates with automatic state persistence.
+ * 
+ * @example
+ * const panel = new MCPTestPanel();
+ * panel.setStateService(stateService);
+ * await panel.initialize();
+ * 
+ * // Setup event handlers
+ * panel.setupEventListeners({
+ *   onConnect: () => connectToMCP(),
+ *   onSendChat: () => sendMessage()
+ * });
+ * 
+ * // Update UI state
+ * panel.updateConnectionStatus('connected', 'Connected to server');
+ * panel.renderTools(tools);
+ * panel.addChatMessage('user', 'Hello');
  */
 
 export class MCPTestPanel {

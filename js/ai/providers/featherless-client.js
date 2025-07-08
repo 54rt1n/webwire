@@ -1,8 +1,23 @@
 import { AbstractAIClient } from '../abstract-ai-client.js';
 
 /**
- * Featherless AI Client - Handles communication with Featherless API
- * Implements streaming responses and robust error handling
+ * Featherless AI API client implementation with OpenAI-compatible interface.
+ * Provides access to open-source models through Featherless.ai with streaming
+ * support and optimized headers for referrer tracking.
+ * 
+ * @example
+ * const client = new FeatherlessClient(eventBus, {
+ *   apiKey: 'fl-...',
+ *   model: 'meta-llama/Meta-Llama-3.1-8B-Instruct',
+ *   baseUrl: 'https://api.featherless.ai/v1'
+ * });
+ * 
+ * const response = await client.generateTurn(
+ *   "Explain machine learning",
+ *   previousMessages,
+ *   { systemPrompt: "You are an AI expert" }
+ * );
+ * 
  * @extends AbstractAIClient
  */
 export class FeatherlessClient extends AbstractAIClient {

@@ -1,6 +1,25 @@
 /**
- * Kitten Corner Configuration
- * Central configuration file for the entire application
+ * Centralized configuration management for the WebWire application.
+ * Provides a hierarchical configuration system with dot-notation access,
+ * deep merging capabilities, and default values for all app components.
+ * 
+ * @example
+ * const config = new AppConfig();
+ * 
+ * // Get configuration values
+ * const temperature = config.get('ai.temperature'); // 0.8
+ * const dbName = config.get('storage.db.state'); // 'WebwireDB'
+ * 
+ * // Set configuration values
+ * config.set('ai.temperature', 0.7);
+ * config.set('ai.models.chat', 'gpt-4');
+ * 
+ * // Merge configurations
+ * config.merge({ ai: { temperature: 0.9 } });
+ * 
+ * // Use singleton instance
+ * import { appConfig } from './app-config.js';
+ * const maxTokens = appConfig.get('ai.maxTokens');
  */
 
 export class AppConfig {
