@@ -61,8 +61,17 @@ class WebWireBackground {
 
     async loadState() {
         try {
+            console.log('[WebWireBackground] Loading state...');
+            console.log('[WebWireBackground] State service available:', !!this.stateService);
+            console.log('[WebWireBackground] Settings plugin available:', !!this.stateService?.settings);
+            
             await this.stateService.settings.loadSettings();
+            console.log('[WebWireBackground] Settings loaded, current state.settings:', this.stateService.state.settings);
+            
             await this.stateService.disk.loadFromStorage();
+            console.log('[WebWireBackground] Disk state loaded');
+            
+            console.log('[WebWireBackground] Final state after loading:', this.stateService.state);
             console.log('WebWire state loaded in background');
         } catch (error) {
             console.error('Failed to load WebWire state:', error);
@@ -132,6 +141,11 @@ class WebWireBackground {
         chrome.runtime.onInstalled.addListener((details) => {
             this.handleInstalled(details);
         });
+
+        // Listen for storage changes
+        chrome.storage.onChanged.addListener((changes, areaName) => {
+            this.handleStorageChanged(changes, areaName);
+        });
     }
 
     async handleActionClick(tab) {
@@ -162,8 +176,12 @@ class WebWireBackground {
     }
 
     async handleMessage(message, sender, sendResponse) {
-        console.log('Background received message:', message.action, 'from:', sender);
-        console.log('State service available:', !!this.stateService);
+        console.log('[WebWireBackground] ===== MESSAGE RECEIVED =====');
+        console.log('[WebWireBackground] Action:', message.action);
+        console.log('[WebWireBackground] Sender:', sender);
+        console.log('[WebWireBackground] Full message:', message);
+        console.log('[WebWireBackground] State service available:', !!this.stateService);
+        console.log('[WebWireBackground] =============================');
         
         const { action } = message;
 
@@ -253,6 +271,25 @@ class WebWireBackground {
                             error: error.message 
                         }));
                     return true;
+
+                case 'SETTINGS_UPDATED':
+                    this.handleSettingsUpdated(message, sender)
+                        .then(response => sendResponse(response))
+                        .catch(error => sendResponse({ 
+                            success: false, 
+                            error: error.message 
+                        }));
+                    return true;
+
+                case 'PING':
+                    console.log('[WebWireBackground] PING received from:', message.source || 'unknown');
+                    sendResponse({ 
+                        success: true, 
+                        status: 'ready',
+                        timestamp: Date.now(),
+                        stateServiceReady: !!this.stateService
+                    });
+                    return false;
 
                 default:
                     console.warn('Unknown action:', action);
@@ -356,6 +393,56 @@ class WebWireBackground {
         }
     }
 
+    async handleSettingsUpdated(message, sender) {
+        console.log('[WebWireBackground] ===== SETTINGS_UPDATED HANDLER =====');
+        console.log('[WebWireBackground] Message:', message);
+        console.log('[WebWireBackground] Sender:', sender);
+        console.log('[WebWireBackground] Current stateService:', !!this.stateService);
+        console.log('[WebWireBackground] Settings in message:', message.settings);
+        console.log('[WebWireBackground] ===============================');
+        
+        try {
+            // Reload state service settings
+            if (this.stateService) {
+                console.log('[WebWireBackground] Reloading settings from storage...');
+                await this.stateService.settings.loadSettings();
+                console.log('[WebWireBackground] Settings reloaded from storage:', this.stateService.state.settings);
+            } else {
+                console.error('[WebWireBackground] No state service available for settings reload!');
+            }
+            
+            // Notify all tabs about the settings change
+            console.log('[WebWireBackground] Notifying tabs of settings change...');
+            await this.notifyTabsOfSettingsChange();
+            
+            const result = { 
+                success: true, 
+                message: 'Settings updated and tabs notified',
+                timestamp: Date.now()
+            };
+            
+            console.log('[WebWireBackground] Settings update handler completed successfully:', result);
+            return result;
+            
+        } catch (error) {
+            console.error('[WebWireBackground] Failed to handle settings update:', error);
+            console.error('[WebWireBackground] Error details:', {
+                name: error.name,
+                message: error.message,
+                stack: error.stack
+            });
+            
+            const errorResult = { 
+                success: false, 
+                error: error.message,
+                timestamp: Date.now()
+            };
+            
+            console.log('[WebWireBackground] Settings update handler failed:', errorResult);
+            return errorResult;
+        }
+    }
+
     handleTabUpdate(tabId, changeInfo, tab) {
         // Track tab state
         if (changeInfo.status === 'complete') {
@@ -380,6 +467,104 @@ class WebWireBackground {
         if (details.reason === 'install') {
             // Open options page on first install
             chrome.runtime.openOptionsPage();
+        }
+    }
+
+    async handleStorageChanged(changes, areaName) {
+        console.log('[WebWireBackground] ===== STORAGE CHANGED =====');
+        console.log('[WebWireBackground] Area:', areaName);
+        console.log('[WebWireBackground] Changes:', changes);
+        console.log('[WebWireBackground] Change keys:', Object.keys(changes));
+        console.log('[WebWireBackground] ============================');
+        
+        // Handle WebWire settings changes
+        if (changes.webwireSettings) {
+            console.log('[WebWireBackground] 🔄 WebWire extension settings changed, reloading...');
+            await this.loadSettings();
+        }
+        
+        // Handle state service storage changes (from options panel)
+        const settingsKeys = ['webwireState', 'webwireSettingsState', 'app-settings'];
+        const hasSettingsChange = settingsKeys.some(key => changes[key]);
+        
+        // Handle manual trigger from options page (fallback mechanism)
+        const hasTrigger = changes['webwire-settings-trigger'];
+        
+        if (this.stateService && (hasSettingsChange || hasTrigger)) {
+            if (hasTrigger) {
+                console.log('[WebWireBackground] 📡 Settings trigger detected (fallback mechanism activated)');
+                console.log('[WebWireBackground] Trigger details:', hasTrigger.newValue);
+            }
+            
+            console.log('[WebWireBackground] 🔄 WebWire state/settings changed, reloading state...');
+            try {
+                await this.stateService.settings.loadSettings();
+                await this.stateService.disk.loadFromStorage();
+                console.log('[WebWireBackground] ✅ WebWire state reloaded after storage change');
+                
+                // Notify all active tabs about settings change
+                await this.notifyTabsOfSettingsChange();
+                
+                // Clean up the trigger key if it was used
+                if (hasTrigger) {
+                    try {
+                        await chrome.storage.local.remove('webwire-settings-trigger');
+                        console.log('[WebWireBackground] 🧹 Cleaned up settings trigger');
+                    } catch (error) {
+                        console.warn('[WebWireBackground] Failed to clean up trigger:', error);
+                    }
+                }
+                
+            } catch (error) {
+                console.error('[WebWireBackground] ❌ Failed to reload state after storage change:', error);
+            }
+        }
+    }
+
+    async notifyTabsOfSettingsChange() {
+        try {
+            const tabs = await this.getAllTabs();
+            
+            // Filter tabs that can potentially have content scripts
+            const validTabs = tabs.filter(tab => {
+                return tab.url && 
+                       (tab.url.startsWith('http://') || tab.url.startsWith('https://')) &&
+                       !tab.url.includes('chrome-extension://') &&
+                       !tab.url.startsWith('chrome://') &&
+                       !tab.url.startsWith('moz-extension://') &&
+                       !tab.url.startsWith('edge://');
+            });
+            
+            console.log(`Checking ${validTabs.length} valid tabs for settings change notifications (out of ${tabs.length} total tabs)`);
+            
+            let successCount = 0;
+            const notifications = validTabs.map(async (tab) => {
+                try {
+                    // First ping to check if content script is available
+                    await this.pingContentScriptSilent(tab.id);
+                    
+                    // If ping succeeds, send the settings update
+                    await this.sendToContentScriptSilent(tab.id, {
+                        action: 'SETTINGS_CHANGED',
+                        data: {
+                            settings: this.stateService?.state?.settings || {}
+                        }
+                    });
+                    
+                    successCount++;
+                    return { success: true, tabId: tab.id, url: tab.url };
+                } catch (error) {
+                    // Content script not available, which is normal for most tabs
+                    return { success: false, tabId: tab.id, url: tab.url, error: error.message };
+                }
+            });
+            
+            const results = await Promise.allSettled(notifications);
+            const successful = results.filter(r => r.status === 'fulfilled' && r.value.success).length;
+            
+            console.log(`Settings change notifications completed: ${successful} tabs notified successfully out of ${validTabs.length} checked`);
+        } catch (error) {
+            console.error('Failed to notify tabs of settings change:', error);
         }
     }
 
@@ -431,6 +616,16 @@ class WebWireBackground {
         }
     }
 
+    async sendToContentScriptSilent(tabId, message) {
+        try {
+            const response = await chrome.tabs.sendMessage(tabId, message);
+            return response;
+        } catch (error) {
+            // Silent version - don't log errors as they're expected for tabs without content scripts
+            throw error;
+        }
+    }
+
     async pingContentScript(tabId) {
         try {
             const response = await chrome.tabs.sendMessage(tabId, { action: 'PING' });
@@ -439,6 +634,19 @@ class WebWireBackground {
             }
             throw new Error('Content script ping failed');
         } catch (error) {
+            throw new Error('Content script not responsive');
+        }
+    }
+
+    async pingContentScriptSilent(tabId) {
+        try {
+            const response = await chrome.tabs.sendMessage(tabId, { action: 'PING' });
+            if (response && response.success) {
+                return true;
+            }
+            throw new Error('Content script ping failed');
+        } catch (error) {
+            // Silent version - don't log, just throw for caller to handle
             throw new Error('Content script not responsive');
         }
     }

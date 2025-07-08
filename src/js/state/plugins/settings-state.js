@@ -23,17 +23,50 @@ export class SettingsStatePlugin {
      * Read settings and set them in the state
      */
     async loadSettings() {
-        const settings = await this.settingsAdapter.getAll();
-        this.stateService.state.settings = settings;
-        console.log('[StateService::SettingsState] Settings read:', settings);
-        return settings;
+        try {
+            console.log('[StateService::SettingsState] Loading settings from adapter...');
+            console.log('[StateService::SettingsState] Settings adapter:', this.settingsAdapter);
+            
+            const settings = await this.settingsAdapter.getAll();
+            console.log('[StateService::SettingsState] Raw settings from adapter:', settings);
+            
+            // If settings is null or undefined, initialize with empty object
+            const validSettings = settings || {};
+            
+            this.stateService.state.settings = validSettings;
+            console.log('[StateService::SettingsState] Settings loaded and set in state:', validSettings);
+            console.log('[StateService::SettingsState] Final state.settings:', this.stateService.state.settings);
+            
+            return validSettings;
+        } catch (error) {
+            console.error('[StateService::SettingsState] Error loading settings:', error);
+            
+            // Initialize with empty settings on error
+            this.stateService.state.settings = {};
+            return {};
+        }
     }
 
     /**
      * Save settings
      */
     async saveSettings() {
-        await this.settingsAdapter.setAll(this.stateService.state.settings);
+        try {
+            console.log('[StateService::SettingsState] Saving settings to adapter...');
+            console.log('[StateService::SettingsState] Settings to save:', this.stateService.state.settings);
+            console.log('[StateService::SettingsState] Settings adapter:', this.settingsAdapter);
+            
+            await this.settingsAdapter.setAll(this.stateService.state.settings);
+            console.log('[StateService::SettingsState] Settings saved successfully');
+            
+            // Verify the save by immediately reading back
+            const verifySettings = await this.settingsAdapter.getAll();
+            console.log('[StateService::SettingsState] Verification read after save:', verifySettings);
+            
+        } catch (error) {
+            console.error('[StateService::SettingsState] Error saving settings:', error);
+            throw error;
+        }
     }
 
     /**

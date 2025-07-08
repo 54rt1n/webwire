@@ -4,6 +4,7 @@ import { AIClientFactory } from '../js/ai/ai-client-factory.js';
 import MCPConnector from '../js/mcp/mcp-connector.js';
 import { ToolParser } from '../js/mcp/tool-parser.js';
 import { ToolFormatter } from '../js/mcp/tool-formatter.js';
+import { EventBus } from '../js/core/event-bus.js';
 
 /**
  * Proxy for state management that communicates with background script
@@ -103,6 +104,7 @@ class WebWireContentScript {
         };
         
         // Initialize WebWire framework components
+        this.eventBus = new EventBus();
         this.storage = null;
         this.stateService = null;
         this.aiClient = null;
@@ -134,6 +136,10 @@ class WebWireContentScript {
         try {
             await this.initializeBackgroundState();
             console.log('Background state initialized successfully');
+            
+            // Initialize AI client and MCP connector with loaded settings
+            await this.initializeWithSettings(this.currentState?.settings || {});
+            
         } catch (error) {
             console.error('Background state initialization failed, but content script will continue:', error);
         }
@@ -182,6 +188,30 @@ class WebWireContentScript {
         }
     }
 
+    async initializeWithSettings(settings) {
+        console.log('[WebWireContent] Initializing AI client and MCP connector with settings:', settings);
+        
+        try {
+            // Initialize AI client if we have valid settings
+            if (settings.ai?.models?.chat?.model && settings.ai?.models?.chat?.provider) {
+                await this.reinitializeAIClient(settings);
+            }
+            
+            // Initialize MCP connector if we have a server URL
+            if (settings.mcp?.serverUrl) {
+                await this.reinitializeMCPConnector(settings);
+            }
+            
+            console.log('[WebWireContent] Initialization with settings complete');
+            
+            // Update connection status after initialization
+            this.updateConnectionStatus();
+        } catch (error) {
+            console.error('[WebWireContent] Error during initialization with settings:', error);
+            this.updateConnectionStatus();
+        }
+    }
+
     setupWebWireEventListeners() {
         // Listen for streaming AI responses
         this.dispatcher.on(EVENTS.AI.STREAM_CHUNK, ({ chunk }) => {
@@ -222,6 +252,9 @@ class WebWireContentScript {
             
             if (event.data.type === 'WEBWIRE_PANEL_MESSAGE') {
                 this.handlePanelMessage(event.data);
+            } else if (event.data.type === 'WEBWIRE_PANEL_READY') {
+                // Panel has loaded, send current state
+                this.sendInitialState();
             }
         });
     }
@@ -428,6 +461,45 @@ class WebWireContentScript {
             type: 'WEBWIRE_FROM_CONTENT',
             ...message
         }, '*');
+    }
+
+    updateConnectionStatus() {
+        if (!this.panelInjected) return;
+        
+        const statusIndicator = this.panelContainer?.querySelector('.status-indicator');
+        const statusText = this.panelContainer?.querySelector('.status-text');
+        
+        if (!statusIndicator || !statusText) return;
+        
+        const aiConnected = this.aiClient ? true : false;
+        const mcpConnected = this.mcpConnector ? true : false;
+        
+        let status, color;
+        
+        if (aiConnected && mcpConnected) {
+            status = 'AI + MCP Ready';
+            color = '#10b981'; // green
+        } else if (aiConnected) {
+            status = 'AI Ready';
+            color = '#3b82f6'; // blue
+        } else if (mcpConnected) {
+            status = 'MCP Connected';
+            color = '#f59e0b'; // yellow
+        } else {
+            status = 'Configuring...';
+            color = '#6b7280'; // gray
+        }
+        
+        statusText.textContent = status;
+        statusIndicator.style.backgroundColor = color;
+        
+        // Send status update to panel
+        this.sendToPanel({
+            type: 'CONNECTION_STATUS_UPDATE',
+            aiConnected,
+            mcpConnected,
+            status
+        });
     }
 
     listenForInjectionRequests() {
@@ -946,16 +1018,28 @@ class WebWireContentScript {
     async sendInitialState() {
         // Send current state to panel
         try {
-            const state = await this.stateProxy.getState();
+            // Use cached state if available, otherwise fetch fresh
+            let state = this.currentState;
+            if (!state || Object.keys(state).length === 0) {
+                const response = await this.stateProxy.getState();
+                state = response || {};
+                this.currentState = state;
+            }
+            
             this.sendToPanel({
                 type: 'INITIAL_STATE',
                 state: {
                     conversation: state.conversation || {},
-                    mcpConnected: state.mcpConnected || false,
+                    mcpConnected: this.mcpConnector ? true : false,
+                    aiClientConfigured: this.aiClient ? true : false,
                     tools: state.tools || [],
-                    settings: state.settings || {}
+                    settings: state.settings || {},
+                    panelInjected: this.panelInjected,
+                    frameworkReady: true
                 }
             });
+            
+            console.log('[WebWireContent] Initial state sent to panel');
         } catch (error) {
             console.error('Failed to send initial state:', error);
             this.sendToPanel({
@@ -963,8 +1047,11 @@ class WebWireContentScript {
                 state: {
                     conversation: {},
                     mcpConnected: false,
+                    aiClientConfigured: false,
                     tools: [],
-                    settings: {}
+                    settings: {},
+                    panelInjected: this.panelInjected,
+                    frameworkReady: false
                 }
             });
         }
@@ -998,6 +1085,122 @@ class WebWireContentScript {
             } else {
                 this.hidePanel();
             }
+        }
+    }
+
+    async handleSettingsChanged(data) {
+        console.log('[WebWireContent] Settings changed notification received:', data);
+        
+        try {
+            const newSettings = data.settings || {};
+            
+            // Update local state cache if we have one
+            if (this.currentState) {
+                this.currentState.settings = newSettings;
+            }
+            
+            // Clear state proxy cache so fresh settings are loaded next time
+            if (this.stateProxy) {
+                this.stateProxy.cache = {};
+            }
+            
+            // Reinitialize AI client if AI settings changed
+            if (newSettings.ai && (newSettings.ai.models || newSettings.ai.providers)) {
+                await this.reinitializeAIClient(newSettings);
+            }
+            
+            // Reinitialize MCP connector if MCP settings changed
+            if (newSettings.mcp && newSettings.mcp.serverUrl) {
+                await this.reinitializeMCPConnector(newSettings);
+            }
+            
+            // Notify panel of settings change
+            this.sendToPanel({
+                type: 'SETTINGS_UPDATED',
+                settings: newSettings
+            });
+            
+            // Update connection status
+            this.updateConnectionStatus();
+            
+            console.log('[WebWireContent] Settings change processed successfully');
+            
+        } catch (error) {
+            console.error('[WebWireContent] Error handling settings change:', error);
+        }
+    }
+
+    async reinitializeAIClient(settings) {
+        try {
+            const model = settings.ai?.models?.chat?.model;
+            const provider = settings.ai?.models?.chat?.provider;
+            const providerSettings = settings.ai?.providers[provider] || {};
+
+            // Only reinitialize if we have valid AI settings
+            if (model && provider) {
+                console.log('[WebWireContent] Reinitializing AI client with new settings', {
+                    model,
+                    provider,
+                    ...providerSettings
+                });
+
+                // TODO add sampler settings to the client
+                
+                // Create new AI client with updated settings
+                this.aiClient = AIClientFactory.createClient(
+                    this.eventBus,
+                    {
+                        provider,
+                        model,
+                        ...providerSettings
+                    }
+                );
+                
+                console.log('[WebWireContent] AI client reinitialized successfully');
+            } else {
+                console.log('[WebWireContent] AI settings incomplete, clearing AI client');
+                this.aiClient = null;
+            }
+            
+            // Update connection status after AI client change
+            this.updateConnectionStatus();
+        } catch (error) {
+            console.error('[WebWireContent] Failed to reinitialize AI client:', error);
+            this.aiClient = null;
+            this.updateConnectionStatus();
+        }
+    }
+
+    async reinitializeMCPConnector(settings) {
+        try {
+            const newMcpUrl = settings.mcp?.serverUrl;
+            const currentMcpUrl = this.mcpConnector?.url;
+            
+            // Only reconnect if URL changed
+            if (newMcpUrl && newMcpUrl !== currentMcpUrl) {
+                console.log('[WebWireContent] MCP server URL changed, reconnecting...');
+                
+                // Disconnect existing connector
+                if (this.mcpConnector) {
+                    this.mcpConnector.disconnect();
+                    this.mcpConnector = null;
+                }
+                
+                // Connect to new server
+                await this.connectToMCP(newMcpUrl);
+                
+                console.log('[WebWireContent] MCP connector reinitialized successfully');
+            } else if (!newMcpUrl && this.mcpConnector) {
+                console.log('[WebWireContent] MCP server URL cleared, disconnecting...');
+                this.mcpConnector.disconnect();
+                this.mcpConnector = null;
+            }
+            
+            // Update connection status after MCP connector change
+            this.updateConnectionStatus();
+        } catch (error) {
+            console.error('[WebWireContent] Failed to reinitialize MCP connector:', error);
+            this.updateConnectionStatus();
         }
     }
 
@@ -1041,6 +1244,12 @@ class WebWireContentScript {
                             }
                         });
                     }
+                    return false;
+                    
+                case 'SETTINGS_CHANGED':
+                    // Settings have been updated - notify panel and update local cache
+                    this.handleSettingsChanged(message.data);
+                    sendResponse({ success: true });
                     return false;
                     
                 case 'PING':
