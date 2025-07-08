@@ -1,0 +1,535 @@
+import { EventErrorBoundary } from './error-boundary.js';
+import { EVENT_TYPES, EVENT_CONTEXT } from './events.js';
+
+export class EventDispatcher {
+  constructor(context, eventBus) {
+    this.context = context;
+    this.eventBus = eventBus;
+    this.errorBoundary = new EventErrorBoundary(this);
+    
+    // Track pending cross-context requests
+    this.pendingRequests = new Map();
+    this.requestId = 0;
+    
+    // Setup context-specific communication handlers
+    this.setupContextHandlers();
+  }
+
+  // ── Core Dispatch Method ──────────────────────────────────────────
+  
+  async dispatch(event, data, options = {}) {
+    const { target = 'local', timeout = 5000, priority = 'normal' } = options;
+    
+    try {
+      if (target === EVENT_CONTEXT.LOCAL) {
+        return this.eventBus.emit(event, data, options);
+      }
+      
+      if (target === EVENT_CONTEXT.BACKGROUND) {
+        return this.sendToBackground(event, data, timeout);
+      }
+
+      if (target === EVENT_CONTEXT.CONTENT) {
+        return this.sendToContent(event, data, timeout);
+      }
+      
+      if (target === EVENT_CONTEXT.PANEL) {
+        return this.sendToPanel(event, data, timeout);
+      }
+      
+      if (target === EVENT_CONTEXT.BROADCAST) {
+        return this.broadcast(event, data, options);
+      }
+      
+      throw new Error(`Unknown dispatch target: ${target}`);
+      
+    } catch (error) {
+      console.error(`[EventDispatcher] Dispatch failed:`, { event, target, error: error.message });
+      throw error;
+    }
+  }
+
+  async call(event, data, options = {}) {
+    return this.dispatch(event, data, options);
+  }
+
+  // ── Local Event Bus Methods ──────────────────────────────────────
+
+  on(event, handler, options = {}) {
+    const { source = EVENT_CONTEXT.LOCAL, once = false, priority = 0 } = options;
+    
+    if (source === EVENT_CONTEXT.LOCAL) {
+      return this.eventBus.on(event, handler, { once, priority });
+    }
+    
+    // Setup cross-context listeners
+    return this.setupCrossContextListener(event, handler, source);
+  }
+
+  once(event, handler, options = {}) {
+    return this.on(event, handler, { ...options, once: true });
+  }
+
+  off(event, handlerOrId) {
+    return this.eventBus.off(event, handlerOrId);
+  }
+
+  emit(event, data, options = {}) {
+    return this.eventBus.emit(event, data, options);
+  }
+
+  // ── Cross-Context Communication ──────────────────────────────────
+
+  async sendToBackground(event, data, timeout = 5000) {
+    if (this.context === EVENT_CONTEXT.BACKGROUND) {
+      // Already in background, dispatch locally
+      return this.eventBus.emit(event, data);
+    }
+
+    if (typeof chrome === 'undefined' || !chrome.runtime) {
+      throw new Error('Chrome runtime not available for background communication');
+    }
+
+    return this.sendChromeMessage({
+      type: 'CROSS_CONTEXT_EVENT',
+      event,
+      data,
+      source: this.context,
+      target: 'background'
+    }, timeout);
+  }
+
+  async sendToContent(event, data, timeout = 5000, tabId = null) {
+    if (this.context === EVENT_CONTEXT.CONTENT) {
+      // Already in content, dispatch locally
+      return this.eventBus.emit(event, data);
+    }
+
+    if (this.context === EVENT_CONTEXT.BACKGROUND) {
+      // Send to specific tab or all tabs
+      if (tabId) {
+        return this.sendToSpecificTab(tabId, event, data, timeout);
+      } else {
+        return this.sendToAllTabs(event, data, timeout);
+      }
+    }
+
+    if (this.context === EVENT_CONTEXT.POPUP) {
+      // Route through background to content
+      return this.sendToBackground('ROUTE_TO_CONTENT', {
+        event,
+        data,
+        tabId
+      }, timeout);
+    }
+
+    if (this.context === EVENT_CONTEXT.PANEL) {
+      // Send to parent content script via postMessage
+      return this.sendToParentContent(event, data, timeout);
+    }
+
+    throw new Error(`Cannot send to content from context: ${this.context}`);
+  }
+
+  async sendToPanel(event, data, timeout = 5000) {
+    if (this.context === EVENT_CONTEXT.PANEL) {
+      // Already in panel, dispatch locally
+      return this.eventBus.emit(event, data);
+    }
+
+    if (this.context === EVENT_CONTEXT.CONTENT) {
+      // Send to injected panel via postMessage
+      return this.sendToInjectedPanel(event, data, timeout);
+    }
+
+    // Route through content script
+    return this.sendToContent('ROUTE_TO_PANEL', {
+      event,
+      data
+    }, timeout);
+  }
+
+  async broadcast(event, data, options = {}) {
+    const { exclude = [], includeLocal = true } = options;
+    const results = [];
+
+    if (includeLocal && !exclude.includes(EVENT_CONTEXT.LOCAL)) {
+      try {
+        const localResult = await this.eventBus.emit(event, data);
+        results.push({ target: EVENT_CONTEXT.LOCAL, success: true, result: localResult });
+      } catch (error) {
+        results.push({ target: EVENT_CONTEXT.LOCAL, success: false, error: error.message });
+      }
+    }
+
+    // Broadcast to other contexts based on current context
+    const targets = this.getBroadcastTargets(exclude);
+    
+    for (const target of targets) {
+      try {
+        const result = await this.dispatch(event, data, { target, timeout: 3000 });
+        results.push({ target, success: true, result });
+      } catch (error) {
+        results.push({ target, success: false, error: error.message });
+      }
+    }
+
+    return results;
+  }
+
+  // ── Chrome Extension Messaging ───────────────────────────────────
+
+  async sendChromeMessage(message, timeout = 5000) {
+    return new Promise((resolve, reject) => {
+      const requestId = ++this.requestId;
+      
+      // Setup timeout
+      const timeoutId = setTimeout(() => {
+        this.pendingRequests.delete(requestId);
+        reject(new Error(`Chrome message timeout after ${timeout}ms`));
+      }, timeout);
+
+      // Track request
+      this.pendingRequests.set(requestId, { resolve, reject, timeoutId });
+
+      // Send message
+      chrome.runtime.sendMessage({
+        ...message,
+        requestId
+      }, (response) => {
+        const pending = this.pendingRequests.get(requestId);
+        if (!pending) return; // Already timed out
+
+        clearTimeout(pending.timeoutId);
+        this.pendingRequests.delete(requestId);
+
+        if (chrome.runtime.lastError) {
+          reject(new Error(chrome.runtime.lastError.message));
+        } else {
+          resolve(response);
+        }
+      });
+    });
+  }
+
+  async sendToSpecificTab(tabId, event, data, timeout = 5000) {
+    return new Promise((resolve, reject) => {
+      const timeoutId = setTimeout(() => {
+        reject(new Error(`Tab message timeout after ${timeout}ms`));
+      }, timeout);
+
+      chrome.tabs.sendMessage(tabId, {
+        type: 'CROSS_CONTEXT_EVENT',
+        event,
+        data,
+        source: this.context
+      }, (response) => {
+        clearTimeout(timeoutId);
+        
+        if (chrome.runtime.lastError) {
+          reject(new Error(chrome.runtime.lastError.message));
+        } else {
+          resolve(response);
+        }
+      });
+    });
+  }
+
+  async sendToAllTabs(event, data, timeout = 5000) {
+    const tabs = await chrome.tabs.query({});
+    const results = [];
+
+    for (const tab of tabs) {
+      try {
+        const result = await this.sendToSpecificTab(tab.id, event, data, timeout);
+        results.push({ tabId: tab.id, success: true, result });
+      } catch (error) {
+        results.push({ tabId: tab.id, success: false, error: error.message });
+      }
+    }
+
+    return results;
+  }
+
+  // ── PostMessage Communication (Panel ↔ Content) ─────────────────
+
+  async sendToInjectedPanel(event, data, timeout = 5000) {
+    return new Promise((resolve, reject) => {
+      const requestId = ++this.requestId;
+      
+      const timeoutId = setTimeout(() => {
+        this.pendingRequests.delete(requestId);
+        reject(new Error(`Panel message timeout after ${timeout}ms`));
+      }, timeout);
+
+      this.pendingRequests.set(requestId, { resolve, reject, timeoutId });
+
+      // Find panel iframe/window
+      const panelWindow = this.findPanelWindow();
+      if (!panelWindow) {
+        clearTimeout(timeoutId);
+        this.pendingRequests.delete(requestId);
+        reject(new Error('Panel window not found'));
+        return;
+      }
+
+      panelWindow.postMessage({
+        type: 'CONTENT_TO_PANEL',
+        event,
+        data,
+        requestId,
+        source: 'content'
+      }, '*');
+    });
+  }
+
+  async sendToParentContent(event, data, timeout = 5000) {
+    return new Promise((resolve, reject) => {
+      const requestId = ++this.requestId;
+      
+      const timeoutId = setTimeout(() => {
+        this.pendingRequests.delete(requestId);
+        reject(new Error(`Content message timeout after ${timeout}ms`));
+      }, timeout);
+
+      this.pendingRequests.set(requestId, { resolve, reject, timeoutId });
+
+      window.parent.postMessage({
+        type: 'PANEL_TO_CONTENT',
+        event,
+        data,
+        requestId,
+        source: 'panel'
+      }, '*');
+    });
+  }
+
+  // ── Context Setup and Handlers ───────────────────────────────────
+
+  setupContextHandlers() {
+    if (typeof chrome !== 'undefined' && chrome.runtime) {
+      this.setupChromeMessageHandler();
+    }
+
+    if (typeof window !== 'undefined') {
+      this.setupPostMessageHandler();
+    }
+
+    // Context-specific setup
+    switch (this.context) {
+      case EVENT_CONTEXT.BACKGROUND:
+        this.setupBackgroundHandlers();
+        break;
+      case EVENT_CONTEXT.CONTENT:
+        this.setupContentHandlers();
+        break;
+      case EVENT_CONTEXT.POPUP:
+        this.setupPopupHandlers();
+        break;
+      case EVENT_CONTEXT.PANEL:
+        this.setupPanelHandlers();
+        break;
+    }
+  }
+
+  setupChromeMessageHandler() {
+    chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+      if (message.type === 'CROSS_CONTEXT_EVENT') {
+        this.handleCrossContextEvent(message, sender, sendResponse);
+        return true; // Keep channel open for async response
+      }
+
+      if (message.requestId && this.pendingRequests.has(message.requestId)) {
+        const pending = this.pendingRequests.get(message.requestId);
+        clearTimeout(pending.timeoutId);
+        this.pendingRequests.delete(message.requestId);
+        pending.resolve(message);
+        return;
+      }
+
+      return false;
+    });
+  }
+
+  setupPostMessageHandler() {
+    window.addEventListener('message', (event) => {
+      if (event.source === window) return; // Ignore same-window messages
+
+      const { type, event: eventName, data, requestId } = event.data;
+
+      if (type === 'CONTENT_TO_PANEL' && this.context === EVENT_CONTEXT.PANEL) {
+        this.handlePanelMessage(eventName, data, requestId, event.source);
+      }
+
+      if (type === 'PANEL_TO_CONTENT' && this.context === EVENT_CONTEXT.CONTENT) {
+        this.handleContentMessage(eventName, data, requestId, event.source);
+      }
+
+      if (requestId && this.pendingRequests.has(requestId)) {
+        const pending = this.pendingRequests.get(requestId);
+        clearTimeout(pending.timeoutId);
+        this.pendingRequests.delete(requestId);
+        pending.resolve(event.data);
+      }
+    });
+  }
+
+  setupCrossContextListener(event, handler, source) {
+    // Create a wrapper that only handles events from the specified source
+    const wrappedHandler = (eventData, metadata = {}) => {
+      if (metadata.source === source || source === 'any') {
+        return handler(eventData, metadata);
+      }
+    };
+
+    return this.eventBus.on(`cross_context:${event}`, wrappedHandler);
+  }
+
+  // ── Event Handlers ───────────────────────────────────────────────
+
+  async handleCrossContextEvent(message, sender, sendResponse) {
+    try {
+      const result = await this.eventBus.emit(message.event, message.data, {
+        source: message.source,
+        sender
+      });
+      
+      sendResponse({ success: true, result });
+    } catch (error) {
+      sendResponse({ success: false, error: error.message });
+    }
+  }
+
+  handlePanelMessage(event, data, requestId, source) {
+    this.eventBus.emit(event, data, { source: EVENT_CONTEXT.PANEL })
+      .then(result => {
+        if (requestId) {
+          source.postMessage({
+            type: 'CONTENT_RESPONSE',
+            requestId,
+            success: true,
+            result
+          }, '*');
+        }
+      })
+      .catch(error => {
+        if (requestId) {
+          source.postMessage({
+            type: 'CONTENT_RESPONSE',
+            requestId,
+            success: false,
+            error: error.message
+          }, '*');
+        }
+      });
+  }
+
+  handleContentMessage(event, data, requestId, source) {
+    this.eventBus.emit(event, data, { source: EVENT_CONTEXT.CONTENT })
+      .then(result => {
+        if (requestId) {
+          source.postMessage({
+            type: 'PANEL_RESPONSE',
+            requestId,
+            success: true,
+            result
+          }, '*');
+        }
+      })
+      .catch(error => {
+        if (requestId) {
+          source.postMessage({
+            type: 'PANEL_RESPONSE',
+            requestId,
+            success: false,
+            error: error.message
+          }, '*');
+        }
+      });
+  }
+
+  // ── Context-Specific Handlers ────────────────────────────────────
+
+  setupBackgroundHandlers() {
+    // Handle routing requests
+    this.on('ROUTE_TO_CONTENT', async ({ event, data, tabId }) => {
+      return this.sendToContent(event, data, 5000, tabId);
+    });
+
+    // Handle state synchronization
+    this.on('STATE_UPDATE', (update) => {
+      this.broadcast('STATE_SYNC', update, { exclude: ['background'] });
+    });
+  }
+
+  setupContentHandlers() {
+    // Handle panel routing
+    this.on('ROUTE_TO_PANEL', async ({ event, data }) => {
+      return this.sendToPanel(event, data);
+    });
+
+    // Handle state sync from background
+    this.on('STATE_SYNC', (update) => {
+      this.eventBus.emit('BACKGROUND_STATE_SYNC', update);
+    });
+  }
+
+  setupPopupHandlers() {
+    // Popup is mainly for sending commands, minimal handling needed
+  }
+
+  setupPanelHandlers() {
+    // Handle commands from content script
+    this.on('CONTENT_COMMAND', (command) => {
+      this.eventBus.emit('EXECUTE_COMMAND', command);
+    });
+  }
+
+  // ── Utility Methods ──────────────────────────────────────────────
+
+  getBroadcastTargets(exclude = []) {
+    const allTargets = [EVENT_CONTEXT.BACKGROUND, EVENT_CONTEXT.CONTENT, EVENT_CONTEXT.PANEL];
+    return allTargets.filter(target => 
+      target !== this.context && !exclude.includes(target)
+    );
+  }
+
+  findPanelWindow() {
+    // Look for panel iframe or popup window
+    const panelFrame = document.querySelector('#webwire-panel iframe');
+    if (panelFrame) {
+      return panelFrame.contentWindow;
+    }
+
+    // Look for panel elements that might have their own window context
+    const panelContainer = document.querySelector('#webwire-container');
+    if (panelContainer && panelContainer.contentWindow) {
+      return panelContainer.contentWindow;
+    }
+
+    return null;
+  }
+
+  // ── Debugging and Utilities ──────────────────────────────────────
+
+  getStats() {
+    return {
+      context: this.context,
+      pendingRequests: this.pendingRequests.size,
+      errorBoundaryStats: this.errorBoundary.getErrorStats(),
+      eventBusStats: this.eventBus.getTotalListeners()
+    };
+  }
+
+  destroy() {
+    // Clear pending requests
+    for (const [requestId, pending] of this.pendingRequests) {
+      clearTimeout(pending.timeoutId);
+      pending.reject(new Error('EventDispatcher destroyed'));
+    }
+    this.pendingRequests.clear();
+
+    // Cleanup event bus
+    this.eventBus.destroy();
+  }
+}
