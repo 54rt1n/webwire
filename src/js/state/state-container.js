@@ -172,7 +172,9 @@ export function createInitialState() {
         },
 
         ui: {
-            // ui state
+            // Panel display state - persists across browser sessions
+            panelVisible: false,
+            // Other ui state
         },
     };
 }

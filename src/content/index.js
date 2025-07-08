@@ -69,14 +69,35 @@ class WebWireContentScript {
             console.error('Settings loading failed, but content script will continue:', error);
         }
         
-        // Auto-inject if configured
+        // Auto-inject if configured OR if panel was previously visible (from background state)
         try {
-            if (await this.shouldAutoInject()) {
-                console.log('Auto-inject enabled, injecting panel...');
+            const shouldInject = await this.shouldAutoInject();
+            
+            // Get panel visibility state from background worker
+            const backgroundState = await this.getBackgroundState();
+            const shouldShowPanel = backgroundState?.ui?.panelVisible || false;
+            
+            console.log('[WebWireContent] Panel state from background:', {
+                shouldInject,
+                shouldShowPanel,
+                backgroundState: backgroundState?.ui
+            });
+            
+            if (shouldInject || shouldShowPanel) {
+                console.log(shouldInject ? 'Auto-inject enabled, injecting panel...' : 'Panel was previously visible, restoring...');
                 await this.injectPanel();
+                
+                // If panel should be visible (not just auto-inject), show it
+                if (shouldShowPanel) {
+                    console.log('Showing panel based on background state');
+                    // Small delay to ensure panel is fully initialized
+                    setTimeout(() => {
+                        this.panel.show(); // Use direct show() to avoid recursive state saving
+                    }, 100);
+                }
             }
         } catch (error) {
-            console.error('Auto-inject failed:', error);
+            console.error('Auto-inject/restore failed:', error);
         }
         
         console.log('WebWire content script initialization complete - ready for messages');
@@ -658,19 +679,72 @@ class WebWireContentScript {
         }
     }
 
-    showPanel() {
+    async showPanel() {
         this.panel.show();
+        // Persist panel visibility state in background
+        await this.savePanelVisibilityState(true);
     }
 
-    hidePanel() {
+    async hidePanel() {
         this.panel.hide();
+        // Persist panel visibility state in background
+        await this.savePanelVisibilityState(false);
     }
 
-    togglePanel() {
+    /**
+     * Save panel visibility state to background worker
+     * @param {boolean} visible - Whether the panel is visible
+     */
+    async savePanelVisibilityState(visible) {
+        try {
+            console.log(`[WebWireContent] Saving panel visibility state to background: ${visible}`);
+            
+            const response = await chrome.runtime.sendMessage({
+                action: 'SAVE_PANEL_VISIBILITY',
+                visible: visible
+            });
+
+            if (response && response.success) {
+                console.log(`[WebWireContent] Panel visibility state saved to background: ${visible}`);
+            } else {
+                console.warn('[WebWireContent] Failed to save panel visibility state:', response?.error);
+            }
+        } catch (error) {
+            console.error('[WebWireContent] Error saving panel visibility state:', error);
+        }
+    }
+
+    /**
+     * Get current state from background worker
+     */
+    async getBackgroundState() {
+        try {
+            const response = await chrome.runtime.sendMessage({
+                action: 'GET_WEBWIRE_STATE'
+            });
+
+            if (response && response.success) {
+                return response.state;
+            } else {
+                console.warn('[WebWireContent] Failed to get background state:', response?.error);
+                return null;
+            }
+        } catch (error) {
+            console.error('[WebWireContent] Error getting background state:', error);
+            return null;
+        }
+    }
+
+    async togglePanel() {
         if (!this.panel.isReady()) {
-            this.injectPanel();
+            await this.injectPanel();
         } else {
-            this.panel.toggle();
+            // Use our persistent show/hide methods instead of panel.toggle()
+            if (this.panel.isVisible) {
+                await this.hidePanel();
+            } else {
+                await this.showPanel();
+            }
         }
     }
 
@@ -1027,6 +1101,53 @@ if (typeof window !== 'undefined') {
             enhanced,
             lengthDiff: enhanced.length - original.length
         };
+    };
+
+    WebWireContentScript.prototype.debugPanelPersistence = function() {
+        console.log('=== WebWire Panel Persistence Debug ===');
+        console.log('Current panel visible state:', this.panel.isVisible);
+        
+        const testActions = {
+            showPanel: () => {
+                console.log('Testing: Show panel (will persist state to background)');
+                return this.showPanel();
+            },
+            hidePanel: () => {
+                console.log('Testing: Hide panel (will persist state to background)');
+                return this.hidePanel();
+            },
+            togglePanel: () => {
+                console.log('Testing: Toggle panel (will persist state to background)');
+                return this.togglePanel();
+            },
+            checkBackgroundState: async () => {
+                console.log('Testing: Check background state');
+                const state = await this.getBackgroundState();
+                console.log('Background state:', state);
+                console.log('Panel visible in background:', state?.ui?.panelVisible);
+                return state;
+            },
+            testRestore: async () => {
+                console.log('Testing: Restore panel from background state');
+                const state = await this.getBackgroundState();
+                const shouldShow = state?.ui?.panelVisible || false;
+                console.log('Should show panel:', shouldShow);
+                if (shouldShow) {
+                    this.panel.show();
+                    console.log('Panel restored to visible state');
+                } else {
+                    this.panel.hide();
+                    console.log('Panel restored to hidden state');
+                }
+                return shouldShow;
+            }
+        };
+        
+        console.log('Available test actions:', Object.keys(testActions));
+        console.log('Usage: webwire.debugPanelPersistence().showPanel()');
+        console.log('Usage: webwire.debugPanelPersistence().checkBackgroundState()');
+        
+        return testActions;
     };
 }
 

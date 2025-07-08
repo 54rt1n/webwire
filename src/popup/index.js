@@ -57,17 +57,18 @@ class WebWirePopupApp {
 
     /**
      * Toggle the WebWire panel on the current page
+     * Panel visibility state is now persistent across browser sessions
      */
     async togglePanel() {
         try {
-            console.log('[WebWirePopupApp] Toggling WebWire panel...');
+            console.log('[WebWirePopupApp] Toggling WebWire panel (state will be persisted)...');
             
             const response = await chrome.runtime.sendMessage({
                 action: 'TOGGLE_WEBWIRE_PANEL'
             });
 
             if (response.success) {
-                console.log('[WebWirePopupApp] Panel toggled successfully');
+                console.log('[WebWirePopupApp] Panel toggled successfully, visibility state saved');
                 // Refresh status to reflect changes
                 await this.popup.loadStatus();
                 // Close popup after successful toggle

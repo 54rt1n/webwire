@@ -550,10 +550,26 @@ export class WebWirePanel {
      */
     setupEventListeners() {
         // FAB click to show panel
-        this.elements.fab?.addEventListener('click', () => this.show());
+        this.elements.fab?.addEventListener('click', () => {
+            // Use the content script's showPanel method to persist state to background
+            if (window.webwire && window.webwire.showPanel) {
+                window.webwire.showPanel();
+            } else {
+                // Fallback to local show if content script not available
+                this.show();
+            }
+        });
 
         // Close button
-        this.elements.closeBtn?.addEventListener('click', () => this.hide());
+        this.elements.closeBtn?.addEventListener('click', () => {
+            // Use the content script's hidePanel method to persist state to background
+            if (window.webwire && window.webwire.hidePanel) {
+                window.webwire.hidePanel();
+            } else {
+                // Fallback to local hide if content script not available
+                this.hide();
+            }
+        });
 
         // Send button and input handling
         this.elements.sendBtn?.addEventListener('click', () => this.handleSendMessage());

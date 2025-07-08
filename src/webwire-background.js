@@ -68,6 +68,9 @@ class WebWireBackground {
             await this.stateService.settings.loadSettings();
             console.log('[WebWireBackground] Settings loaded, current state.settings:', this.stateService.state.settings);
             
+            await this.stateService.ui.loadUiState();
+            console.log('[WebWireBackground] UI state loaded, current state.ui:', this.stateService.state.ui);
+            
             await this.stateService.disk.loadFromStorage();
             console.log('[WebWireBackground] Disk state loaded');
             
@@ -94,11 +97,42 @@ class WebWireBackground {
                 this.stateService.state.mcp = { ...this.stateService.state.mcp, ...state.mcp };
             }
             
+            if (state.ui) {
+                this.stateService.state.ui = { ...this.stateService.state.ui, ...state.ui };
+                await this.stateService.ui.saveUiState();
+            }
+            
             await this.stateService.disk.saveState();
             return true;
         } catch (error) {
             console.error('Failed to save WebWire state:', error);
             return false;
+        }
+    }
+
+    /**
+     * Save panel visibility state
+     * @param {boolean} visible - Whether the panel should be visible
+     */
+    async savePanelVisibilityState(visible) {
+        try {
+            console.log(`[WebWireBackground] Saving panel visibility state: ${visible}`);
+
+            if (!this.stateService.state.ui) {
+                this.stateService.state.ui = {};
+            }
+            
+            // Update UI state with panel visibility
+            this.stateService.state.ui.panelVisible = visible;
+            
+            // Save UI state
+            await this.stateService.ui.saveUiState();
+            
+            console.log(`[WebWireBackground] Panel visibility state saved successfully: ${visible}`);
+            return true;
+        } catch (error) {
+            console.error('[WebWireBackground] Failed to save panel visibility state:', error);
+            throw error;
         }
     }
 
@@ -403,6 +437,15 @@ class WebWireBackground {
                     sendResponse({ success: true });
                     return false;
 
+                case 'SAVE_PANEL_VISIBILITY':
+                    this.savePanelVisibilityState(message.visible)
+                        .then(() => sendResponse({ success: true }))
+                        .catch(error => sendResponse({ 
+                            success: false, 
+                            error: error.message 
+                        }));
+                    return true;
+
                 case 'GET_OR_CREATE_CURRENT_THREAD':
                     const currentThreadId = this.stateService.conversation.getOrCreateCurrentConversation(message.options || {});
                     const currentThreadData = {
@@ -624,6 +667,7 @@ class WebWireBackground {
             console.log('[WebWireBackground] 🔄 WebWire state/settings changed, reloading state...');
             try {
                 await this.stateService.settings.loadSettings();
+                await this.stateService.ui.loadUiState();
                 await this.stateService.disk.loadFromStorage();
                 console.log('[WebWireBackground] ✅ WebWire state reloaded after storage change');
                 
@@ -861,6 +905,7 @@ class WebWireBackground {
                 settings: this.stateService.state.settings || {},
                 conversation: this.stateService.state.conversation || {},
                 mcp: this.stateService.state.mcp || {},
+                ui: this.stateService.state.ui || {},
                 panelInjected: false, // We'll determine this by trying to ping content script
                 frameworkReady: true
             };
