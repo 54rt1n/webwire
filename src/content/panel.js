@@ -572,11 +572,11 @@ export class WebWirePanel {
 
         // Quick action buttons
         this.elements.analyzePageBtn?.addEventListener('click', () => {
-            this.handleSendMessage('Please analyze this webpage and provide insights about its content, structure, and purpose.');
+            this.handlePageAnalysisRequest();
         });
 
         this.elements.analyzeBtn?.addEventListener('click', () => {
-            this.handleSendMessage('Please analyze this webpage and provide insights about its content, structure, and purpose.');
+            this.handlePageAnalysisRequest();
         });
     }
 
@@ -656,6 +656,18 @@ export class WebWirePanel {
             type: 'WEBWIRE_PANEL_MESSAGE',
             action: 'SEND_CHAT_MESSAGE',
             data: { message }
+        }, '*');
+    }
+
+    /**
+     * Handle page analysis request using the enhanced chatpanel pattern
+     */
+    handlePageAnalysisRequest() {
+        // Request page analysis using the page utils pattern
+        window.postMessage({
+            type: 'WEBWIRE_PANEL_MESSAGE',
+            action: 'ANALYZE_PAGE_CONTENT',
+            data: {}
         }, '*');
     }
 
@@ -748,7 +760,6 @@ export class WebWirePanel {
             // Format the content and update
             const formattedContent = this.formatMessageContent(content);
             streamingContent.innerHTML = formattedContent;
-            console.log('[WebWirePanel] Updated streaming content:', formattedContent);
         } else {
             console.log('[WebWirePanel] Streaming content element not found');
         }
@@ -862,7 +873,7 @@ export class WebWirePanel {
         // Re-setup analyze button event
         const analyzeBtn = welcomeEl.querySelector('#analyze-page-btn');
         analyzeBtn?.addEventListener('click', () => {
-            this.handleSendMessage('Please analyze this webpage and provide insights about its content, structure, and purpose.');
+            this.handlePageAnalysisRequest();
         });
 
         this.elements.chatContent.appendChild(welcomeEl);

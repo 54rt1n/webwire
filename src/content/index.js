@@ -5,6 +5,7 @@ import { ToolParser } from '../js/mcp/tool-parser.js';
 import { ToolFormatter } from '../js/mcp/tool-formatter.js';
 import { EventBus } from '../js/core/event-bus.js';
 import { WebWirePanel } from './panel.js';
+import { pageUtils } from './page-utils.js';
 
 /**
  * WebWire Content Script - Lightweight Version
@@ -172,6 +173,11 @@ class WebWireContentScript {
                     await this.handleChatMessage(data.message);
                     break;
                     
+                case 'ANALYZE_PAGE_CONTENT':
+                    const analysisRequest = pageUtils.buildAnalysisRequest();
+                    await this.handleChatMessage(analysisRequest);
+                    break;
+                    
                 case 'CONNECT_MCP':
                     await this.connectToMCP(data.url);
                     break;
@@ -184,7 +190,7 @@ class WebWireContentScript {
                     break;
                     
                 case 'GET_PAGE_CONTENT':
-                    const content = this.getPageContent();
+                    const content = pageUtils.getCurrentPageContent();
                     this.sendToPanel({ 
                         type: 'PAGE_CONTENT_RESPONSE', 
                         content 
@@ -297,13 +303,40 @@ class WebWireContentScript {
                     tools = await this.mcpConnector.getTools();
                     if (tools && tools.length > 0) {
                         systemPrompt = ToolFormatter.generateSystemPrompt(tools);
-                        
-                        // Add page context to user message
-                        const pageContent = this.getPageContent();
-                        userMessage = `Page Context:\nTitle: ${pageContent.title}\nURL: ${pageContent.url}\n\nUser Message: ${userMessage}`;
                     }
                 } catch (error) {
                     console.warn('Failed to get MCP tools:', error);
+                }
+            }
+
+            // Prepare messages for API (with page context) vs storage (without context)
+            // Always enhance the first user message in the conversation with page context for API
+            
+            // Add current user message to conversation history
+            const newUserMessage = {
+                role: 'user',
+                content: userMessage,
+                timestamp: Date.now()
+            };
+            const allMessages = [...messages, newUserMessage];
+            
+            // Create enhanced version for API - enhance the first user message with page context
+            const messagesForAPI = [...allMessages];
+            const firstUserIndex = messagesForAPI.findIndex(msg => msg.role === 'user');
+            if (firstUserIndex !== -1) {
+                const firstUserMessage = messagesForAPI[firstUserIndex];
+                
+                // Only enhance if it's not already a page analysis request
+                const isAnalysisRequest = firstUserMessage.content.startsWith('Please analyze this webpage:');
+                
+                if (!isAnalysisRequest) {
+                    messagesForAPI[firstUserIndex] = {
+                        ...firstUserMessage,
+                        content: pageUtils.enhanceMessageWithContext(firstUserMessage.content)
+                    };
+                    console.log('[WebWireContent] Enhanced first user message with page context for API');
+                } else {
+                    console.log('[WebWireContent] Skipped enhancement for page analysis request (already includes context)');
                 }
             }
 
@@ -321,8 +354,9 @@ class WebWireContentScript {
             let response = null;
             try {
                 console.log('[WebWireContent] Generating AI response...');
-                // Generate AI response using conversation history from background
-                response = await this.aiClient.generateTurn(userMessage, messages, { 
+                // Generate AI response using enhanced messages (with page context) for API
+                // Note: We pass empty userMessage since it's already in messagesForAPI
+                response = await this.aiClient.generateTurn('', messagesForAPI, { 
                     systemPrompt,
                     maxHistory: 10 
                 });
@@ -354,10 +388,10 @@ class WebWireContentScript {
             // Get current timestamp for consistent storage
             const timestamp = Date.now();
 
-            // Prepare messages for storage
+            // Prepare messages for storage (using original unenhanced content)
             const userMsg = { 
                 role: 'user', 
-                content: userMessage,
+                content: userMessage, // Original user message without page context
                 timestamp,
                 url: window.location.href,
                 title: document.title
@@ -908,79 +942,7 @@ class WebWireContentScript {
         });
     }
 
-    getPageContent() {
-        // Extract meaningful content from the page
-        const content = {
-            title: document.title,
-            url: window.location.href,
-            text: this.extractTextContent(),
-            headings: this.extractHeadings(),
-            links: this.extractLinks(),
-            images: this.extractImages(),
-            metadata: this.extractMetadata()
-        };
-        
-        return content;
-    }
 
-    extractTextContent() {
-        // Remove script and style elements
-        const tempDoc = document.cloneNode(true);
-        const elementsToRemove = tempDoc.querySelectorAll('script, style, nav, footer, aside');
-        elementsToRemove.forEach(el => el.remove());
-        
-        const text = tempDoc.body ? tempDoc.body.innerText : '';
-        return text.slice(0, 10000); // Limit to 10KB
-    }
-
-    extractHeadings() {
-        const headings = [];
-        document.querySelectorAll('h1, h2, h3, h4, h5, h6').forEach(heading => {
-            headings.push({
-                level: parseInt(heading.tagName.charAt(1)),
-                text: heading.textContent.trim()
-            });
-        });
-        return headings.slice(0, 20);
-    }
-
-    extractLinks() {
-        const links = [];
-        document.querySelectorAll('a[href]').forEach(link => {
-            const href = link.getAttribute('href');
-            const text = link.textContent.trim();
-            if (href && text && href !== '#') {
-                links.push({ href, text });
-            }
-        });
-        return links.slice(0, 50);
-    }
-
-    extractImages() {
-        const images = [];
-        document.querySelectorAll('img[src]').forEach(img => {
-            const src = img.getAttribute('src');
-            const alt = img.getAttribute('alt') || '';
-            if (src) {
-                images.push({ src, alt });
-            }
-        });
-        return images.slice(0, 20);
-    }
-
-    extractMetadata() {
-        const metadata = {};
-        
-        document.querySelectorAll('meta').forEach(meta => {
-            const name = meta.getAttribute('name') || meta.getAttribute('property');
-            const content = meta.getAttribute('content');
-            if (name && content) {
-                metadata[name] = content;
-            }
-        });
-        
-        return metadata;
-    }
 
     showError(message) {
         console.error('WebWire Error:', message);
@@ -1048,7 +1010,23 @@ if (typeof window !== 'undefined') {
 
     WebWireContentScript.prototype.getPageInfo = function() {
         console.log('Getting page content...');
-        return this.getPageContent();
+        return pageUtils.getCurrentPageContent();
+    };
+
+    WebWireContentScript.prototype.debugMessageEnhancement = function(testMessage = 'Test message') {
+        console.log('=== WebWire Message Enhancement Debug ===');
+        const original = testMessage;
+        const enhanced = pageUtils.enhanceMessageWithContext(testMessage);
+        
+        console.log('Original Message:', original);
+        console.log('Enhanced Message (sent to API):', enhanced);
+        console.log('Difference in length:', enhanced.length - original.length, 'characters');
+        
+        return {
+            original,
+            enhanced,
+            lengthDiff: enhanced.length - original.length
+        };
     };
 }
 
