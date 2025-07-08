@@ -1,116 +1,40 @@
-import { initializeContext } from '../js/context/context-init.js';
 import { EVENTS } from '../js/core/events.js';
 import { AIClientFactory } from '../js/ai/ai-client-factory.js';
 import MCPConnector from '../js/mcp/mcp-connector.js';
 import { ToolParser } from '../js/mcp/tool-parser.js';
 import { ToolFormatter } from '../js/mcp/tool-formatter.js';
 import { EventBus } from '../js/core/event-bus.js';
+import { WebWirePanel } from './panel.js';
 
 /**
- * Proxy for state management that communicates with background script
- */
-class BackgroundStateProxy {
-    constructor() {
-        this.cache = {};
-    }
-
-    async getSettings() {
-        try {
-            const response = await chrome.runtime.sendMessage({
-                action: 'GET_WEBWIRE_SETTINGS'
-            });
-            if (!response) {
-                console.error('[BackgroundStateProxy] No response from background');
-                return {};
-            }
-            if (response.success) {
-                return response.settings || {};
-            } else {
-                console.error('[BackgroundStateProxy] Background returned error:', response.error);
-                return {};
-            }
-        } catch (error) {
-            console.error('[BackgroundStateProxy] Failed to get settings from background:', error);
-            return {};
-        }
-    }
-
-    async saveSettings(settings) {
-        try {
-            const response = await chrome.runtime.sendMessage({
-                action: 'SAVE_WEBWIRE_SETTINGS',
-                settings
-            });
-            return response.success;
-        } catch (error) {
-            console.error('[BackgroundStateProxy] Failed to save settings to background:', error);
-            return false;
-        }
-    }
-
-    async getState() {
-        try {
-            const response = await chrome.runtime.sendMessage({
-                action: 'GET_WEBWIRE_STATE'
-            });
-            if (!response) {
-                console.error('[BackgroundStateProxy] No response from background');
-                return {};
-            }
-            if (response.success) {
-                return response.state || {};
-            } else {
-                console.error('[BackgroundStateProxy] Background returned error:', response.error);
-                return {};
-            }
-        } catch (error) {
-            console.error('[BackgroundStateProxy] Failed to get state from background:', error);
-            return {};
-        }
-    }
-
-    async saveState(state) {
-        try {
-            const response = await chrome.runtime.sendMessage({
-                action: 'SAVE_WEBWIRE_STATE',
-                state
-            });
-            return response.success;
-        } catch (error) {
-            console.error('[BackgroundStateProxy] Failed to save state to background:', error);
-            return false;
-        }
-    }
-}
-
-/**
- * WebWire Content Script - Integrated Version
+ * WebWire Content Script - Lightweight Version
  * 
- * Properly integrated with WebWire framework components:
- * - Uses background script for state management
- * - Leverages AI client factory and MCP connector
- * - Uses existing panel components
- * - Handles extension communication
+ * Page-local AI and MCP processing with background thread storage:
+ * - Manages AI client and MCP connector locally on the page
+ * - Uses background script for conversation thread persistence
+ * - Provides panel UI for user interaction
  */
 class WebWireContentScript {
     constructor() {
-        this.panelInjected = false;
-        this.panelContainer = null;
-        this.webwireApp = null;
+        this.panel = new WebWirePanel();
         this.streamingState = {
             isActive: false,
             currentContent: '',
-            messageId: null
+            messageId: null,
+            currentMessage: null,
+            streamingText: '',
+            messageCounter: 0
         };
         
-        // Initialize WebWire framework components
+        // Page-local AI/MCP components only
         this.eventBus = new EventBus();
-        this.storage = null;
-        this.stateService = null;
         this.aiClient = null;
         this.mcpConnector = null;
         this.toolParser = new ToolParser();
-        this.conversationId = 'content-script-' + Date.now();
+        
+        // Thread management via background script
+        this.currentThreadId = null;
+        this.currentSettings = {};
     }
 
     async initialize() {
@@ -132,16 +56,16 @@ class WebWireContentScript {
         this.listenForInjectionRequests();
         console.log('Injection listeners set up');
         
-        // Initialize with background-based state management
+        // Load settings from background and initialize AI/MCP
         try {
-            await this.initializeBackgroundState();
-            console.log('Background state initialized successfully');
+            await this.loadSettingsFromBackground();
+            console.log('Settings loaded from background successfully');
             
             // Initialize AI client and MCP connector with loaded settings
-            await this.initializeWithSettings(this.currentState?.settings || {});
+            await this.initializeWithSettings(this.currentSettings);
             
         } catch (error) {
-            console.error('Background state initialization failed, but content script will continue:', error);
+            console.error('Settings loading failed, but content script will continue:', error);
         }
         
         // Auto-inject if configured
@@ -157,34 +81,30 @@ class WebWireContentScript {
         console.log('WebWire content script initialization complete - ready for messages');
     }
 
-    async initializeBackgroundState() {
-        // Create lightweight state proxy that communicates with background
-        this.stateProxy = new BackgroundStateProxy();
-        
-        // Load initial state from background
+    async loadSettingsFromBackground() {
         try {
             const response = await chrome.runtime.sendMessage({
-                action: 'GET_WEBWIRE_STATE'
+                action: 'GET_WEBWIRE_SETTINGS'
             });
 
-            console.log('[WebWireContent] Initial state from background:', response);
+            console.log('[WebWireContent] Settings from background:', response);
             
             if (!response) {
-                console.error('[WebWireContent] Received undefined response from background script - likely async handling issue');
-                this.currentState = {};
+                console.error('[WebWireContent] No response from background script');
+                this.currentSettings = {};
                 return;
             }
             
             if (response.success) {
-                this.currentState = response.state || {};
-                console.log('[WebWireContent] Successfully loaded state:', this.currentState);
+                this.currentSettings = response.settings || {};
+                console.log('[WebWireContent] Successfully loaded settings:', this.currentSettings);
             } else {
                 console.error('[WebWireContent] Background script returned error:', response.error);
-                this.currentState = {};
+                this.currentSettings = {};
             }
         } catch (error) {
-            console.error('Failed to load initial state from background:', error);
-            this.currentState = {};
+            console.error('Failed to load settings from background:', error);
+            this.currentSettings = {};
         }
     }
 
@@ -212,25 +132,9 @@ class WebWireContentScript {
         }
     }
 
-    setupWebWireEventListeners() {
-        // Listen for streaming AI responses
-        this.dispatcher.on(EVENTS.AI.STREAM_CHUNK, ({ chunk }) => {
-            this.handleStreamChunk({ content: chunk });
-        });
-
-        // Listen for MCP events
-        this.dispatcher.on(EVENTS.MCP.CONNECTED, () => {
-            this.sendToPanel({ type: 'MCP_CONNECTED' });
-        });
-
-        this.dispatcher.on(EVENTS.MCP.TOOLS_UPDATED, ({ tools }) => {
-            this.sendToPanel({ type: 'MCP_TOOLS_UPDATED', tools });
-        });
-    }
-
     async connectToMCP(url) {
         try {
-            this.mcpConnector = new MCPConnector(url, this.stateService);
+            this.mcpConnector = new MCPConnector(url);
             await this.mcpConnector.initialize();
             console.log('[WebWireContentScript] Connected to MCP server');
         } catch (error) {
@@ -246,7 +150,7 @@ class WebWireContentScript {
     }
 
     setupPanelCommunication() {
-        // Listen for messages from the injected panel
+        // Listen for messages from the panel
         window.addEventListener('message', (event) => {
             if (event.source !== window) return;
             
@@ -288,19 +192,51 @@ class WebWireContentScript {
                     break;
                     
                 case 'GET_STATE':
-                    const state = await this.stateProxy.getState();
-                    this.sendToPanel({
-                        type: 'STATE_RESPONSE',
-                        state
-                    });
+                    // Get current thread and settings from background
+                    try {
+                        const threadResponse = await chrome.runtime.sendMessage({
+                            action: 'GET_ACTIVE_THREAD'
+                        });
+                        const currentThread = threadResponse.success ? threadResponse.thread : null;
+                        
+                        this.sendToPanel({
+                            type: 'STATE_RESPONSE',
+                            state: {
+                                currentThread: currentThread,
+                                settings: this.currentSettings,
+                                mcpConnected: this.mcpConnector ? true : false,
+                                aiClientConfigured: this.aiClient ? true : false
+                            }
+                        });
+                    } catch (error) {
+                        this.sendToPanel({
+                            type: 'STATE_RESPONSE',
+                            state: {
+                                currentThread: null,
+                                settings: {},
+                                mcpConnected: false,
+                                aiClientConfigured: false
+                            }
+                        });
+                    }
                     break;
                     
                 case 'SAVE_SETTINGS':
-                    const success = await this.stateProxy.saveSettings(data.settings);
-                    this.sendToPanel({
-                        type: 'SAVE_SETTINGS_RESPONSE',
-                        success
-                    });
+                    try {
+                        const response = await chrome.runtime.sendMessage({
+                            action: 'SAVE_WEBWIRE_SETTINGS',
+                            settings: data.settings
+                        });
+                        this.sendToPanel({
+                            type: 'SAVE_SETTINGS_RESPONSE',
+                            success: response.success
+                        });
+                    } catch (error) {
+                        this.sendToPanel({
+                            type: 'SAVE_SETTINGS_RESPONSE',
+                            success: false
+                        });
+                    }
                     break;
                     
                 default:
@@ -316,7 +252,10 @@ class WebWireContentScript {
     }
 
     async handleChatMessage(userMessage) {
+        console.log('[WebWireContent] Starting to handle chat message:', userMessage);
+        
         if (!this.aiClient) {
+            console.log('[WebWireContent] No AI client configured, sending error to panel');
             this.sendToPanel({
                 type: 'ERROR',
                 error: 'AI client not configured'
@@ -325,81 +264,146 @@ class WebWireContentScript {
         }
 
         try {
-            // Add user message
+            // Add user message to panel
+            console.log('[WebWireContent] Sending user message to panel');
             this.sendToPanel({
                 type: 'CHAT_MESSAGE',
                 message: { role: 'user', content: userMessage }
             });
 
-            // Get conversation history
-            const history = this.stateService.conversation.getConversationMessages(this.conversationId);
+            // Get or create current thread from background
+            const threadResponse = await chrome.runtime.sendMessage({
+                action: 'GET_OR_CREATE_CURRENT_THREAD',
+                options: {
+                    title: `Page: ${document.title}`,
+                    url: window.location.href
+                }
+            });
+
+            if (!threadResponse.success) {
+                throw new Error('Failed to get conversation thread: ' + threadResponse.error);
+            }
+
+            const { threadId, metadata, messages } = threadResponse.thread;
+            this.currentThreadId = threadId;
 
             // Create system prompt with tools if MCP is connected
             let systemPrompt = "You are a helpful assistant analyzing web pages and helping users.";
             let tools = [];
             
-            if (this.mcpConnector && this.stateService.mcp.isMcpConnected()) {
-                tools = this.stateService.mcp.getMcpTools();
-                systemPrompt = ToolFormatter.generateSystemPrompt(tools);
-                
-                // Add page context to user message
-                const pageContent = this.getPageContent();
-                userMessage = `Page Context:\nTitle: ${pageContent.title}\nURL: ${pageContent.url}\n\nUser Message: ${userMessage}`;
-            }
-
-            // Start streaming response
-            this.streamingState.isActive = true;
-            this.streamingState.currentContent = '';
-            
-            this.sendToPanel({
-                type: 'CHAT_MESSAGE_START',
-                message: { role: 'assistant', content: '' }
-            });
-
-            // Generate AI response
-            const response = await this.aiClient.generateTurn(userMessage, history, { 
-                systemPrompt,
-                metadata: this.stateService.aim.getAimMetadata(),
-                maxHistory: 10 
-            });
-
-            // Parse for tool calls if MCP is connected
-            let toolResults = [];
-            if (this.mcpConnector && tools.length > 0) {
-                const parseResult = this.toolParser.parseResponse(response);
-                if (parseResult.success && parseResult.toolCalls.length > 0) {
-                    toolResults = await this.executeToolCalls(parseResult.toolCalls);
+            if (this.mcpConnector) {
+                // Get MCP tools from local connector
+                try {
+                    tools = await this.mcpConnector.getTools();
+                    if (tools && tools.length > 0) {
+                        systemPrompt = ToolFormatter.generateSystemPrompt(tools);
+                        
+                        // Add page context to user message
+                        const pageContent = this.getPageContent();
+                        userMessage = `Page Context:\nTitle: ${pageContent.title}\nURL: ${pageContent.url}\n\nUser Message: ${userMessage}`;
+                    }
+                } catch (error) {
+                    console.warn('Failed to get MCP tools:', error);
                 }
             }
 
-            // Store conversation
-            const userMsg = { role: 'user', content: userMessage };
+            // Create thinking message and get handle
+            console.log('[WebWireContent] Creating thinking message');
+            const thinkingMessage = this.addThinkingMessage('Thinking...');
+            let streamingText = '';
+
+            // Set up exclusive stream handler for this request
+            const unsubscribeStream = this.eventBus.onExclusive(EVENTS.AI.STREAM_CHUNK, (data) => {
+                streamingText += data.chunk;
+                this.handleStreamingChunk(data.chunk, thinkingMessage);
+            });
+
+            let response = null;
+            try {
+                console.log('[WebWireContent] Generating AI response...');
+                // Generate AI response using conversation history from background
+                response = await this.aiClient.generateTurn(userMessage, messages, { 
+                    systemPrompt,
+                    maxHistory: 10 
+                });
+
+                if (!response) {
+                    throw new Error('No response received from AI client');
+                }
+                console.log('[WebWireContent] AI response received:', response);
+            } finally {
+                // Clean up stream handler
+                unsubscribeStream();
+            }
+
+            // Parse for tool calls if MCP is connected
+            let toolResults = [];
+            let toolCalls = [];
+            let parseErrors = [];
+            
+            if (this.mcpConnector && tools.length > 0) {
+                const parseResult = this.toolParser.parseResponse(response);
+                if (parseResult.success && parseResult.toolCalls.length > 0) {
+                    toolCalls = parseResult.toolCalls;
+                    toolResults = await this.executeToolCalls(parseResult.toolCalls);
+                } else if (parseResult.errors && parseResult.errors.length > 0) {
+                    parseErrors = parseResult.errors;
+                }
+            }
+
+            // Get current timestamp for consistent storage
+            const timestamp = Date.now();
+
+            // Prepare messages for storage
+            const userMsg = { 
+                role: 'user', 
+                content: userMessage,
+                timestamp,
+                url: window.location.href,
+                title: document.title
+            };
+            
             const assistantMsg = { 
                 role: 'assistant', 
                 content: response,
-                toolResults 
+                timestamp: timestamp + 1,
+                toolResults,
+                toolCalls,
+                parseErrors,
+                url: window.location.href,
+                title: document.title
             };
-            
-            this.stateService.conversation.storeMessage(
-                this.conversationId,
-                userMsg,
-                assistantMsg,
-                this.stateService.aim.getAimMessageOptions()
-            );
 
-            // Save state
-            await this.stateService.disk.saveState();
-
-            // Complete streaming
-            this.streamingState.isActive = false;
-            this.sendToPanel({
-                type: 'CHAT_MESSAGE_COMPLETE',
-                message: assistantMsg
+            // Store conversation in background with complete storeMessage parameters
+            const saveResponse = await chrome.runtime.sendMessage({
+                action: 'SAVE_THREAD_MESSAGE',
+                threadId: threadId,
+                userMessage: userMsg,
+                assistantMessage: assistantMsg,
+                options: {
+                    userName: this.currentSettings?.aim?.userName || 'user',
+                    personaName: this.currentSettings?.aim?.personaName || 'assistant',
+                    mood: this.currentSettings?.aim?.mood || null,
+                    location: window.location.href,
+                    timestamp,
+                    toolResults,
+                    toolCalls,
+                    parseErrors,
+                    url: window.location.href,
+                    title: document.title
+                }
             });
+
+            if (!saveResponse.success) {
+                console.warn('Failed to save conversation to background:', saveResponse.error);
+            }
+
+            // Finalize the thinking message with the complete response
+            console.log('[WebWireContent] Finalizing thinking message with complete response');
+            this.finalizeStreamingMessage(thinkingMessage, response);
 
         } catch (error) {
             console.error('Error handling chat message:', error);
-            this.streamingState.isActive = false;
             this.sendToPanel({
                 type: 'ERROR',
                 error: error.message
@@ -457,41 +461,68 @@ class WebWireContentScript {
     }
 
     sendToPanel(message) {
-        window.postMessage({
-            type: 'WEBWIRE_FROM_CONTENT',
-            ...message
-        }, '*');
+        // Direct method calls instead of window messaging since panel is in same context
+        console.log('[WebWireContent] Calling panel method directly:', message);
+        
+        switch (message.type) {
+            case 'CHAT_MESSAGE':
+                this.panel.displayMessage(message.message);
+                break;
+                
+            case 'CHAT_THINKING_START':
+                this.panel.displayThinkingMessage(message.message);
+                break;
+                
+            case 'CHAT_STREAMING_CHUNK':
+                this.panel.updateStreamingMessage(message.messageId, message.fullContent);
+                break;
+                
+            case 'CHAT_THINKING_COMPLETE':
+                if (message.finalContent) {
+                    // Finalize the thinking message with final content
+                    this.panel.finalizeThinkingMessage(message.messageId, message.finalContent);
+                } else {
+                    // Just remove the thinking message
+                    this.panel.removeThinkingMessage(message.messageId);
+                }
+                break;
+                
+            case 'CONVERSATION_UPDATED':
+                this.panel.displayConversation(message.conversation);
+                break;
+                
+            case 'CONNECTION_STATUS_UPDATE':
+                this.panel.updateConnectionStatus(message.status, message.aiConnected, message.mcpConnected);
+                break;
+                
+            case 'INITIAL_STATE':
+                this.panel.handleInitialState(message.state);
+                break;
+                
+            case 'ERROR':
+                this.panel.displayError(message.error);
+                break;
+                
+            default:
+                console.warn('[WebWireContent] Unknown panel message type:', message.type);
+        }
     }
 
     updateConnectionStatus() {
-        if (!this.panelInjected) return;
-        
-        const statusIndicator = this.panelContainer?.querySelector('.status-indicator');
-        const statusText = this.panelContainer?.querySelector('.status-text');
-        
-        if (!statusIndicator || !statusText) return;
-        
         const aiConnected = this.aiClient ? true : false;
         const mcpConnected = this.mcpConnector ? true : false;
         
-        let status, color;
+        let status;
         
         if (aiConnected && mcpConnected) {
             status = 'AI + MCP Ready';
-            color = '#10b981'; // green
         } else if (aiConnected) {
             status = 'AI Ready';
-            color = '#3b82f6'; // blue
         } else if (mcpConnected) {
             status = 'MCP Connected';
-            color = '#f59e0b'; // yellow
         } else {
             status = 'Configuring...';
-            color = '#6b7280'; // gray
         }
-        
-        statusText.textContent = status;
-        statusIndicator.style.backgroundColor = color;
         
         // Send status update to panel
         this.sendToPanel({
@@ -521,8 +552,7 @@ class WebWireContentScript {
     async shouldAutoInject() {
         try {
             // Check if auto-inject is enabled in settings
-            const settings = await this.stateProxy.getSettings();
-            return settings?.ui?.autoInject || false;
+            return this.currentSettings?.ui?.autoInject || false;
         } catch (error) {
             console.warn('Could not check auto-inject setting:', error);
             return false;
@@ -530,51 +560,19 @@ class WebWireContentScript {
     }
 
     async injectPanel() {
-        if (this.panelInjected) {
-            this.showPanel();
+        if (this.panel.isReady()) {
+            this.panel.show();
             return;
         }
 
         try {
             console.log('[WebWireContent] Injecting WebWire panel...');
             
-            // Create container for the panel
-            this.panelContainer = document.createElement('div');
-            this.panelContainer.id = 'webwire-container';
-            this.panelContainer.style.cssText = `
-                position: fixed;
-                top: 0;
-                left: 0;
-                right: 0;
-                bottom: 0;
-                pointer-events: none;
-                z-index: 2147483647;
-                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            `;
+            // Initialize the panel
+            await this.panel.initialize();
             
-            // Load and inject the panel HTML
-            const panelHTML = await this.createPanelHTML();
-            this.panelContainer.innerHTML = panelHTML;
-            
-            // Enable pointer events for the panel elements
-            const panel = this.panelContainer.querySelector('.webwire-panel');
-            const fab = this.panelContainer.querySelector('.webwire-fab');
-            
-            if (panel) panel.style.pointerEvents = 'auto';
-            if (fab) fab.style.pointerEvents = 'auto';
-            
-            // Inject CSS
-            await this.injectCSS();
-            
-            // Setup panel JavaScript
-            this.setupPanelJS();
-            
-            // Add to page
-            document.body.appendChild(this.panelContainer);
-            this.panelInjected = true;
-            
-            // Send initial state to panel
-            await this.sendInitialState();
+            // Send initial state directly to panel methods
+            await this.sendInitialStateDirectly();
             
             console.log('WebWire panel injected successfully');
             
@@ -584,507 +582,61 @@ class WebWireContentScript {
         }
     }
 
-    async createPanelHTML() {
-        return `
-            <div id="webwire-panel" class="webwire-panel hidden">
-                <div class="panel-header">
-                    <div class="header-top">
-                        <div class="agent-info">
-                            <span class="agent-name">WebWire Assistant</span>
-                            <span class="conversation-id">Page Analysis Ready</span>
-                        </div>
-                        <div class="header-actions">
-                            <button class="btn-icon" id="analyze-page" title="Analyze Page">
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/>
-                                    <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>
-                                </svg>
-                            </button>
-                            <button class="btn-icon" id="mcp-status" title="MCP Status">
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
-                                </svg>
-                            </button>
-                            <button class="btn-icon" id="close-panel" title="Close">
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <line x1="18" y1="6" x2="6" y2="18"/>
-                                    <line x1="6" y1="6" x2="18" y2="18"/>
-                                </svg>
-                            </button>
-                        </div>
-                    </div>
-                    <div class="connection-status" id="connection-status">
-                        <span class="status-indicator"></span>
-                        <span class="status-text">Ready</span>
-                    </div>
-                </div>
-
-                <div class="chat-content" id="chat-content">
-                    <div class="welcome-message">
-                        <div class="welcome-icon">🤖</div>
-                        <h3>WebWire Assistant</h3>
-                        <p>I can analyze this webpage and help you with questions. I also have access to various tools through MCP integration.</p>
-                        <div class="quick-actions">
-                            <button class="quick-action-btn" id="analyze-page-btn">
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/>
-                                    <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>
-                                </svg>
-                                Analyze This Page
-                            </button>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="loading-indicator" id="loading-indicator" style="display: none;">
-                    <div class="loading-content">
-                        <div class="spinner"></div>
-                        <span>Processing...</span>
-                    </div>
-                </div>
-
-                <div class="chat-input-container">
-                    <div class="input-wrapper">
-                        <textarea 
-                            id="chat-input" 
-                            placeholder="Ask me anything about this page or use tools..."
-                            rows="1"
-                        ></textarea>
-                        <button id="send-button" class="send-button" disabled>
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <line x1="22" y1="2" x2="11" y2="13"/>
-                                <polygon points="22,2 15,22 11,13 2,9 22,2"/>
-                            </svg>
-                        </button>
-                    </div>
-                </div>
-            </div>
-            <div id="webwire-fab" class="webwire-fab">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-                </svg>
-            </div>
-        `;
-    }
-
-    async injectCSS() {
-        if (document.getElementById('webwire-styles')) return;
-        
-        const style = document.createElement('style');
-        style.id = 'webwire-styles';
-        style.textContent = this.getCSS();
-        document.head.appendChild(style);
-    }
-
-    getCSS() {
-        return `
-            .webwire-panel {
-                position: fixed;
-                top: 20px;
-                right: 20px;
-                width: 400px;
-                height: 600px;
-                background: white;
-                border: 1px solid #e2e8f0;
-                border-radius: 12px;
-                box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
-                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-                z-index: 2147483647;
-                display: flex;
-                flex-direction: column;
-                overflow: hidden;
-                transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            }
-            
-            .webwire-panel.hidden {
-                opacity: 0;
-                transform: translateX(100%) scale(0.95);
-                pointer-events: none;
-            }
-            
-            .webwire-fab {
-                position: fixed;
-                bottom: 24px;
-                right: 24px;
-                width: 56px;
-                height: 56px;
-                background: #3b82f6;
-                color: white;
-                border: none;
-                border-radius: 50%;
-                cursor: pointer;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                box-shadow: 0 10px 25px -3px rgba(0, 0, 0, 0.1);
-                z-index: 2147483646;
-                transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            }
-            
-            .webwire-fab:hover {
-                background: #2563eb;
-                transform: scale(1.1);
-            }
-            
-            .webwire-fab.hidden {
-                opacity: 0;
-                transform: scale(0);
-                pointer-events: none;
-            }
-            
-            .panel-header {
-                padding: 16px;
-                border-bottom: 1px solid #e2e8f0;
-                background: #f8fafc;
-            }
-            
-            .header-top {
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-                margin-bottom: 8px;
-            }
-            
-            .agent-name {
-                font-weight: 600;
-                color: #1e293b;
-            }
-            
-            .conversation-id {
-                font-size: 12px;
-                color: #64748b;
-            }
-            
-            .header-actions {
-                display: flex;
-                gap: 8px;
-            }
-            
-            .btn-icon {
-                width: 32px;
-                height: 32px;
-                border: none;
-                background: transparent;
-                border-radius: 6px;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                cursor: pointer;
-                color: #64748b;
-                transition: all 0.2s;
-            }
-            
-            .btn-icon:hover {
-                background: #e2e8f0;
-                color: #1e293b;
-            }
-            
-            .connection-status {
-                display: flex;
-                align-items: center;
-                gap: 8px;
-                font-size: 12px;
-                color: #64748b;
-            }
-            
-            .status-indicator {
-                width: 8px;
-                height: 8px;
-                border-radius: 50%;
-                background: #10b981;
-            }
-            
-            .chat-content {
-                flex: 1;
-                overflow-y: auto;
-                padding: 16px;
-            }
-            
-            .welcome-message {
-                text-align: center;
-                padding: 32px 16px;
-            }
-            
-            .welcome-icon {
-                font-size: 48px;
-                margin-bottom: 16px;
-            }
-            
-            .welcome-message h3 {
-                margin: 0 0 8px 0;
-                color: #1e293b;
-            }
-            
-            .welcome-message p {
-                margin: 0 0 24px 0;
-                color: #64748b;
-                line-height: 1.5;
-            }
-            
-            .quick-actions {
-                display: flex;
-                justify-content: center;
-            }
-            
-            .quick-action-btn {
-                display: flex;
-                align-items: center;
-                gap: 8px;
-                padding: 12px 16px;
-                border: 1px solid #e2e8f0;
-                border-radius: 8px;
-                background: white;
-                color: #1e293b;
-                cursor: pointer;
-                transition: all 0.2s;
-                font-size: 14px;
-            }
-            
-            .quick-action-btn:hover {
-                background: #f8fafc;
-                border-color: #cbd5e1;
-            }
-            
-            .chat-input-container {
-                padding: 16px;
-                border-top: 1px solid #e2e8f0;
-                background: white;
-            }
-            
-            .input-wrapper {
-                display: flex;
-                gap: 8px;
-                align-items: flex-end;
-            }
-            
-            #chat-input {
-                flex: 1;
-                border: 1px solid #e2e8f0;
-                border-radius: 8px;
-                padding: 12px;
-                font-size: 14px;
-                resize: none;
-                outline: none;
-                max-height: 120px;
-                font-family: inherit;
-            }
-            
-            #chat-input:focus {
-                border-color: #3b82f6;
-                box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-            }
-            
-            .send-button {
-                width: 40px;
-                height: 40px;
-                border: none;
-                border-radius: 8px;
-                background: #3b82f6;
-                color: white;
-                cursor: pointer;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                transition: all 0.2s;
-            }
-            
-            .send-button:hover:not(:disabled) {
-                background: #2563eb;
-            }
-            
-            .send-button:disabled {
-                background: #cbd5e1;
-                cursor: not-allowed;
-            }
-            
-            .chat-message {
-                margin-bottom: 16px;
-                padding: 12px;
-                border-radius: 8px;
-                max-width: 85%;
-            }
-            
-            .chat-message.user {
-                background: #dbeafe;
-                margin-left: auto;
-                border-bottom-right-radius: 4px;
-            }
-            
-            .chat-message.assistant {
-                background: #f0f9ff;
-                margin-right: auto;
-                border-bottom-left-radius: 4px;
-            }
-            
-            .loading-indicator {
-                position: absolute;
-                top: 50%;
-                left: 50%;
-                transform: translate(-50%, -50%);
-                background: rgba(255, 255, 255, 0.95);
-                padding: 20px;
-                border-radius: 8px;
-                box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-            }
-            
-            .loading-content {
-                display: flex;
-                align-items: center;
-                gap: 12px;
-                color: #64748b;
-            }
-            
-            .spinner {
-                width: 20px;
-                height: 20px;
-                border: 2px solid #e2e8f0;
-                border-top: 2px solid #3b82f6;
-                border-radius: 50%;
-                animation: spin 1s linear infinite;
-            }
-            
-            @keyframes spin {
-                to { transform: rotate(360deg); }
-            }
-        `;
-    }
-
-    setupPanelJS() {
-        // Setup event listeners for the injected panel
-        const fab = this.panelContainer.querySelector('#webwire-fab');
-        const panel = this.panelContainer.querySelector('#webwire-panel');
-        const closeBtn = this.panelContainer.querySelector('#close-panel');
-        const chatInput = this.panelContainer.querySelector('#chat-input');
-        const sendBtn = this.panelContainer.querySelector('#send-button');
-        const analyzeBtn = this.panelContainer.querySelector('#analyze-page-btn');
-
-        if (fab) {
-            fab.addEventListener('click', () => this.showPanel());
-        }
-
-        if (closeBtn) {
-            closeBtn.addEventListener('click', () => this.hidePanel());
-        }
-
-        if (chatInput) {
-            chatInput.addEventListener('input', () => {
-                const hasText = chatInput.value.trim().length > 0;
-                sendBtn.disabled = !hasText;
-                
-                // Auto-resize
-                chatInput.style.height = 'auto';
-                chatInput.style.height = chatInput.scrollHeight + 'px';
-            });
-
-            chatInput.addEventListener('keydown', (e) => {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                    e.preventDefault();
-                    this.sendChatMessage();
-                }
-            });
-        }
-
-        if (sendBtn) {
-            sendBtn.addEventListener('click', () => this.sendChatMessage());
-        }
-
-        if (analyzeBtn) {
-            analyzeBtn.addEventListener('click', () => {
-                this.sendChatMessage('Please analyze this webpage and provide insights about its content, structure, and purpose.');
-            });
-        }
-    }
-
-    sendChatMessage(message = null) {
-        const chatInput = this.panelContainer.querySelector('#chat-input');
-        const userMessage = message || chatInput.value.trim();
-        
-        if (!userMessage) return;
-
-        // Clear input
-        if (!message) {
-            chatInput.value = '';
-            chatInput.style.height = 'auto';
-            this.panelContainer.querySelector('#send-button').disabled = true;
-        }
-
-        // Send message to be processed
-        this.handlePanelMessage({
-            action: 'SEND_CHAT_MESSAGE',
-            data: { message: userMessage }
-        });
-    }
-
-    async sendInitialState() {
-        // Send current state to panel
+    async sendInitialStateDirectly() {
         try {
-            // Use cached state if available, otherwise fetch fresh
-            let state = this.currentState;
-            if (!state || Object.keys(state).length === 0) {
-                const response = await this.stateProxy.getState();
-                state = response || {};
-                this.currentState = state;
+            // Get current thread from background if available
+            let currentThread = null;
+            try {
+                const threadResponse = await chrome.runtime.sendMessage({
+                    action: 'GET_ACTIVE_THREAD'
+                });
+                if (threadResponse.success) {
+                    currentThread = threadResponse.thread;
+                }
+            } catch (error) {
+                console.warn('Could not get active thread:', error);
             }
             
-            this.sendToPanel({
-                type: 'INITIAL_STATE',
-                state: {
-                    conversation: state.conversation || {},
-                    mcpConnected: this.mcpConnector ? true : false,
-                    aiClientConfigured: this.aiClient ? true : false,
-                    tools: state.tools || [],
-                    settings: state.settings || {},
-                    panelInjected: this.panelInjected,
-                    frameworkReady: true
-                }
-            });
+            const state = {
+                currentThread: currentThread,
+                mcpConnected: this.mcpConnector ? true : false,
+                aiClientConfigured: this.aiClient ? true : false,
+                settings: this.currentSettings,
+                panelInjected: this.panel.isReady(),
+                frameworkReady: true
+            };
             
-            console.log('[WebWireContent] Initial state sent to panel');
+            // Call panel methods directly
+            this.panel.handleInitialState(state);
+            
+            console.log('[WebWireContent] Initial state sent directly to panel');
         } catch (error) {
-            console.error('Failed to send initial state:', error);
-            this.sendToPanel({
-                type: 'INITIAL_STATE',
-                state: {
-                    conversation: {},
-                    mcpConnected: false,
-                    aiClientConfigured: false,
-                    tools: [],
-                    settings: {},
-                    panelInjected: this.panelInjected,
-                    frameworkReady: false
-                }
-            });
+            console.error('Failed to send initial state directly:', error);
+            const fallbackState = {
+                currentThread: null,
+                mcpConnected: false,
+                aiClientConfigured: false,
+                settings: {},
+                panelInjected: this.panel.isReady(),
+                frameworkReady: false
+            };
+            this.panel.handleInitialState(fallbackState);
         }
     }
 
     showPanel() {
-        if (this.panelContainer) {
-            const panel = this.panelContainer.querySelector('.webwire-panel');
-            const fab = this.panelContainer.querySelector('.webwire-fab');
-            if (panel) panel.classList.remove('hidden');
-            if (fab) fab.classList.add('hidden');
-        }
+        this.panel.show();
     }
 
     hidePanel() {
-        if (this.panelContainer) {
-            const panel = this.panelContainer.querySelector('.webwire-panel');
-            const fab = this.panelContainer.querySelector('.webwire-fab');
-            if (panel) panel.classList.add('hidden');
-            if (fab) fab.classList.remove('hidden');
-        }
+        this.panel.hide();
     }
 
     togglePanel() {
-        if (!this.panelInjected) {
+        if (!this.panel.isReady()) {
             this.injectPanel();
         } else {
-            const panel = this.panelContainer.querySelector('.webwire-panel');
-            if (panel.classList.contains('hidden')) {
-                this.showPanel();
-            } else {
-                this.hidePanel();
-            }
+            this.panel.toggle();
         }
     }
 
@@ -1094,15 +646,8 @@ class WebWireContentScript {
         try {
             const newSettings = data.settings || {};
             
-            // Update local state cache if we have one
-            if (this.currentState) {
-                this.currentState.settings = newSettings;
-            }
-            
-            // Clear state proxy cache so fresh settings are loaded next time
-            if (this.stateProxy) {
-                this.stateProxy.cache = {};
-            }
+            // Update local settings cache
+            this.currentSettings = newSettings;
             
             // Reinitialize AI client if AI settings changed
             if (newSettings.ai && (newSettings.ai.models || newSettings.ai.providers)) {
@@ -1114,19 +659,42 @@ class WebWireContentScript {
                 await this.reinitializeMCPConnector(newSettings);
             }
             
-            // Notify panel of settings change
-            this.sendToPanel({
-                type: 'SETTINGS_UPDATED',
-                settings: newSettings
-            });
-            
-            // Update connection status
+            // Update connection status (this calls panel directly)
             this.updateConnectionStatus();
             
             console.log('[WebWireContent] Settings change processed successfully');
             
         } catch (error) {
             console.error('[WebWireContent] Error handling settings change:', error);
+        }
+    }
+
+    handleConversationUpdate(data) {
+        console.log('[WebWireContent] Conversation update notification received:', data);
+        
+        try {
+            const { conversation } = data;
+            
+            if (conversation) {
+                // Update our local thread state
+                if (conversation.isActive) {
+                    this.currentThreadId = conversation.threadId;
+                    console.log('[WebWireContent] Updated active thread ID:', this.currentThreadId);
+                }
+                
+                // Update panel UI directly
+                if (this.panel && this.panel.isReady()) {
+                    this.panel.displayConversation({
+                        ...conversation,
+                        isCurrentThread: conversation.threadId === this.currentThreadId
+                    });
+                }
+                
+                console.log('[WebWireContent] Updated local state and panel UI');
+            }
+            
+        } catch (error) {
+            console.error('[WebWireContent] Error handling conversation update:', error);
         }
     }
 
@@ -1143,8 +711,6 @@ class WebWireContentScript {
                     provider,
                     ...providerSettings
                 });
-
-                // TODO add sampler settings to the client
                 
                 // Create new AI client with updated settings
                 this.aiClient = AIClientFactory.createClient(
@@ -1232,7 +798,9 @@ class WebWireContentScript {
                         sendResponse({
                             success: true,
                             state: {
-                                panel: this,
+                                panelInjected: this.panel.isReady(),
+                                mcpConnected: this.mcpConnector ? true : false,
+                                aiClientConfigured: this.aiClient ? true : false
                             }
                         });
                     } catch (error) {
@@ -1240,7 +808,9 @@ class WebWireContentScript {
                         sendResponse({
                             success: true,
                             state: {
-                                panel: this
+                                panelInjected: false,
+                                mcpConnected: false,
+                                aiClientConfigured: false
                             }
                         });
                     }
@@ -1249,6 +819,12 @@ class WebWireContentScript {
                 case 'SETTINGS_CHANGED':
                     // Settings have been updated - notify panel and update local cache
                     this.handleSettingsChanged(message.data);
+                    sendResponse({ success: true });
+                    return false;
+                    
+                case 'CONVERSATION_UPDATED':
+                    // Conversation has been updated - notify panel
+                    this.handleConversationUpdate(message.data);
                     sendResponse({ success: true });
                     return false;
                     
@@ -1269,16 +845,66 @@ class WebWireContentScript {
         }
     }
 
-    handleStreamChunk(message) {
-        if (!this.panelInjected) return;
+    /**
+     * Add a thinking message and return a handle for streaming updates
+     * @param {string} message - Initial message content
+     * @returns {Object} Message handle with ID for updates
+     */
+    addThinkingMessage(message) {
+        const messageId = `thinking-${++this.streamingState.messageCounter}`;
         
-        this.streamingState.isActive = true;
-        this.streamingState.currentContent += message.content;
-        
+        // Send thinking message start to panel
         this.sendToPanel({
-            type: 'STREAM_CHUNK',
-            content: message.content,
-            fullContent: this.streamingState.currentContent
+            type: 'CHAT_THINKING_START',
+            message: {
+                id: messageId,
+                content: message,
+                role: 'assistant'
+            }
+        });
+        
+        return { id: messageId };
+    }
+    
+    /**
+     * Handle streaming chunks for a specific message
+     * @param {string} chunk - Text chunk to append
+     * @param {Object} messageHandle - Message handle from addThinkingMessage
+     */
+    handleStreamingChunk(chunk, messageHandle) {
+        if (!this.streamingState.isActive) {
+            // Start new streaming
+            this.streamingState.isActive = true;
+            this.streamingState.streamingText = '';
+            this.streamingState.currentMessage = messageHandle;
+        }
+        
+        // Append chunk to streaming text
+        this.streamingState.streamingText += chunk;
+        
+        // Send chunk update to panel
+        this.sendToPanel({
+            type: 'CHAT_STREAMING_CHUNK',
+            messageId: messageHandle.id,
+            chunk: chunk,
+            fullContent: this.streamingState.streamingText
+        });
+    }
+    
+    /**
+     * Finalize streaming and clean up the thinking message
+     * @param {Object} messageHandle - Message handle to finalize
+     */
+    finalizeStreamingMessage(messageHandle, finalContent) {
+        this.streamingState.isActive = false;
+        this.streamingState.currentMessage = null;
+        this.streamingState.streamingText = '';
+        
+        // Send finalization to panel
+        this.sendToPanel({
+            type: 'CHAT_THINKING_COMPLETE',
+            messageId: messageHandle.id,
+            finalContent: finalContent // Pass the final content
         });
     }
 
@@ -1392,20 +1018,21 @@ export function getWebWireInstance() {
 }
 
 export function isWebWireReady() {
-    return webwireContentScript && webwireContentScript.stateService;
+    return webwireContentScript && (webwireContentScript.aiClient || webwireContentScript.mcpConnector);
 }
 
 // Add debug methods to the WebWire class prototype for window access
 if (typeof window !== 'undefined') {
     WebWireContentScript.prototype.debug = function() {
         return {
-            panelInjected: this.panelInjected,
+            panelInjected: this.panel.isReady(),
             mcpConnected: this.mcpConnector ? true : false,
             aiClientConfigured: this.aiClient ? true : false,
-            conversationId: this.conversationId,
-            frameworkReady: this.stateService ? true : false,
+            currentThreadId: this.currentThreadId,
+            frameworkReady: true,
             streamingActive: this.streamingState.isActive,
-            currentContent: this.streamingState.currentContent
+            currentContent: this.streamingState.currentContent,
+            currentSettings: this.currentSettings
         };
     };
 

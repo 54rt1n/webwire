@@ -36,7 +36,7 @@ export class FeatherlessClient extends AbstractAIClient {
      * @param {Object} options - Additional options including system prompt
      * @returns {Promise<string>} AI response
      */
-    async generateTurn(userTurn, history = [], { systemPrompt, apiHeaders, ...options } = {}) {
+    async generateTurn(userTurn, history = [], { systemPrompt, apiHeaders = {}, ...options } = {}) {
         if (!this.isConfigured()) {
             throw new Error('Featherless API key not configured');
         }
@@ -48,7 +48,7 @@ export class FeatherlessClient extends AbstractAIClient {
             console.log('[FeatherlessClient]', 'Sending messages to AI:', messages);
             apiHeaders['HTTP-Referer'] = 'https://webwire.ai/';
             apiHeaders['X-Title'] = 'Webwire';
-            const response = await this.streamChatCompletion(messages, options);
+            const response = await this.streamChatCompletion(messages, { ...options, apiHeaders });
             
             // Reset error counters on success
             this.state.consecutiveErrors = 0;

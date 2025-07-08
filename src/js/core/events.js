@@ -43,7 +43,8 @@ export const EVENTS = {
     CONVERSATION: {
         UPDATED: 'conversation:updated',
         DELETED: 'conversation:deleted',
-        STATUS_UPDATED: 'conversation:status_updated'
+        STATUS_UPDATED: 'conversation:status_updated',
+        ACTIVATED: 'conversation:activated'
     },
     AIM: {
         THOUGHT_TOGGLED: 'aim:thought_toggled',

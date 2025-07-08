@@ -167,5 +167,135 @@ export class ConversationStatePlugin {
         return null;
     }
 
+    // ==== THREAD-LIKE CONVENIENCE METHODS ====
+
+    /**
+     * Creates a thread-style conversation ID
+     * @param {string} [userName] - User name (defaults to current settings)
+     * @param {string} [personaName] - Persona name (defaults to current settings)
+     * @returns {string} Thread-style conversation ID
+     */
+    createThreadId(userName, personaName) {
+        const user = userName || this.stateService.state.settings.aim.userName || 'user';
+        const persona = personaName || this.stateService.state.settings.aim.personaName || 'assistant';
+        const sessionId = Date.now().toString(36) + Math.random().toString(36).substr(2);
+        return `${user}-${persona}-${sessionId}`;
+    }
+
+    /**
+     * Get the current active conversation ID for the current user/persona
+     * @returns {string|null} Active conversation ID or null
+     */
+    getActiveConversationId() {
+        const currentUser = this.stateService.state.settings.aim.userName;
+        const currentPersona = this.stateService.state.settings.aim.personaName;
+        
+        if (!currentUser || !currentPersona) return null;
+
+        // Get conversations for current persona, filter by user, and find active ones
+        const conversations = this.getConversationsFor(currentPersona)
+            .filter(conv => conv.userName === currentUser && conv.status === 'active')
+            .sort((a, b) => (b.endTime || b.startTime) - (a.endTime || a.startTime));
+
+        return conversations.length > 0 ? conversations[0].id : null;
+    }
+
+    /**
+     * Set a conversation as active (and mark others as inactive)
+     * @param {string} conversationId - The conversation ID to set as active
+     */
+    setActiveConversation(conversationId) {
+        const targetMetadata = this.stateService.state.conversation.metadata[conversationId];
+        if (!targetMetadata) return;
+
+        const currentUser = targetMetadata.userName;
+        const currentPersona = targetMetadata.personaName;
+
+        // Mark other conversations for this user/persona as inactive
+        Object.values(this.stateService.state.conversation.metadata).forEach(metadata => {
+            if (metadata.userName === currentUser && 
+                metadata.personaName === currentPersona && 
+                metadata.id !== conversationId &&
+                metadata.status === 'active') {
+                metadata.status = 'inactive';
+            }
+        });
+
+        // Mark target conversation as active
+        this.updateConversationStatus(conversationId, 'active');
+        
+        console.log(`Set active conversation to ${conversationId}`);
+        this.eventBus.emit(EVENTS.CONVERSATION.ACTIVATED, { conversationId });
+    }
+
+    /**
+     * Get or create a conversation for the current user/persona
+     * @param {Object} [options={}] - Options for conversation creation
+     * @param {string} [options.title] - Conversation title
+     * @returns {string} The conversation ID
+     */
+    getOrCreateCurrentConversation(options = {}) {
+        // Try to get existing active conversation
+        let conversationId = this.getActiveConversationId();
+        
+        if (!conversationId) {
+            // Create new conversation for current user/persona
+            const currentUser = this.stateService.state.settings.aim.userName;
+            const currentPersona = this.stateService.state.settings.aim.personaName;
+            
+            conversationId = this.createThreadId(currentUser, currentPersona);
+            
+            // Initialize conversation with first (empty) message to set up metadata
+            this.storeMessage(
+                conversationId,
+                { role: 'system', content: '' }, // Placeholder to initialize
+                null,
+                {
+                    userName: currentUser,
+                    personaName: currentPersona,
+                    title: options.title || `${currentPersona} Conversation`,
+                    ...options
+                }
+            );
+
+            // Remove the placeholder system message
+            this.stateService.state.conversation.history[conversationId] = [];
+            
+            // Set as active
+            this.setActiveConversation(conversationId);
+        }
+
+        return conversationId;
+    }
+
+    /**
+     * List conversations with thread-like filtering and sorting
+     * @param {Object} [filters={}] - Filter options
+     * @param {string} [filters.userName] - Filter by user name
+     * @param {string} [filters.personaName] - Filter by persona name
+     * @param {string} [filters.status] - Filter by status
+     * @returns {Array} Array of conversation metadata objects
+     */
+    listConversations({ userName, personaName, status } = {}) {
+        let conversations = Object.values(this.stateService.state.conversation.metadata);
+
+        if (userName) {
+            conversations = conversations.filter(conv => conv.userName === userName);
+        }
+        if (personaName) {
+            conversations = conversations.filter(conv => conv.personaName === personaName);
+        }
+        if (status) {
+            conversations = conversations.filter(conv => conv.status === status);
+        }
+
+        // Sort by last update (endTime or startTime), newest first
+        return conversations.sort((a, b) => {
+            const timeA = a.endTime || a.startTime || 0;
+            const timeB = b.endTime || b.startTime || 0;
+            return timeB - timeA;
+        });
+    }
+
 
 }
