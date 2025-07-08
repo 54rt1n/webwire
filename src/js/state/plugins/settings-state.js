@@ -52,12 +52,12 @@ export class SettingsStatePlugin {
             type = 'chat';
 
         // If the type is not in the model config, return set the type to chat
-        if (!this.stateService.state.settings.ai.models[type]) {
+        if (!this.stateService.state.settings?.ai?.models[type]) {
             type = 'chat';
         }
 
-        const model = this.stateService.state.settings.ai.models[type];
-        const provider = this.stateService.state.settings.ai.providers[model.provider];
+        const model = this.stateService.state.settings?.ai?.models[type];
+        const provider = this.stateService.state.settings?.ai?.providers[model.provider];
         const config = {...model, ...provider};
         console.log('[StateService::SettingsState] Model config:', config);
         return config;

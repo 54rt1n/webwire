@@ -192,11 +192,17 @@ export class EventDispatcher {
       // Track request
       this.pendingRequests.set(requestId, { resolve, reject, timeoutId });
 
-      // Send message
-      chrome.runtime.sendMessage({
+      // Enhance message with tab context if available
+      const enhancedMessage = {
         ...message,
         requestId
-      }, (response) => {
+      };
+
+      // Add tab context when available and relevant
+      this.addTabContextToMessage(enhancedMessage);
+
+      // Send message
+      chrome.runtime.sendMessage(enhancedMessage, (response) => {
         const pending = this.pendingRequests.get(requestId);
         if (!pending) return; // Already timed out
 
@@ -210,6 +216,32 @@ export class EventDispatcher {
         }
       });
     });
+  }
+
+  // Helper method to add tab context to messages when available
+  addTabContextToMessage(message) {
+    // Don't override if message already has tabId
+    if (message.tabId) {
+      return;
+    }
+
+    try {
+      // In content script context, we can get the current tab info
+      if (this.context === EVENT_CONTEXT.CONTENT && typeof window !== 'undefined') {
+        // Note: Content scripts don't have direct access to tab ID
+        // but they can indicate they're from a content context
+        message.fromContent = true;
+      }
+
+      // In popup context, we could potentially get active tab
+      // but it's better to let the background script handle this
+      if (this.context === EVENT_CONTEXT.POPUP) {
+        message.needsActiveTab = true;
+      }
+    } catch (error) {
+      // Ignore errors in tab context detection
+      console.debug('Could not add tab context:', error.message);
+    }
   }
 
   async sendToSpecificTab(tabId, event, data, timeout = 5000) {
@@ -486,6 +518,21 @@ export class EventDispatcher {
   }
 
   // ── Utility Methods ──────────────────────────────────────────────
+
+  // Send event with explicit tab context
+  async dispatchWithTab(event, data, tabId, options = {}) {
+    const enhancedOptions = {
+      ...options,
+      target: options.target || EVENT_CONTEXT.BACKGROUND
+    };
+    
+    const enhancedData = {
+      ...data,
+      tabId
+    };
+    
+    return this.dispatch(event, enhancedData, enhancedOptions);
+  }
 
   getBroadcastTargets(exclude = []) {
     const allTargets = [EVENT_CONTEXT.BACKGROUND, EVENT_CONTEXT.CONTENT, EVENT_CONTEXT.PANEL];

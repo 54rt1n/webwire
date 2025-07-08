@@ -53,11 +53,16 @@ module.exports = (env, argv) => {
       new CopyPlugin({
         patterns: [
           { 
-            from: './src/manifest.json', 
+            from: './src/manifest.json.dist', 
             to: 'manifest.json',
             transform(content) {
               // Generate manifest based on package.json info
+              const packageJson = require('./package.json');
               const manifest = JSON.parse(content.toString());
+              
+              // Update version from package.json
+              manifest.version = packageJson.version;
+              
               return JSON.stringify(manifest, null, 2);
             } 
           },

@@ -38,6 +38,7 @@ export class WebWirePopup {
         this.analyzePageBtn = document.getElementById('analyze-page');
         this.openOptionsBtn = document.getElementById('open-options');
         this.helpLink = document.getElementById('help-link');
+        this.mcpLink = document.getElementById('mcp-link');
     }
 
     /**
@@ -82,7 +83,9 @@ export class WebWirePopup {
                 action: 'GET_WEBWIRE_STATE'
             });
 
-            if (response.success) {
+            console.log('response', response);
+
+            if (response && response.success) {
                 this.updateStatus(response.state);
             } else {
                 this.updateStatus({});

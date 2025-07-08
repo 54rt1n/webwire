@@ -28,8 +28,8 @@ export async function initializeContent(dispatcher) {
   
   // Setup MCP connector if configured
   let mcpConnector = null;
-  const mcpUrl = stateService.state.settings.mcp?.serverUrl;
-  const autoConnect = stateService.state.settings.mcp?.autoConnect;
+  const mcpUrl = stateService.state.settings?.mcp?.serverUrl;
+  const autoConnect = stateService.state.settings?.mcp?.autoConnect;
   if (mcpUrl && autoConnect) {
     mcpConnector = new MCPConnector(mcpUrl, stateService);
     try {

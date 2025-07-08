@@ -92,6 +92,7 @@ class OptionsApp {
     async saveAllSettings() {
         try {
             const settings = this.panel.getAllSettings();
+            console.log('[OptionsApp] Saving settings:', settings);
             
             // Basic validation
             if (!settings.ai.models.chat?.model || !settings.ai.models.chat?.provider) {

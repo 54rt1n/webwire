@@ -28,6 +28,8 @@ export class SettingsAdapter {
             await this.setAll(migrated);
             return migrated;
         }
+
+        console.log('[SettingsAdapter] Settings read:', data);
         
         return data;
     }
@@ -49,6 +51,8 @@ export class SettingsAdapter {
         if (success && this.eventBus) {
             this.eventBus.emit(EVENTS.SETTINGS.CHANGED, data);
         }
+
+        console.log('[SettingsAdapter] Settings saved:', data);
         
         return success;
     }

@@ -1,5 +1,6 @@
 import { EVENT_TYPES, EVENT_CONTEXT } from './js/core/events.js';
 import { initializeContext } from './js/context/context-init.js';
+
 /**
  * WebWire Extension Background Script
  * 
@@ -20,12 +21,15 @@ class WebWireBackground {
     async initialize() {
         console.log('WebWire background script initializing...');
 
-        const { dispatcher, errorBoundary } = await initializeContext(EVENT_CONTEXT.BACKGROUND);
+        const { dispatcher, errorBoundary, stateService, storage } = await initializeContext(EVENT_CONTEXT.BACKGROUND);
         this.dispatcher = dispatcher;
         this.errorBoundary = errorBoundary;
+        this.stateService = stateService;
+        this.storage = storage;
         
-        // Load extension settings
+        // Load extension settings and state
         await this.loadSettings();
+        await this.loadState();
         
         // Setup event listeners
         this.setupEventListeners();
@@ -55,6 +59,40 @@ class WebWireBackground {
         }
     }
 
+    async loadState() {
+        try {
+            await this.stateService.settings.loadSettings();
+            await this.stateService.disk.loadFromStorage();
+            console.log('WebWire state loaded in background');
+        } catch (error) {
+            console.error('Failed to load WebWire state:', error);
+        }
+    }
+
+    async saveState(state) {
+        try {
+            // Update state service and save
+            if (state.settings) {
+                this.stateService.state.settings = { ...this.stateService.state.settings, ...state.settings };
+                await this.stateService.settings.saveSettings();
+            }
+            
+            if (state.conversation) {
+                this.stateService.state.conversation = { ...this.stateService.state.conversation, ...state.conversation };
+            }
+            
+            if (state.mcp) {
+                this.stateService.state.mcp = { ...this.stateService.state.mcp, ...state.mcp };
+            }
+            
+            await this.stateService.disk.saveState();
+            return true;
+        } catch (error) {
+            console.error('Failed to save WebWire state:', error);
+            return false;
+        }
+    }
+
     setupEventListeners() {
         // Handle extension icon clicks
         chrome.action.onClicked.addListener((tab) => {
@@ -68,7 +106,16 @@ class WebWireBackground {
 
         // Handle messages from content scripts and popup
         chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-            return this.handleMessage(message, sender, sendResponse);
+            // Handle async operations by wrapping in a promise
+            this.handleMessage(message, sender, sendResponse)
+                .catch(error => {
+                    console.error('Error in handleMessage:', error);
+                    sendResponse({ 
+                        success: false, 
+                        error: error.message 
+                    });
+                });
+            return true; // Always return true to keep message channel open for async responses
         });
 
         // Handle tab updates
@@ -114,23 +161,42 @@ class WebWireBackground {
         }
     }
 
-    handleMessage(message, sender, sendResponse) {
+    async handleMessage(message, sender, sendResponse) {
         console.log('Background received message:', message.action, 'from:', sender);
+        console.log('State service available:', !!this.stateService);
         
         const { action } = message;
 
         try {
             switch (action) {
                 case 'GET_WEBWIRE_SETTINGS':
+                    const settings = this.stateService?.state?.settings || {};
                     sendResponse({ 
                         success: true, 
-                        settings: this.extensionSettings 
+                        settings: settings 
                     });
                     return false;
 
                 case 'SAVE_WEBWIRE_SETTINGS':
-                    this.saveSettings(message.settings)
-                        .then(() => sendResponse({ success: true }))
+                    if (this.stateService?.state && this.stateService?.settings) {
+                        this.stateService.state.settings = { ...this.stateService.state.settings, ...message.settings };
+                        this.stateService.settings.saveSettings()
+                            .then(() => sendResponse({ success: true }))
+                            .catch(error => sendResponse({ 
+                                success: false, 
+                                error: error.message 
+                            }));
+                    } else {
+                        sendResponse({ 
+                            success: false, 
+                            error: 'State service not initialized' 
+                        });
+                    }
+                    return true;
+
+                case 'SAVE_WEBWIRE_STATE':
+                    this.saveState(message.state)
+                        .then(success => sendResponse({ success }))
                         .catch(error => sendResponse({ 
                             success: false, 
                             error: error.message 
@@ -138,7 +204,7 @@ class WebWireBackground {
                     return true;
 
                 case 'INJECT_WEBWIRE_PANEL':
-                    this.injectPanel(sender.tab.id)
+                    this.handleInjectPanel(message, sender)
                         .then(() => sendResponse({ success: true }))
                         .catch(error => sendResponse({ 
                             success: false, 
@@ -147,7 +213,7 @@ class WebWireBackground {
                     return true;
 
                 case 'GET_WEBWIRE_STATE':
-                    this.getWebWireState(sender.tab.id)
+                    this.handleGetState(message, sender)
                         .then(state => sendResponse({ 
                             success: true, 
                             state 
@@ -168,11 +234,20 @@ class WebWireBackground {
                     return true;
 
                 case 'CAPTURE_PAGE_CONTENT':
-                    this.capturePageContent(sender.tab.id)
+                    this.handleCaptureContent(message, sender)
                         .then(content => sendResponse({ 
                             success: true, 
                             content 
                         }))
+                        .catch(error => sendResponse({ 
+                            success: false, 
+                            error: error.message 
+                        }));
+                    return true;
+
+                case 'TOGGLE_WEBWIRE_PANEL':
+                    this.handleTogglePanel(message, sender)
+                        .then(response => sendResponse(response))
                         .catch(error => sendResponse({ 
                             success: false, 
                             error: error.message 
@@ -194,6 +269,90 @@ class WebWireBackground {
                 error: error.message 
             });
             return false;
+        }
+    }
+
+    /**
+     * Resolves tab ID for operations that require tab context.
+     * 
+     * Tab ID Resolution Priority:
+     * 1. Explicit tabId in message payload (highest priority)
+     * 2. sender.tab.id when available (content script context)  
+     * 3. Active tab when message indicates it needs one or comes from non-tab context
+     * 
+     * Usage patterns:
+     * - Content scripts: sender.tab.id is automatically available
+     * - Popup/Options: Uses active tab as fallback
+     * - Panel: Should include explicit tabId in message or use active tab
+     * - Background: Can specify explicit tabId for targeted operations
+     * 
+     * @param {Object} sender - Chrome extension message sender object
+     * @param {Object} message - Message object that may contain tabId
+     * @returns {Promise<number>} The resolved tab ID
+     * @throws {Error} When no tab context is available
+     */
+    // Helper method to resolve tab ID from sender or message
+    async resolveTabId(sender, message) {
+        // If message explicitly includes a tab ID, use it
+        if (message.tabId) {
+            return message.tabId;
+        }
+        
+        // If sender has tab context (content script), use it
+        if (sender.tab && sender.tab.id) {
+            return sender.tab.id;
+        }
+        
+        // If message indicates it needs active tab or comes from non-tab context
+        if (message.needsActiveTab || !message.fromContent) {
+            const activeTab = await this.getActiveTab();
+            if (activeTab && activeTab.id) {
+                return activeTab.id;
+            }
+        }
+        
+        throw new Error('No tab context available for this operation');
+    }
+
+    async handleInjectPanel(message, sender) {
+        const tabId = await this.resolveTabId(sender, message);
+        return this.injectPanel(tabId);
+    }
+
+    async handleGetState(message, sender) {
+        const tabId = await this.resolveTabId(sender, message);
+        return this.getWebWireState(tabId);
+    }
+
+    async handleCaptureContent(message, sender) {
+        const tabId = await this.resolveTabId(sender, message);
+        return this.capturePageContent(tabId);
+    }
+
+    async handleTogglePanel(message, sender) {
+        const tabId = await this.resolveTabId(sender, message);
+        
+        try {
+            // First try to toggle the panel if content script is already loaded
+            await this.sendToContentScript(tabId, {
+                action: 'TOGGLE_WEBWIRE_PANEL'
+            });
+            
+            return { success: true };
+        } catch (error) {
+            // Content script not loaded, inject panel first
+            console.log('Content script not available for toggle, injecting panel...');
+            
+            try {
+                await this.injectPanel(tabId);
+                return { success: true, injected: true };
+            } catch (injectError) {
+                console.error('Failed to inject panel during toggle:', injectError);
+                return { 
+                    success: false, 
+                    error: 'Failed to inject WebWire panel: ' + injectError.message 
+                };
+            }
         }
     }
 
@@ -228,7 +387,7 @@ class WebWireBackground {
         try {
             await chrome.scripting.executeScript({
                 target: { tabId },
-                files: ['content/index.js']
+                files: ['content.js']
             });
             console.log('Content script injected into tab:', tabId);
         } catch (error) {
@@ -239,19 +398,23 @@ class WebWireBackground {
 
     async injectPanel(tabId) {
         try {
-            // Ensure content script is loaded
+            // Check if content script is already loaded and responsive
+            await this.pingContentScript(tabId);
+            
+            // Content script is available, inject panel
             await this.sendToContentScript(tabId, {
                 action: 'INJECT_WEBWIRE_PANEL'
             });
+            
         } catch (error) {
-            // If content script isn't available, inject it first
+            // Content script not available, inject it first
             console.log('Content script not available, injecting...');
             await this.injectContentScript(tabId);
             
-            // Wait a bit for initialization
-            await new Promise(resolve => setTimeout(resolve, 500));
+            // Wait for content script to initialize with exponential backoff
+            await this.waitForContentScript(tabId);
             
-            // Try again
+            // Now inject the panel
             await this.sendToContentScript(tabId, {
                 action: 'INJECT_WEBWIRE_PANEL'
             });
@@ -263,40 +426,121 @@ class WebWireBackground {
             const response = await chrome.tabs.sendMessage(tabId, message);
             return response;
         } catch (error) {
-            console.error('Failed to send message to content script:', error);
+            console.error('Failed to send message to content script:', tabId, message, error);
             throw error;
+        }
+    }
+
+    async pingContentScript(tabId) {
+        try {
+            const response = await chrome.tabs.sendMessage(tabId, { action: 'PING' });
+            if (response && response.success) {
+                return true;
+            }
+            throw new Error('Content script ping failed');
+        } catch (error) {
+            throw new Error('Content script not responsive');
+        }
+    }
+
+    async waitForContentScript(tabId, maxAttempts = 10) {
+        for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+            try {
+                await this.pingContentScript(tabId);
+                console.log(`Content script ready after ${attempt} attempts`);
+                return;
+            } catch (error) {
+                if (attempt === maxAttempts) {
+                    throw new Error(`Content script failed to initialize after ${maxAttempts} attempts`);
+                }
+                
+                // Exponential backoff: 100ms, 200ms, 400ms, 800ms, etc.
+                const delay = Math.min(100 * Math.pow(2, attempt - 1), 2000);
+                console.log(`Content script not ready, waiting ${delay}ms (attempt ${attempt}/${maxAttempts})`);
+                await new Promise(resolve => setTimeout(resolve, delay));
+            }
         }
     }
 
     async getWebWireState(tabId) {
         try {
-            // Get state from content script
-            const response = await this.sendToContentScript(tabId, {
-                action: 'GET_WEBWIRE_STATE'
-            });
+            // Check if state service is available
+            if (!this.stateService?.state) {
+                console.warn('State service not available, returning default state');
+                return {
+                    settings: {},
+                    conversation: {},
+                    mcp: {},
+                    panelInjected: false,
+                    mcpConnected: false,
+                    aiClientConfigured: false,
+                    frameworkReady: false
+                };
+            }
+
+            // Get state from our state service
+            const state = {
+                settings: this.stateService.state.settings || {},
+                conversation: this.stateService.state.conversation || {},
+                mcp: this.stateService.state.mcp || {},
+                panelInjected: false, // We'll determine this by trying to ping content script
+                frameworkReady: true
+            };
+
+            // Try to get additional state from content script if available
+            try {
+                await this.pingContentScript(tabId);
+                const response = await this.sendToContentScript(tabId, {
+                    action: 'GET_WEBWIRE_STATE'
+                });
+                
+                if (response.success && response.state) {
+                    state.panelInjected = response.state.panelInjected || false;
+                    state.mcpConnected = response.state.mcpConnected || false;
+                    state.aiClientConfigured = response.state.aiClientConfigured || false;
+                }
+            } catch (error) {
+                // Content script not available, use defaults
+                state.panelInjected = false;
+                state.mcpConnected = false;
+                state.aiClientConfigured = false;
+            }
             
-            return response.state || {};
+            console.log('[WebWireBackground] Returning state:', state);
+            return state;
         } catch (error) {
             console.error('Failed to get WebWire state:', error);
-            return {};
+            return {
+                error: 'Failed to get state',
+                settings: {},
+                conversation: {},
+                mcp: {},
+                panelInjected: false,
+                mcpConnected: false,
+                aiClientConfigured: false,
+                frameworkReady: false
+            };
         }
     }
 
     async handlePanelMessage(message, sender) {
         // Forward panel messages to appropriate handlers
-        const tabId = sender.tab.id;
-        
         try {
+            // Handle settings updates that don't need tab context
+            if (message.type === 'SETTINGS_UPDATE') {
+                await this.saveSettings(message.data.settings);
+                return { success: true };
+            }
+            
+            // For other messages, resolve tab ID
+            const tabId = await this.resolveTabId(sender, message);
+            
             switch (message.type) {
                 case 'AI_CHAT_REQUEST':
                     return await this.handleAIChatRequest(message.data, tabId);
                     
                 case 'MCP_CONNECT_REQUEST':
                     return await this.handleMCPConnectRequest(message.data, tabId);
-                    
-                case 'SETTINGS_UPDATE':
-                    await this.saveSettings(message.data.settings);
-                    return { success: true };
                     
                 default:
                     // Forward to content script

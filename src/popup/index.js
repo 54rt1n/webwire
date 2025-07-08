@@ -50,7 +50,8 @@ class WebWirePopupApp {
             onTogglePanel: () => this.togglePanel(),
             onAnalyzePage: () => this.analyzePage(),
             onOpenOptions: () => this.openOptions(),
-            onHelp: (e) => this.openHelp(e)
+            onHelp: (e) => this.openHelp(e),
+            onMCP: () => this.openMCP()
         });
     }
 
@@ -149,6 +150,25 @@ class WebWirePopupApp {
         } catch (error) {
             console.error('[WebWirePopupApp] Failed to open help:', error);
             this.popup.showError('Failed to open help');
+        }
+    }
+
+    /**
+     * Open the MCP panel
+     */
+    async openMCP() {
+        try {
+            console.log('[WebWirePopupApp] Opening MCP panel...');
+            
+            const mcpUrl = chrome.runtime.getURL('mcp/index.html');
+            await chrome.tabs.create({
+                url: mcpUrl
+            });
+            this.popup.close();
+            
+        } catch (error) {
+            console.error('[WebWirePopupApp] Failed to open MCP panel:', error);
+            this.popup.showError('Failed to open MCP panel');
         }
     }
 

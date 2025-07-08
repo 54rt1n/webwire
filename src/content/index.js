@@ -6,10 +6,87 @@ import { ToolParser } from '../js/mcp/tool-parser.js';
 import { ToolFormatter } from '../js/mcp/tool-formatter.js';
 
 /**
+ * Proxy for state management that communicates with background script
+ */
+class BackgroundStateProxy {
+    constructor() {
+        this.cache = {};
+    }
+
+    async getSettings() {
+        try {
+            const response = await chrome.runtime.sendMessage({
+                action: 'GET_WEBWIRE_SETTINGS'
+            });
+            if (!response) {
+                console.error('[BackgroundStateProxy] No response from background');
+                return {};
+            }
+            if (response.success) {
+                return response.settings || {};
+            } else {
+                console.error('[BackgroundStateProxy] Background returned error:', response.error);
+                return {};
+            }
+        } catch (error) {
+            console.error('[BackgroundStateProxy] Failed to get settings from background:', error);
+            return {};
+        }
+    }
+
+    async saveSettings(settings) {
+        try {
+            const response = await chrome.runtime.sendMessage({
+                action: 'SAVE_WEBWIRE_SETTINGS',
+                settings
+            });
+            return response.success;
+        } catch (error) {
+            console.error('[BackgroundStateProxy] Failed to save settings to background:', error);
+            return false;
+        }
+    }
+
+    async getState() {
+        try {
+            const response = await chrome.runtime.sendMessage({
+                action: 'GET_WEBWIRE_STATE'
+            });
+            if (!response) {
+                console.error('[BackgroundStateProxy] No response from background');
+                return {};
+            }
+            if (response.success) {
+                return response.state || {};
+            } else {
+                console.error('[BackgroundStateProxy] Background returned error:', response.error);
+                return {};
+            }
+        } catch (error) {
+            console.error('[BackgroundStateProxy] Failed to get state from background:', error);
+            return {};
+        }
+    }
+
+    async saveState(state) {
+        try {
+            const response = await chrome.runtime.sendMessage({
+                action: 'SAVE_WEBWIRE_STATE',
+                state
+            });
+            return response.success;
+        } catch (error) {
+            console.error('[BackgroundStateProxy] Failed to save state to background:', error);
+            return false;
+        }
+    }
+}
+
+/**
  * WebWire Content Script - Integrated Version
  * 
  * Properly integrated with WebWire framework components:
- * - Uses StateService for state management
+ * - Uses background script for state management
  * - Leverages AI client factory and MCP connector
  * - Uses existing panel components
  * - Handles extension communication
@@ -32,65 +109,76 @@ class WebWireContentScript {
         this.mcpConnector = null;
         this.toolParser = new ToolParser();
         this.conversationId = 'content-script-' + Date.now();
-        
-        this.initialize();
     }
 
     async initialize() {
-        console.log('WebWire content script initializing...');
+        console.log('WebWire content script starting initialization...');
         
-        // Initialize WebWire framework
-        await this.initializeWebWireFramework();
-        
-        // Set up extension communication if available
+        // Set up extension communication FIRST (critical for background script communication)
         if (typeof chrome !== 'undefined' && chrome.runtime) {
             this.setupExtensionCommunication();
+            console.log('Extension communication set up');
+        } else {
+            console.warn('Chrome runtime not available - running in non-extension context');
         }
         
         // Set up panel communication
         this.setupPanelCommunication();
+        console.log('Panel communication set up');
         
         // Listen for injection requests
         this.listenForInjectionRequests();
+        console.log('Injection listeners set up');
         
-        // Auto-inject if configured
-        if (await this.shouldAutoInject()) {
-            await this.injectPanel();
+        // Initialize with background-based state management
+        try {
+            await this.initializeBackgroundState();
+            console.log('Background state initialized successfully');
+        } catch (error) {
+            console.error('Background state initialization failed, but content script will continue:', error);
         }
         
-        console.log('WebWire content script initialized');
+        // Auto-inject if configured
+        try {
+            if (await this.shouldAutoInject()) {
+                console.log('Auto-inject enabled, injecting panel...');
+                await this.injectPanel();
+            }
+        } catch (error) {
+            console.error('Auto-inject failed:', error);
+        }
+        
+        console.log('WebWire content script initialization complete - ready for messages');
     }
 
-    async initializeWebWireFramework() {
+    async initializeBackgroundState() {
+        // Create lightweight state proxy that communicates with background
+        this.stateProxy = new BackgroundStateProxy();
+        
+        // Load initial state from background
         try {
-            const { dispatcher, stateService, storage } = await initializeContext();
-            this.dispatcher = dispatcher;
-            this.stateService = stateService;
-            this.storage = storage;
+            const response = await chrome.runtime.sendMessage({
+                action: 'GET_WEBWIRE_STATE'
+            });
 
-            // Load settings and state
-            await this.stateService.settings.loadSettings();
-            await this.stateService.disk.loadFromStorage();
+            console.log('[WebWireContent] Initial state from background:', response);
             
-            // Setup AI client
-            const modelConfig = this.stateService.settings.getModelConfig('chat');
-            if (modelConfig && modelConfig.provider && modelConfig.model) {
-                this.aiClient = AIClientFactory.createClient(this.dispatcher, modelConfig);
-                console.log('[WebWireContentScript] AI client configured:', modelConfig.provider, modelConfig.model);
+            if (!response) {
+                console.error('[WebWireContent] Received undefined response from background script - likely async handling issue');
+                this.currentState = {};
+                return;
             }
             
-            // Setup MCP if configured
-            const mcpUrl = this.stateService.state.settings.mcp?.serverUrl;
-            const autoConnect = this.stateService.state.settings.mcp?.autoConnect;
-            if (mcpUrl && autoConnect) {
-                await this.connectToMCP(mcpUrl);
+            if (response.success) {
+                this.currentState = response.state || {};
+                console.log('[WebWireContent] Successfully loaded state:', this.currentState);
+            } else {
+                console.error('[WebWireContent] Background script returned error:', response.error);
+                this.currentState = {};
             }
-            
-            // Setup event listeners
-            this.setupWebWireEventListeners();
-            
         } catch (error) {
-            console.error('[WebWireContentScript] Failed to initialize framework:', error);
+            console.error('Failed to load initial state from background:', error);
+            this.currentState = {};
         }
     }
 
@@ -167,13 +255,18 @@ class WebWireContentScript {
                     break;
                     
                 case 'GET_STATE':
+                    const state = await this.stateProxy.getState();
                     this.sendToPanel({
                         type: 'STATE_RESPONSE',
-                        state: {
-                            conversation: this.stateService.conversation.getConversationMessages(this.conversationId),
-                            mcp: this.stateService.mcp.getMcpSummary(),
-                            settings: this.stateService.state.settings
-                        }
+                        state
+                    });
+                    break;
+                    
+                case 'SAVE_SETTINGS':
+                    const success = await this.stateProxy.saveSettings(data.settings);
+                    this.sendToPanel({
+                        type: 'SAVE_SETTINGS_RESPONSE',
+                        success
                     });
                     break;
                     
@@ -354,8 +447,14 @@ class WebWireContentScript {
     }
 
     async shouldAutoInject() {
-        // Check if auto-inject is enabled in settings
-        return this.stateService.state.settings?.ui?.autoInject || false;
+        try {
+            // Check if auto-inject is enabled in settings
+            const settings = await this.stateProxy.getSettings();
+            return settings?.ui?.autoInject || false;
+        } catch (error) {
+            console.warn('Could not check auto-inject setting:', error);
+            return false;
+        }
     }
 
     async injectPanel() {
@@ -365,7 +464,7 @@ class WebWireContentScript {
         }
 
         try {
-            console.log('Injecting WebWire panel...');
+            console.log('[WebWireContent] Injecting WebWire panel...');
             
             // Create container for the panel
             this.panelContainer = document.createElement('div');
@@ -846,15 +945,29 @@ class WebWireContentScript {
 
     async sendInitialState() {
         // Send current state to panel
-        this.sendToPanel({
-            type: 'INITIAL_STATE',
-            state: {
-                conversation: this.stateService.conversation.getConversationMessages(this.conversationId),
-                mcpConnected: this.stateService.mcp.isMcpConnected(),
-                tools: this.stateService.mcp.getMcpTools(),
-                settings: this.stateService.state.settings
-            }
-        });
+        try {
+            const state = await this.stateProxy.getState();
+            this.sendToPanel({
+                type: 'INITIAL_STATE',
+                state: {
+                    conversation: state.conversation || {},
+                    mcpConnected: state.mcpConnected || false,
+                    tools: state.tools || [],
+                    settings: state.settings || {}
+                }
+            });
+        } catch (error) {
+            console.error('Failed to send initial state:', error);
+            this.sendToPanel({
+                type: 'INITIAL_STATE',
+                state: {
+                    conversation: {},
+                    mcpConnected: false,
+                    tools: [],
+                    settings: {}
+                }
+            });
+        }
     }
 
     showPanel() {
@@ -891,29 +1004,59 @@ class WebWireContentScript {
     handleBackgroundMessage(message, sender, sendResponse) {
         console.log('Content script received message:', message.action);
         
-        switch (message.action) {
-            case 'INJECT_WEBWIRE_PANEL':
-                this.injectPanel()
-                    .then(() => sendResponse({ success: true }))
-                    .catch(error => sendResponse({ success: false, error: error.message }));
-                return true;
-                
-            case 'TOGGLE_WEBWIRE_PANEL':
-                this.togglePanel();
-                sendResponse({ success: true });
-                return false;
-                
-            case 'CAPTURE_PAGE_CONTENT':
-                sendResponse({
-                    success: true,
-                    data: this.getPageContent()
-                });
-                return false;
-                
-            default:
-                console.warn('Unknown WebWire message action:', message.action);
-                sendResponse({ success: false, error: 'Unknown action' });
-                return false;
+        try {
+            switch (message.action) {
+                case 'INJECT_WEBWIRE_PANEL':
+                    this.injectPanel()
+                        .then(() => sendResponse({ success: true }))
+                        .catch(error => sendResponse({ success: false, error: error.message }));
+                    return true;
+                    
+                case 'TOGGLE_WEBWIRE_PANEL':
+                    this.togglePanel();
+                    sendResponse({ success: true });
+                    return false;
+                    
+                case 'CAPTURE_PAGE_CONTENT':
+                    sendResponse({
+                        success: true,
+                        data: this.getPageContent()
+                    });
+                    return false;
+                    
+                case 'GET_WEBWIRE_STATE':
+                    try {
+                        sendResponse({
+                            success: true,
+                            state: {
+                                panel: this,
+                            }
+                        });
+                    } catch (error) {
+                        console.error('Error getting WebWire state:', error);
+                        sendResponse({
+                            success: true,
+                            state: {
+                                panel: this
+                            }
+                        });
+                    }
+                    return false;
+                    
+                case 'PING':
+                    // Health check endpoint
+                    sendResponse({ success: true, status: 'ready' });
+                    return false;
+                    
+                default:
+                    console.warn('Unknown WebWire message action:', message.action);
+                    sendResponse({ success: false, error: 'Unknown action' });
+                    return false;
+            }
+        } catch (error) {
+            console.error('Error handling background message:', error);
+            sendResponse({ success: false, error: error.message });
+            return false;
         }
     }
 
@@ -1032,16 +1175,87 @@ class WebWireContentScript {
     }
 }
 
-// Initialize the content script
-let webwireContentScript;
-
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => {
-        webwireContentScript = new WebWireContentScript();
-    });
-} else {
-    webwireContentScript = new WebWireContentScript();
+/**
+ * Export functions for testing and debugging
+ */
+export function getWebWireInstance() {
+    return webwireContentScript;
 }
 
-// Export for testing/debugging
-window.webwireContentScript = webwireContentScript;
+export function isWebWireReady() {
+    return webwireContentScript && webwireContentScript.stateService;
+}
+
+// Add debug methods to the WebWire class prototype for window access
+if (typeof window !== 'undefined') {
+    WebWireContentScript.prototype.debug = function() {
+        return {
+            panelInjected: this.panelInjected,
+            mcpConnected: this.mcpConnector ? true : false,
+            aiClientConfigured: this.aiClient ? true : false,
+            conversationId: this.conversationId,
+            frameworkReady: this.stateService ? true : false,
+            streamingActive: this.streamingState.isActive,
+            currentContent: this.streamingState.currentContent
+        };
+    };
+
+    WebWireContentScript.prototype.forceInject = function() {
+        console.log('Force injecting WebWire panel...');
+        return this.injectPanel();
+    };
+
+    WebWireContentScript.prototype.forceToggle = function() {
+        console.log('Force toggling WebWire panel...');
+        this.togglePanel();
+    };
+
+    WebWireContentScript.prototype.getPageInfo = function() {
+        console.log('Getting page content...');
+        return this.getPageContent();
+    };
+}
+
+// Global instance
+let webwireContentScript = null;
+
+// Wait for the DOM to be fully loaded
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initialize);
+} else {
+    initialize();
+}
+
+/**
+ * Initialize the WebWire content script
+ */
+async function initialize() {
+    console.log('WebWire content script initializing...');
+    
+    try {
+        // Create instance
+        webwireContentScript = new WebWireContentScript();
+        
+        // Initialize properly with async support
+        await webwireContentScript.initialize();
+        
+        console.log('WebWire content script initialized successfully');
+        
+        // Hook to window for global access and debugging
+        if (typeof window !== 'undefined') {
+            window.webwireContentScript = webwireContentScript;
+            window.webwire = webwireContentScript; // Shorter alias
+            console.log('WebWire hooked to window.webwireContentScript and window.webwire');
+        }
+        
+    } catch (error) {
+        console.error('Failed to initialize WebWire content script:', error);
+        
+        // Still hook to window for debugging failed states
+        if (typeof window !== 'undefined') {
+            window.webwireContentScript = webwireContentScript;
+            window.webwire = webwireContentScript;
+            console.log('WebWire hooked to window despite initialization failure (for debugging)');
+        }
+    }
+}

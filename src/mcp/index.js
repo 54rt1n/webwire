@@ -59,7 +59,7 @@ class MCPTestApp {
             console.log('[MCPTestApp] State:', this.stateService.state);
             
             // Load MCP URL from settings
-            const mcpUrl = this.stateService.state.settings.mcp?.serverUrl;
+            const mcpUrl = this.stateService.state.settings?.mcp?.serverUrl;
             if (mcpUrl) {
                 this.panel.setMcpUrl(mcpUrl);
             }
@@ -774,8 +774,8 @@ class MCPTestApp {
      */
     async handleAutoConnect() {
         try {
-            const autoConnect = this.stateService.state.settings.mcp?.autoConnect;
-            const mcpUrl = this.stateService.state.settings.mcp?.serverUrl;
+            const autoConnect = this.stateService.state.settings?.mcp?.autoConnect;
+            const mcpUrl = this.stateService.state.settings?.mcp?.serverUrl;
             
             if (autoConnect && mcpUrl) {
                 console.log('[MCPTestApp] Auto-connecting to MCP server:', mcpUrl);
