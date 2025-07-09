@@ -1,6 +1,5 @@
 import { MCPControlPanel } from './panel.js';
-import { initializeContext } from '../js/context/context-init.js';
-import MCPConnector from '../js/mcp/mcp-connector.js';
+import { WebWireClientCore } from '../js/client/webwire-client-core.js';
 import { documentModal } from './document-modal.js';
 
 /**
@@ -10,10 +9,8 @@ import { documentModal } from './document-modal.js';
  */
 class MCPControlPanelApp {
     constructor() {
+        this.core = new WebWireClientCore();    
         this.panel = new MCPControlPanel();
-        this.stateService = null;
-        this.mcpConnector = null;
-        this.serverUrl = null;
     }
 
     /**
@@ -22,12 +19,17 @@ class MCPControlPanelApp {
     async initialize() {
         console.log('[MCPApp] Initializing Control Panel...');
 
-        // 1. Initialize core services (state, storage)
-        const { stateService } = await initializeContext();
-        this.stateService = stateService;
-        await this.stateService.settings.loadSettings();
+        await this.core.initialize();
 
-        // 2. Setup UI event handlers
+        // 2. Set up state service for modals
+        if (this.core.stateService) {
+            // Load stash data from storage
+            await this.loadStash();
+            documentModal.setStateService(this.core.stateService);
+            this.panel.setStateService(this.core.stateService, this.saveStash.bind(this));
+        }
+
+        // 3. Setup UI event handlers
         const handlers = {
             onReconnect: this.connect.bind(this),
             onRefreshHealth: this.fetchHealthCheck.bind(this),
@@ -36,11 +38,11 @@ class MCPControlPanelApp {
             onRefreshKb: this.fetchKnowledgeBase.bind(this),
             onRefreshLists: this.fetchLists.bind(this),
             onSelectList: this.fetchListContent.bind(this),
-            onOpenKbDocument: this.openKbDocument.bind(this), // Add this line
+            onOpenKbDocument: this.openKbDocument.bind(this),
         };
         this.panel.initialize(handlers);
 
-        // 3. Attempt to auto-connect
+        // 4. Attempt to auto-connect
         await this.connect();
     }
 
@@ -48,22 +50,12 @@ class MCPControlPanelApp {
      * Connects to the MCP server and fetches initial data.
      */
     async connect() {
-        this.serverUrl = this.stateService.state.settings?.mcp?.serverUrl || 'http://localhost:8000/sse';
-        console.log(`[MCPApp] Attempting to connect to: ${this.serverUrl}`);
         this.panel.renderConnectionStatus('connecting', this.serverUrl);
-
-        try {
-            this.mcpConnector = new MCPConnector(this.serverUrl, this.stateService);
-            await this.mcpConnector.initialize();
-
-            console.log('[MCPApp] Connection successful.');
-            this.panel.renderConnectionStatus('connected', this.serverUrl);
-
-            // Fetch initial data for all widgets upon successful connection
+        const success = await this.core.connect();
+        if (success) {
+            this.panel.renderConnectionStatus('connected', this.core.serverUrl);
             this.fetchAllData();
-
-        } catch (error) {
-            console.error('[MCPApp] Connection failed:', error);
+        } else {
             this.panel.renderConnectionStatus('disconnected', `Failed: ${error.message}`);
         }
     }
@@ -82,10 +74,10 @@ class MCPControlPanelApp {
      * Fetches and renders the health check data.
      */
     async fetchHealthCheck() {
-        if (!this.mcpConnector) return;
+        if (!this.core.mcpConnector) return;
         this.panel.showLoading('health');
         try {
-            const result = await this.mcpConnector.executeTool('health_check');
+            const result = await this.core.mcpConnector.executeTool('health_check');
             if (result.success) {
                 this.panel.renderHealthCheck(result);
             } else {
@@ -101,10 +93,10 @@ class MCPControlPanelApp {
      * Fetches and renders the filesystem tree.
      */
     async fetchFilesystem() {
-        if (!this.mcpConnector) return;
+        if (!this.core.mcpConnector) return;
         this.panel.showLoading('fs');
         try {
-            const result = await this.mcpConnector.executeTool('fs_list', { path: '/', recursive: true });
+            const result = await this.core.mcpConnector.executeTool('fs_list', { path: '/', recursive: true });
             if (result.success) {
                 this.panel.renderFilesystem(result.entries);
             } else {
@@ -120,11 +112,11 @@ class MCPControlPanelApp {
      * Fetches and renders the knowledge base graph data.
      */
     async fetchKnowledgeBase() {
-        if (!this.mcpConnector) return;
+        if (!this.core.mcpConnector) return;
         this.panel.showLoading('kb');
         try {
             // Fetch with graph expansion to get relationships
-            const result = await this.mcpConnector.executeTool('kb_search', { 
+            const result = await this.core.mcpConnector.executeTool('kb_search', { 
                 root_uri: "kb://",
                 include_index: true,
             });
@@ -144,12 +136,12 @@ class MCPControlPanelApp {
      * Fetches and renders the list of all lists.
      */
     async fetchLists() {
-        if (!this.mcpConnector) return;
+        if (!this.core.mcpConnector) return;
         this.panel.showLoading('lists');
         this.panel.showLoading('listContent', 'Select a list from the left...');
 
         try {
-            const result = await this.mcpConnector.executeTool('list_get', { summary_only: true });
+            const result = await this.core.mcpConnector.executeTool('list_get', { summary_only: true });
             if (result.success) {
                 this.panel.renderListsBrowser(result.lists);
             } else {
@@ -166,10 +158,10 @@ class MCPControlPanelApp {
      * @param {string} listName - The name of the list to fetch.
      */
     async fetchListContent(listName) {
-        if (!this.mcpConnector) return;
+        if (!this.core.mcpConnector) return;
         this.panel.showLoading('listContent');
         try {
-            const result = await this.mcpConnector.executeTool('list_get', { name: listName, include_items: true });
+            const result = await this.core.mcpConnector.executeTool('list_get', { name: listName, include_items: true });
             if (result.success) {
                 this.panel.renderListContent(result);
             } else {
@@ -186,7 +178,7 @@ class MCPControlPanelApp {
      * @param {string} filePath - The path of the file to open.
      */
     async openFile(filePath) {
-        if (!this.mcpConnector) return;
+        if (!this.core.mcpConnector) return;
         
         console.log(`[MCPApp] Opening file: ${filePath}`);
         
@@ -196,7 +188,7 @@ class MCPControlPanelApp {
             this.panel.setFileViewerLoading();
             
             // Fetch file content
-            const result = await this.mcpConnector.executeTool('fs_read', { path: filePath });
+            const result = await this.core.mcpConnector.executeTool('fs_read', { path: filePath });
             
             if (result.success) {
                 // Update modal with actual content
@@ -219,7 +211,7 @@ class MCPControlPanelApp {
      * @param {object} node - The KB node data to open.
      */
     async openKbDocument(node) {
-        if (!this.mcpConnector) return;
+        if (!this.core.mcpConnector) return;
         
         const uri = node.uri || node.urn;
         console.log(`[MCPApp] Opening KB document: ${uri}`);
@@ -234,7 +226,7 @@ class MCPControlPanelApp {
             documentModal.setLoading();
             
             // Fetch full document content with index
-            const result = await this.mcpConnector.executeTool('kb_read', { 
+            const result = await this.core.mcpConnector.executeTool('kb_read', { 
                 uri: uri,
                 include_content: true,
                 include_index: true
@@ -267,6 +259,34 @@ class MCPControlPanelApp {
                 content: errorMsg,
                 index: { error: error.message }
             });
+        }
+    }
+
+    /**
+     * Load stash data from storage
+     */
+    async loadStash() {
+        if (!this.core.stateService || !this.core.stateService.stash) return;
+        
+        try {
+            await this.core.stateService.stash.load();
+            console.log('[MCPApp] Stash data loaded successfully');
+        } catch (error) {
+            console.error('[MCPApp] Failed to load stash data:', error);
+        }
+    }
+
+    /**
+     * Save stash data to storage
+     */
+    async saveStash() {
+        if (!this.core.stateService || !this.core.stateService.stash) return;
+        
+        try {
+            await this.core.stateService.stash.save();
+            console.log('[MCPApp] Stash data saved successfully');
+        } catch (error) {
+            console.error('[MCPApp] Failed to save stash data:', error);
         }
     }
 }

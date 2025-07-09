@@ -1,4 +1,5 @@
 import './textview.css';
+import { StashButton } from './stash-button.js';
 
 /**
  * TextViewModal
@@ -6,10 +7,13 @@ import './textview.css';
  * Creates and manages its own DOM elements and lifecycle.
  */
 export class TextViewModal {
-    constructor() {
+    constructor(stateService = null) {
         this.modal = null;
         this.isOpen = false;
         this.onClose = null;
+        this.stateService = stateService;
+        this.stashButton = null;
+        this.currentFilePath = null;
     }
 
     /**
@@ -23,6 +27,7 @@ export class TextViewModal {
             this.close();
         }
 
+        this.currentFilePath = fileName;
         this.onClose = onClose;
         this.isOpen = true;
         this._createModal(fileName, content);
@@ -83,11 +88,14 @@ export class TextViewModal {
             <div class="textview-modal">
                 <div class="textview-modal-header">
                     <h2 class="textview-modal-title">${this._escapeHtml(fileName)}</h2>
-                    <button class="btn btn-icon textview-modal-close" title="Close">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
-                          <path d="M2.146 2.854a.5.5 0 1 1 .708-.708L8 7.293l5.146-5.147a.5.5 0 0 1 .708.708L8.707 8l5.147 5.146a.5.5 0 0 1-.708.708L8 8.707l-5.146 5.147a.5.5 0 0 1-.708-.708L7.293 8 2.146 2.854Z"/>
-                        </svg>
-                    </button>
+                    <div class="textview-modal-actions">
+                        <div class="textview-modal-stash-container"></div>
+                        <button class="btn btn-icon textview-modal-close" title="Close">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                              <path d="M2.146 2.854a.5.5 0 1 1 .708-.708L8 7.293l5.146-5.147a.5.5 0 0 1 .708.708L8.707 8l5.147 5.146a.5.5 0 0 1-.708.708L8 8.707l-5.146 5.147a.5.5 0 0 1-.708-.708L7.293 8 2.146 2.854Z"/>
+                            </svg>
+                        </button>
+                    </div>
                 </div>
                 <div class="textview-modal-content">
                      <textarea 
@@ -131,6 +139,9 @@ export class TextViewModal {
 
         // Store reference to remove listener later
         this.modal._keydownHandler = handleKeyDown;
+
+        // Add stash button if state service is available
+        this._addStashButton();
     }
 
     /**
@@ -171,6 +182,42 @@ export class TextViewModal {
             textarea.placeholder = 'Loading file content...';
             textarea.classList.add('loading');
         }
+    }
+
+    /**
+     * Add stash button to the modal if state service is available
+     * @private
+     */
+    _addStashButton() {
+        if (!this.stateService || !this.currentFilePath) return;
+        
+        const stashContainer = this.modal.querySelector('.textview-modal-stash-container');
+        if (!stashContainer) return;
+        
+        // Create stash button
+        this.stashButton = new StashButton(this.stateService);
+        const button = this.stashButton.create(this.currentFilePath, 'fs', {
+            size: 'icon',
+            onToggle: async (stashedUri, isStashed) => {
+                console.log(`[TextViewModal] ${isStashed ? 'Added to' : 'Removed from'} stash: ${stashedUri}`);
+                // Save stash to disk
+                if (this.saveStashFn) {
+                    await this.saveStashFn();
+                }
+            }
+        });
+        
+        stashContainer.appendChild(button);
+    }
+
+    /**
+     * Set the state service for stash functionality
+     * @param {Object} stateService - The state service instance
+     * @param {Function} saveStashFn - Function to call when stash needs to be saved
+     */
+    setStateService(stateService, saveStashFn = null) {
+        this.stateService = stateService;
+        this.saveStashFn = saveStashFn;
     }
 
     /**

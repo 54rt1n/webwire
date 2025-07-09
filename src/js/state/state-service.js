@@ -7,11 +7,12 @@ import { ConversationStatePlugin } from './plugins/conversation-state.js';
 import { DiskStatePlugin } from './plugins/disk-state.js';
 import { MCPStatePlugin } from './plugins/mcp-state.js';
 import { SettingsStatePlugin } from './plugins/settings-state.js';
+import { StashStatePlugin } from './plugins/stash-state.js';
 import { UiStatePlugin } from './plugins/ui-state.js';
 
 /**
  * Centralized state management service using a plugin architecture.
- * Manages conversations, settings, MCP connections, UI state, and persistence
+ * Manages conversations, settings, MCP connections, UI state, stash storage, and persistence
  * with automatic state validation and event-driven updates.
  * 
  * @example
@@ -22,6 +23,7 @@ import { UiStatePlugin } from './plugins/ui-state.js';
  * stateService.conversation.storeMessage(conversationId, userMsg, aiMsg);
  * stateService.settings.saveSettings();
  * stateService.mcp.setMcpConnected(true);
+ * stateService.stash.append('item', 'key1', 'key2');
  * 
  * // State is automatically persisted and validated
  */
@@ -51,6 +53,7 @@ class StateService {
         this.aim = new AIMStatePlugin(this);
         this.conversation = new ConversationStatePlugin(this);
         this.mcp = new MCPStatePlugin(this);
+        this.stash = new StashStatePlugin(this);
         this.ui = new UiStatePlugin(this);
 
         this.validator = new StateValidator();

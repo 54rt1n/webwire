@@ -3,6 +3,8 @@ import './style.css';
 import { textViewModal } from './textview-modal.js';
 import { GraphDraw } from './graph-draw.js';
 import { documentModal } from './document-modal.js';
+import { StashButton } from './stash-button.js';
+import { EVENTS } from '../js/core/events.js';
 
 /**
  * MCPControlPanel
@@ -16,7 +18,9 @@ export class MCPControlPanel {
         this.selectedList = null;
         this.selectedFile = null; // Track currently selected file
         this.selectedKbNode = null; // Track currently selected KB node
+        this.selectedListItem = null; // Track currently selected list item
         this.graphDraw = null;      // Graph visualization instance
+        this.stateService = null;   // State service for stash functionality
     }
 
     /**
@@ -47,6 +51,11 @@ export class MCPControlPanel {
         
         // Add KB open button reference
         this.openKbBtn = document.getElementById('open-kb-btn');
+        
+        // Stash button references
+        this.fileStashButton = null;
+        this.kbStashButton = null;
+        this.listStashButton = null;
     }
 
     /**
@@ -248,8 +257,12 @@ export class MCPControlPanel {
                 linePrefix += isLast ? '└── ' : '├── ';
             }
             
+            // Check if this file is stashed (only for files, not folders)
+            const isStashed = node.type === 'file' && this._isFileStashed(node.path);
+            const stashedClass = isStashed ? ' fs-item-stashed' : '';
+            
             // Create the node HTML
-            html += `<div class="fs-tree-line" data-path="${node.path}" data-type="${node.type}">`;
+            html += `<div class="fs-tree-line${stashedClass}" data-path="${node.path}" data-type="${node.type}">`;
             
             // Line prefix with monospace characters
             html += `<span class="fs-line-prefix">${this._escapeHtml(linePrefix)}</span>`;
@@ -318,9 +331,11 @@ export class MCPControlPanel {
         if (fileType === 'file') {
             this.selectedFile = filePath;
             this.openFileBtn.style.display = 'inline-flex';
+            this._updateFileStashButton(filePath);
         } else {
             this.selectedFile = null;
             this.openFileBtn.style.display = 'none';
+            this._hideFileStashButton();
         }
     }
 
@@ -378,6 +393,12 @@ export class MCPControlPanel {
         this.kbGraphContainer.addEventListener('kb-node-selected', (e) => {
             this.selectedKbNode = e.detail.node;
             this.openKbBtn.style.display = this.selectedKbNode ? 'inline-flex' : 'none';
+            
+            if (this.selectedKbNode) {
+                this._updateKbStashButton(this.selectedKbNode);
+            } else {
+                this._hideKbStashButton();
+            }
         });
         
         this.kbGraphContainer.addEventListener('kb-node-open', (e) => {
@@ -396,8 +417,14 @@ export class MCPControlPanel {
             // Loading state should already be cleared since we're not in showLoading anymore
         });
         
+        // Mark nodes as stashed before rendering
+        const resultsWithStashInfo = results.map(node => ({
+            ...node,
+            isStashed: this._isKbNodeStashed(node.uri || node.urn)
+        }));
+        
         // Set data and render
-        this.graphDraw.setData(results);
+        this.graphDraw.setData(resultsWithStashInfo);
     }
 
     /**
@@ -427,20 +454,35 @@ export class MCPControlPanel {
     renderListContent(list) {
         this.listContentTitle.textContent = list.metadata.title || list.name;
         this.listContentView.innerHTML = '';
+        
+        // Reset list item selection
+        this.selectedListItem = null;
+        this._hideListStashButton();
+        
         if (!list.items || list.items.length === 0) {
             this.listContentView.innerHTML = `<div class="placeholder">This list is empty.</div>`;
             return;
         }
+        
         const ul = this._createEl('ul');
-        list.items.forEach(item => {
+        list.items.forEach((item, index) => {
             // Debug: Log the actual status value
             console.log(`[Lists] Item status: "${item.status}" (type: ${typeof item.status})`);
             
             // Normalize status to uppercase for CSS class matching
             const normalizedStatus = (item.status || 'NONE').toString().toUpperCase();
             
+            // Create list item URI for stashing
+            const itemUri = `${list.name}:${index}`;
+            
+            // Check if this item is stashed
+            const isStashed = this._isListItemStashed(itemUri);
+            
             const li = this._createEl('li', {
-                className: `list-item list-item-${normalizedStatus}`
+                className: `list-item list-item-${normalizedStatus}${isStashed ? ' list-item-stashed' : ''}`,
+                'data-list-name': list.name,
+                'data-item-index': index,
+                'data-item-uri': itemUri
             });
             
             // Debug: Log the generated class names and check DOM
@@ -459,6 +501,15 @@ export class MCPControlPanel {
             li.appendChild(text);
             ul.appendChild(li);
         });
+        
+        // Add click handler for list items
+        ul.addEventListener('click', (e) => {
+            const listItem = e.target.closest('.list-item');
+            if (listItem) {
+                this._selectListItem(listItem);
+            }
+        });
+        
         this.listContentView.appendChild(ul);
     }
 
@@ -516,6 +567,357 @@ export class MCPControlPanel {
      */
     setFileViewerLoading() {
         textViewModal.setLoading();
+    }
+
+    /**
+     * Set the state service for stash functionality
+     * @param {Object} stateService - The state service instance
+     * @param {Function} saveStashFn - Function to call when stash needs to be saved
+     */
+    setStateService(stateService, saveStashFn = null) {
+        this.stateService = stateService;
+        this.saveStashFn = saveStashFn;
+        // Also set for the textview modal
+        textViewModal.setStateService(stateService, saveStashFn);
+        
+        // Initialize stash buttons for dashboard
+        this._initializeStashButtons();
+        
+        // Listen for stash events from other components (like modals)
+        this._setupStashEventListeners();
+    }
+
+    /**
+     * Initialize stash buttons for dashboard panels
+     * @private
+     */
+    _initializeStashButtons() {
+        if (!this.stateService) return;
+        
+        // Add stash button containers to widget actions if they don't exist
+        this._ensureStashContainers();
+    }
+
+    /**
+     * Setup event listeners for stash events from other components
+     * @private
+     */
+    _setupStashEventListeners() {
+        if (!this.stateService || !this.stateService.eventBus) return;
+        
+        // Listen for stash updates from other components (modals, etc.)
+        this.stateService.eventBus.on(EVENTS.STASH.UPDATED, async (data) => {
+            console.log('[Panel] Received stash update:', data);
+            
+            if (data && data.uri && typeof data.isStashed === 'boolean') {
+                // Handle different types of stash updates
+                switch (data.type) {
+                    case 'kb':
+                        this._updateKbNodeStashState(data.uri, data.isStashed);
+                        break;
+                    case 'fs':
+                        this._updateFileStashState(data.uri, data.isStashed);
+                        break;
+                    case 'list':
+                        this._updateListItemStashState(data.uri, data.isStashed);
+                        break;
+                }
+                
+                // Save stash to disk centrally
+                if (this.saveStashFn) {
+                    await this.saveStashFn();
+                }
+            }
+        });
+    }
+
+    /**
+     * Ensure stash button containers exist in widget actions
+     * @private
+     */
+    _ensureStashContainers() {
+        // File system widget
+        const fsActions = this.refreshFsBtn.parentElement;
+        if (fsActions && !fsActions.querySelector('.fs-stash-container')) {
+            const container = document.createElement('div');
+            container.className = 'fs-stash-container';
+            container.style.display = 'none'; // Initially hidden
+            fsActions.insertBefore(container, this.openFileBtn);
+        }
+        
+        // KB widget
+        const kbActions = this.refreshKbBtn.parentElement;
+        if (kbActions && !kbActions.querySelector('.kb-stash-container')) {
+            const container = document.createElement('div');
+            container.className = 'kb-stash-container';
+            container.style.display = 'none'; // Initially hidden
+            kbActions.insertBefore(container, this.openKbBtn);
+        }
+        
+        // List content widget
+        const listContentHeader = this.listContentTitle.parentElement;
+        const listActions = listContentHeader.querySelector('.widget-actions');
+        if (listActions && !listActions.querySelector('.list-stash-container')) {
+            const container = document.createElement('div');
+            container.className = 'list-stash-container';
+            container.style.display = 'none'; // Initially hidden
+            listActions.appendChild(container);
+        }
+    }
+
+    /**
+     * Update file stash button
+     * @param {string} filePath - The file path to stash
+     * @private
+     */
+    _updateFileStashButton(filePath) {
+        if (!this.stateService) return;
+        
+        const container = document.querySelector('.fs-stash-container');
+        if (!container) return;
+        
+        // Remove existing button
+        container.innerHTML = '';
+        
+        // Create new stash button
+        this.fileStashButton = new StashButton(this.stateService);
+        const button = this.fileStashButton.create(filePath, 'fs', {
+            size: 'icon',
+            onToggle: async (stashedUri, isStashed) => {
+                console.log(`[Panel] File ${isStashed ? 'added to' : 'removed from'} stash: ${stashedUri}`);
+                // Update the visual state of the file tree
+                this._updateFileStashState(filePath, isStashed);
+                // Save stash to disk
+                if (this.saveStashFn) {
+                    await this.saveStashFn();
+                }
+            }
+        });
+        
+        container.appendChild(button);
+        container.style.display = 'inline-flex';
+    }
+
+    /**
+     * Hide file stash button
+     * @private
+     */
+    _hideFileStashButton() {
+        const container = document.querySelector('.fs-stash-container');
+        if (container) {
+            container.style.display = 'none';
+        }
+    }
+
+    /**
+     * Update KB stash button
+     * @param {Object} kbNode - The KB node to stash
+     * @private
+     */
+    _updateKbStashButton(kbNode) {
+        if (!this.stateService || !kbNode) return;
+        
+        const container = document.querySelector('.kb-stash-container');
+        if (!container) return;
+        
+        const uri = kbNode.uri || kbNode.urn;
+        if (!uri) return;
+        
+        // Remove existing button
+        container.innerHTML = '';
+        
+        // Create new stash button
+        this.kbStashButton = new StashButton(this.stateService);
+        const button = this.kbStashButton.create(uri, 'kb', {
+            size: 'icon',
+            onToggle: async (stashedUri, isStashed) => {
+                console.log(`[Panel] KB document ${isStashed ? 'added to' : 'removed from'} stash: ${stashedUri}`);
+                // Update the visual state of the KB node in the graph
+                this._updateKbNodeStashState(uri, isStashed);
+                // Save stash to disk
+                if (this.saveStashFn) {
+                    await this.saveStashFn();
+                }
+            }
+        });
+        
+        container.appendChild(button);
+        container.style.display = 'inline-flex';
+    }
+
+    /**
+     * Hide KB stash button
+     * @private
+     */
+    _hideKbStashButton() {
+        const container = document.querySelector('.kb-stash-container');
+        if (container) {
+            container.style.display = 'none';
+        }
+    }
+
+    /**
+     * Check if a file is stashed
+     * @param {string} filePath - The file path
+     * @returns {boolean} True if the file is stashed
+     * @private
+     */
+    _isFileStashed(filePath) {
+        if (!this.stateService || !this.stateService.stash) return false;
+        
+        const fullUri = `fs://${filePath}`;
+        const stashItems = this.stateService.stash.getAll('mcp');
+        return stashItems.includes(fullUri);
+    }
+
+    /**
+     * Check if a KB node is stashed
+     * @param {string} uri - The KB node URI
+     * @returns {boolean} True if the KB node is stashed
+     * @private
+     */
+    _isKbNodeStashed(uri) {
+        if (!this.stateService || !this.stateService.stash) return false;
+        
+        // KB URIs already have kb:// prefix, so use as-is
+        const fullUri = uri.startsWith('kb://') ? uri : `kb://${uri}`;
+        const stashItems = this.stateService.stash.getAll('mcp');
+        return stashItems.includes(fullUri);
+    }
+
+    /**
+     * Check if a list item is stashed
+     * @param {string} itemUri - The list item URI (listName:itemIndex)
+     * @returns {boolean} True if the item is stashed
+     * @private
+     */
+    _isListItemStashed(itemUri) {
+        if (!this.stateService || !this.stateService.stash) return false;
+        
+        // Convert listName:itemIndex to list://listName/itemIndex
+        const [listName, itemIndex] = itemUri.split(':');
+        const fullUri = `list://${listName}/${itemIndex}`;
+        const stashItems = this.stateService.stash.getAll('mcp');
+        return stashItems.includes(fullUri);
+    }
+
+    /**
+     * Select a list item
+     * @param {HTMLElement} listItem - The list item element
+     * @private
+     */
+    _selectListItem(listItem) {
+        // Remove previous selection
+        this.listContentView.querySelectorAll('.list-item.selected').forEach(el => {
+            el.classList.remove('selected');
+        });
+        
+        // Add selection to clicked item
+        listItem.classList.add('selected');
+        
+        const itemUri = listItem.dataset.itemUri;
+        console.log(`[Lists] Selected item: ${itemUri}`);
+        
+        // Update selected item state and show stash button
+        this.selectedListItem = {
+            uri: itemUri,
+            listName: listItem.dataset.listName,
+            itemIndex: parseInt(listItem.dataset.itemIndex),
+            element: listItem
+        };
+        
+        this._updateListStashButton(itemUri);
+    }
+
+    /**
+     * Update list item stash button
+     * @param {string} itemUri - The list item URI to stash
+     * @private
+     */
+    _updateListStashButton(itemUri) {
+        if (!this.stateService) return;
+        
+        const container = document.querySelector('.list-stash-container');
+        if (!container) return;
+        
+        // Remove existing button
+        container.innerHTML = '';
+        
+        // Create new stash button
+        this.listStashButton = new StashButton(this.stateService);
+        const button = this.listStashButton.create(itemUri, 'list', {
+            size: 'icon',
+            onToggle: async (stashedUri, isStashed) => {
+                console.log(`[Panel] List item ${isStashed ? 'added to' : 'removed from'} stash: ${stashedUri}`);
+                // Update the visual state of the list item
+                this._updateListItemStashState(itemUri, isStashed);
+                // Save stash to disk
+                if (this.saveStashFn) {
+                    await this.saveStashFn();
+                }
+            }
+        });
+        
+        container.appendChild(button);
+        container.style.display = 'inline-flex';
+    }
+
+    /**
+     * Hide list stash button
+     * @private
+     */
+    _hideListStashButton() {
+        const container = document.querySelector('.list-stash-container');
+        if (container) {
+            container.style.display = 'none';
+        }
+    }
+
+    /**
+     * Update the visual state of a file when its stash state changes
+     * @param {string} filePath - The file path
+     * @param {boolean} isStashed - Whether the file is now stashed
+     * @private
+     */
+    _updateFileStashState(filePath, isStashed) {
+        const fileElement = this.fsTreeContainer.querySelector(`[data-path="${filePath}"]`);
+        if (fileElement) {
+            if (isStashed) {
+                fileElement.classList.add('fs-item-stashed');
+            } else {
+                fileElement.classList.remove('fs-item-stashed');
+            }
+        }
+    }
+
+    /**
+     * Update the visual state of a KB node when its stash state changes
+     * @param {string} uri - The KB node URI
+     * @param {boolean} isStashed - Whether the node is now stashed
+     * @private
+     */
+    _updateKbNodeStashState(uri, isStashed) {
+        if (this.graphDraw) {
+            // Update the node's stash state in the graph
+            this.graphDraw.updateNodeStashState(uri, isStashed);
+        }
+    }
+
+    /**
+     * Update the visual state of a list item when its stash state changes
+     * @param {string} itemUri - The list item URI
+     * @param {boolean} isStashed - Whether the item is now stashed
+     * @private
+     */
+    _updateListItemStashState(itemUri, isStashed) {
+        const listItem = this.listContentView.querySelector(`[data-item-uri="${itemUri}"]`);
+        if (listItem) {
+            if (isStashed) {
+                listItem.classList.add('list-item-stashed');
+            } else {
+                listItem.classList.remove('list-item-stashed');
+            }
+        }
     }
 
     /**

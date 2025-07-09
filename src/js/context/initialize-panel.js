@@ -1,6 +1,7 @@
 import { StorageManager } from '../storage/storage-manager.js';
 import { StateService } from '../state/state-service.js';
 import { AIClientFactory } from '../ai/ai-client-factory.js';
+import { MCPConnector } from '../mcp/mcp-connector.js';
 
 /**
  * Initialize Panel Context (Injected UI)

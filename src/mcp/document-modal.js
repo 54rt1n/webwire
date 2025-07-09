@@ -1,4 +1,6 @@
 import './document-modal.css';
+import { StashButton } from './stash-button.js';
+import { EVENTS } from '../js/core/events.js';
 
 /**
  * DocumentModal
@@ -6,11 +8,13 @@ import './document-modal.css';
  * Features a two-column layout with document content on the left and index metadata on the right.
  */
 export class DocumentModal {
-    constructor() {
+    constructor(stateService = null) {
         this.modal = null;
         this.isOpen = false;
         this.onClose = null;
         this.currentDocument = null;
+        this.stateService = stateService;
+        this.stashButton = null;
     }
 
     /**
@@ -90,6 +94,7 @@ export class DocumentModal {
                 <div class="document-modal-header">
                     <h2 class="document-modal-title">${this._escapeHtml(title)}</h2>
                     <div class="document-modal-actions">
+                        <div class="document-modal-stash-container"></div>
                         <button class="btn btn-icon document-modal-copy" title="Copy Content">
                             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
                                 <path d="M4 2a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V2Zm2-1a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1H6ZM2 5a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1v-1h1v1a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h1v1H2Z"/>
@@ -311,6 +316,9 @@ export class DocumentModal {
 
         // Store reference to remove listener later
         this.modal._keydownHandler = handleKeyDown;
+
+        // Add stash button if state service is available
+        this._addStashButton();
     }
 
     /**
@@ -368,6 +376,9 @@ export class DocumentModal {
         // Update metadata
         const metadataEl = this.modal.querySelector('.document-metadata');
         metadataEl.innerHTML = this._renderMetadata(documentData);
+        
+        // Update stash button
+        this._updateStashButton();
     }
 
     /**
@@ -384,6 +395,62 @@ export class DocumentModal {
     }
 
     /**
+     * Add stash button to the modal if state service is available
+     * @private
+     */
+    _addStashButton() {
+        if (!this.stateService || !this.currentDocument) return;
+        
+        const stashContainer = this.modal.querySelector('.document-modal-stash-container');
+        if (!stashContainer) return;
+        
+        const uri = this.currentDocument.uri || this.currentDocument.urn;
+        if (!uri) return;
+        
+        // Create stash button
+        this.stashButton = new StashButton(this.stateService);
+        const button = this.stashButton.create(uri, 'kb', {
+            size: 'icon',
+            onToggle: (stashedUri, isStashed) => {
+                console.log(`[DocumentModal] ${isStashed ? 'Added to' : 'Removed from'} stash: ${stashedUri}`);
+                
+                // Emit event through the event bus to notify other components
+                if (this.stateService && this.stateService.eventBus) {
+                    this.stateService.eventBus.emit(EVENTS.STASH.UPDATED, {
+                        uri,
+                        isStashed,
+                        type: 'kb',
+                        source: 'document-modal'
+                    });
+                }
+            }
+        });
+        
+        stashContainer.appendChild(button);
+    }
+
+    /**
+     * Update stash button when document changes
+     * @private
+     */
+    _updateStashButton() {
+        if (!this.stashButton || !this.currentDocument) return;
+        
+        const uri = this.currentDocument.uri || this.currentDocument.urn;
+        if (uri) {
+            this.stashButton.updateUri(uri, 'kb');
+        }
+    }
+
+    /**
+     * Set the state service for stash functionality
+     * @param {Object} stateService - The state service instance
+     */
+    setStateService(stateService) {
+        this.stateService = stateService;
+    }
+
+    /**
      * Checks if the modal is currently open.
      * @returns {boolean} True if modal is open
      */
@@ -392,5 +459,5 @@ export class DocumentModal {
     }
 }
 
-// Export a singleton instance for convenience
+// Export a singleton instance for convenience (state service will be set later)
 export const documentModal = new DocumentModal();

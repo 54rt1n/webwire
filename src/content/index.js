@@ -1,6 +1,6 @@
 import { EVENTS } from '../js/core/events.js';
 import { AIClientFactory } from '../js/ai/ai-client-factory.js';
-import MCPConnector from '../js/mcp/mcp-connector.js';
+import { MCPConnector } from '../js/mcp/mcp-connector.js';
 import { ToolParser } from '../js/mcp/tool-parser.js';
 import { ToolFormatter } from '../js/mcp/tool-formatter.js';
 import { EventBus } from '../js/core/event-bus.js';

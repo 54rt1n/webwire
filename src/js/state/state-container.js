@@ -179,6 +179,10 @@ export function createInitialState() {
             panelVisible: false,
             // Other ui state
         },
+
+        stash: {
+            // Stash state - persists across browser sessions
+        }
     };
 }
 

@@ -20,7 +20,7 @@ import { generateUUID } from '../utils/id-generator.js';
  * // Cleanup
  * connector.disconnect();
  */
-class MCPConnector {
+export class MCPConnector {
     /**
      * Create an MCP Connector instance
      * @param {string} mcpServerUrl - The base URL of the MCP server
@@ -450,5 +450,3 @@ class MCPConnector {
       this.stateService.mcp.clearMcpPendingRequests();
     }
   }
-  
-  export default MCPConnector;

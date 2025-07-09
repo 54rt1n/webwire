@@ -177,6 +177,22 @@ body {
 
 
 
+/* Stashed file styling */
+.fs-tree-line.fs-item-stashed {
+    background-color: var(--color-blue-50, #eff6ff);
+    border-left: 3px solid var(--color-blue-300, #93c5fd);
+    border-radius: var(--radius-sm);
+}
+
+.fs-tree-line.fs-item-stashed:hover {
+    background-color: var(--color-blue-100, #dbeafe);
+}
+
+.fs-tree-line.selected.fs-item-stashed {
+    background-color: var(--color-blue-200, #bfdbfe);
+    border-left-color: var(--color-blue-400, #60a5fa);
+}
+
 /* File and folder icons */
 .fs-icon {
     width: 16px;
@@ -358,10 +374,31 @@ body {
     gap: var(--space-3);
     font-size: var(--font-size-sm);
     line-height: var(--line-height-normal);
+    cursor: pointer;
+    border-radius: var(--radius-sm);
 }
 
 #list-content-view li:hover {
     background-color: var(--color-gray-50);
+}
+
+#list-content-view li.selected {
+    background-color: var(--color-primary-100);
+    border-color: var(--color-primary-300);
+}
+
+#list-content-view li.list-item-stashed {
+    background-color: var(--color-blue-50, #eff6ff);
+    border-left-color: var(--color-blue-300, #93c5fd);
+}
+
+#list-content-view li.list-item-stashed:hover {
+    background-color: var(--color-blue-100, #dbeafe);
+}
+
+#list-content-view li.selected.list-item-stashed {
+    background-color: var(--color-blue-200, #bfdbfe);
+    border-color: var(--color-blue-400, #60a5fa);
 }
 
 /* Status-based color coding for list items */
@@ -496,6 +533,11 @@ body {
     min-height: 400px;
 }
 
+/* Stashed KB node styling - these will be applied via JavaScript to the canvas */
+.kb-node-stashed {
+    /* This class will be used as a reference for the graph drawing logic */
+}
+
 /* Ensure the open button matches filesystem button style */
 #open-kb-btn {
     display: none;
@@ -506,4 +548,46 @@ body {
     width: 100%;
     height: 100%;
     min-height: 400px;
+}
+
+/* Stash Button Styles */
+.stash-button {
+    transition: all var(--transition-fast);
+    position: relative;
+}
+
+.stash-button.not-stashed {
+    color: var(--color-text-secondary);
+    border-color: var(--color-border);
+}
+
+.stash-button.not-stashed:hover {
+    color: var(--color-primary-600);
+    border-color: var(--color-primary-300);
+    background-color: var(--color-primary-50);
+}
+
+.stash-button.stashed {
+    color: var(--color-success-600);
+    border-color: var(--color-success-300);
+    background-color: var(--color-success-50);
+}
+
+.stash-button.stashed:hover {
+    color: var(--color-error-600);
+    border-color: var(--color-error-300);
+    background-color: var(--color-error-50);
+}
+
+/* Add subtle animation when toggling */
+.stash-button:active {
+    transform: scale(0.95);
+}
+
+.stash-button svg {
+    transition: transform var(--transition-fast);
+}
+
+.stash-button:hover svg {
+    transform: scale(1.1);
 }

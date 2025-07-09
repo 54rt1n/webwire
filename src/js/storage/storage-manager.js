@@ -1,6 +1,7 @@
 import { SettingsAdapter } from './adapters/settings-adapter.js';
 import { StateAdapter, StateValidator } from './adapters/state-adapter.js';
 import { UiAdapter } from './adapters/ui-adapter.js';
+import { StashAdapter } from './adapters/stash-adapter.js';
 
 /**
  * Factory and container for specialized storage adapters handling different data types.
@@ -48,6 +49,11 @@ export class StorageManager {
 
             ui: new UiAdapter({
                 storageKey: this.config.keys?.ui || 'app-ui',
+                version: this.version
+            }, eventBus),
+
+            stash: new StashAdapter({
+                storageKey: this.config.keys?.stash || 'app-stash',
                 version: this.version
             }, eventBus)
         };

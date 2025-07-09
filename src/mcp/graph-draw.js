@@ -20,9 +20,12 @@ export class GraphDraw {
         // Visual configuration
         this.config = {
             nodeRadius: 30,
-            nodeColor: '#3b82f6',
+            nodeColor: '#3bc692',
             nodeHoverColor: '#2563eb',
             nodeSelectedColor: '#1d4ed8',
+            nodeStashedColor: '#60a5fa',       // Light blue for stashed nodes
+            nodeStashedHoverColor: '#3b82f6',  // Darker blue on hover
+            nodeStashedSelectedColor: '#1d4ed8', // Selected stashed color
             edgeColor: '#94a3b8',
             textColor: '#1e293b',
             backgroundColor: '#f8fafc',
@@ -69,6 +72,7 @@ export class GraphDraw {
                 id: entry.uri || entry.urn,
                 label: this._extractLabel(entry.uri || entry.urn),
                 data: entry,
+                isStashed: entry.isStashed || false,  // Include stash state
                 x: Math.cos(index * 2 * Math.PI / kbData.length) * 200 + this.canvas.width / 2,
                 y: Math.sin(index * 2 * Math.PI / kbData.length) * 200 + this.canvas.height / 2,
                 vx: 0,
@@ -497,12 +501,25 @@ export class GraphDraw {
      * Draw a node
      */
     drawNode(node) {
-        // Determine node color
+        // Determine node color based on state
         let color = this.config.nodeColor;
-        if (node === this.selectedNode) {
-            color = this.config.nodeSelectedColor;
-        } else if (node === this.hoveredNode) {
-            color = this.config.nodeHoverColor;
+        
+        if (node.isStashed) {
+            // Stashed node colors
+            if (node === this.selectedNode) {
+                color = this.config.nodeStashedSelectedColor;
+            } else if (node === this.hoveredNode) {
+                color = this.config.nodeStashedHoverColor;
+            } else {
+                color = this.config.nodeStashedColor;
+            }
+        } else {
+            // Regular node colors
+            if (node === this.selectedNode) {
+                color = this.config.nodeSelectedColor;
+            } else if (node === this.hoveredNode) {
+                color = this.config.nodeHoverColor;
+            }
         }
         
         // Draw node circle
@@ -510,6 +527,13 @@ export class GraphDraw {
         this.ctx.beginPath();
         this.ctx.arc(node.x, node.y, this.config.nodeRadius, 0, 2 * Math.PI);
         this.ctx.fill();
+        
+        // Add a subtle border for stashed nodes
+        if (node.isStashed) {
+            this.ctx.strokeStyle = '#1e40af'; // Darker blue border
+            this.ctx.lineWidth = 2;
+            this.ctx.stroke();
+        }
         
         // Draw node label with white text and black border
         this.ctx.font = `bold ${12 / this.zoom}px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif`;
@@ -599,5 +623,22 @@ export class GraphDraw {
         this.zoom = 1;
         this.panOffset = { x: 0, y: 0 };
         this.render();
+    }
+
+    /**
+     * Update the stash state of a specific node and re-render
+     * @param {string} nodeId - The ID of the node to update
+     * @param {boolean} isStashed - Whether the node is now stashed
+     */
+    updateNodeStashState(nodeId, isStashed) {
+        const node = this.nodes.find(n => n.id === nodeId);
+        if (node) {
+            node.isStashed = isStashed;
+            // Also update the data object
+            if (node.data) {
+                node.data.isStashed = isStashed;
+            }
+            this.render();
+        }
     }
 }

@@ -70,6 +70,12 @@ export const EVENTS = {
     },
     UI: {
         CHANGED: 'ui:changed'
+    },
+    STASH: {
+        UPDATED: 'stash:updated',
+        CLEARED: 'stash:cleared',
+        CLEARED_ALL: 'stash:cleared_all',
+        SAVED: 'stash:saved'
     }
 }; 
 
