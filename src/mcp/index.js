@@ -1,6 +1,7 @@
 import { MCPControlPanel } from './panel.js';
 import { initializeContext } from '../js/context/context-init.js';
 import MCPConnector from '../js/mcp/mcp-connector.js';
+import { documentModal } from './document-modal.js';
 
 /**
  * MCPControlPanelApp
@@ -35,6 +36,7 @@ class MCPControlPanelApp {
             onRefreshKb: this.fetchKnowledgeBase.bind(this),
             onRefreshLists: this.fetchLists.bind(this),
             onSelectList: this.fetchListContent.bind(this),
+            onOpenKbDocument: this.openKbDocument.bind(this), // Add this line
         };
         this.panel.initialize(handlers);
 
@@ -121,9 +123,13 @@ class MCPControlPanelApp {
         if (!this.mcpConnector) return;
         this.panel.showLoading('kb');
         try {
-             const result = await this.mcpConnector.executeTool('kb_search', { graph_expand_hops: 1 });
-             if (result.success) {
-                // This will just show the placeholder with the node count for now
+            // Fetch with graph expansion to get relationships
+            const result = await this.mcpConnector.executeTool('kb_search', { 
+                root_uri: "kb://",
+                include_index: true,
+            });
+            
+            if (result.success) {
                 this.panel.renderKbGraph(result);
             } else {
                 throw new Error(result.error || 'Unknown error');
@@ -205,6 +211,62 @@ class MCPControlPanelApp {
             // Show error in modal
             const errorMsg = `Failed to read file: ${error.message}`;
             this.panel.updateFileViewerContent(errorMsg);
+        }
+    }
+
+    /**
+     * Opens a KB document by fetching its full content and displaying it in the document modal.
+     * @param {object} node - The KB node data to open.
+     */
+    async openKbDocument(node) {
+        if (!this.mcpConnector) return;
+        
+        const uri = node.uri || node.urn;
+        console.log(`[MCPApp] Opening KB document: ${uri}`);
+        
+        try {
+            // Show modal with loading state first
+            documentModal.open({
+                uri: uri,
+                content: '',
+                index: {}
+            });
+            documentModal.setLoading();
+            
+            // Fetch full document content with index
+            const result = await this.mcpConnector.executeTool('kb_read', { 
+                uri: uri,
+                include_content: true,
+                include_index: true
+            });
+            
+            if (result.success) {
+                // Update modal with actual content
+                documentModal.updateContent({
+                    uri: result.uri || result.urn || uri,
+                    content: result.content || '',
+                    index: result.index || {},
+                    score: node.score,
+                    relations: node.relations
+                });
+            } else {
+                // Show error in modal
+                const errorMsg = `Error reading document: ${result.error || 'Unknown error'}`;
+                documentModal.updateContent({
+                    uri: uri,
+                    content: errorMsg,
+                    index: { error: result.error || 'Unknown error' }
+                });
+            }
+        } catch (error) {
+            console.error(`[MCPApp] Failed to open KB document "${uri}":`, error);
+            // Show error in modal
+            const errorMsg = `Failed to read document: ${error.message}`;
+            documentModal.updateContent({
+                uri: uri,
+                content: errorMsg,
+                index: { error: error.message }
+            });
         }
     }
 }

@@ -1,6 +1,8 @@
 import '../shared/global.scss';
 import './style.css';
 import { textViewModal } from './textview-modal.js';
+import { GraphDraw } from './graph-draw.js';
+import { documentModal } from './document-modal.js';
 
 /**
  * MCPControlPanel
@@ -13,6 +15,8 @@ export class MCPControlPanel {
         this._cacheDOMElements();
         this.selectedList = null;
         this.selectedFile = null; // Track currently selected file
+        this.selectedKbNode = null; // Track currently selected KB node
+        this.graphDraw = null;      // Graph visualization instance
     }
 
     /**
@@ -40,6 +44,9 @@ export class MCPControlPanel {
         this.openFileBtn = document.getElementById('open-file-btn');
         this.refreshKbBtn = document.getElementById('refresh-kb-btn');
         this.refreshListsBtn = document.getElementById('refresh-lists-btn');
+        
+        // Add KB open button reference
+        this.openKbBtn = document.getElementById('open-kb-btn');
     }
 
     /**
@@ -55,6 +62,7 @@ export class MCPControlPanel {
      * @param {Function} handlers.onSelectList - Callback when a list is selected.
      */
     initialize(handlers) {
+        this._storeHandlers(handlers); // Add this line
         this.reconnectBtn.addEventListener('click', handlers.onReconnect);
         this.refreshHealthBtn.addEventListener('click', handlers.onRefreshHealth);
         this.refreshFsBtn.addEventListener('click', handlers.onRefreshFs);
@@ -65,6 +73,13 @@ export class MCPControlPanel {
         });
         this.refreshKbBtn.addEventListener('click', handlers.onRefreshKb);
         this.refreshListsBtn.addEventListener('click', handlers.onRefreshLists);
+        
+        // Add after existing event listeners
+        this.openKbBtn.addEventListener('click', () => {
+            if (this.selectedKbNode) {
+                handlers.onOpenKbDocument(this.selectedKbNode);
+            }
+        });
         
         this.listsBrowser.addEventListener('click', (e) => {
             const listItem = e.target.closest('li[data-list-name]');
@@ -338,18 +353,51 @@ export class MCPControlPanel {
     }
 
     /**
-     * Renders the knowledge base graph (placeholder).
+     * Renders the knowledge base graph.
      * @param {object} kbData - Data for the graph visualization.
      */
     renderKbGraph(kbData) {
+        console.log(`[Panel] renderKbGraph called with data:`, kbData);
         if (!kbData) {
             this.kbGraphContainer.innerHTML = `<div class="placeholder error">Failed to fetch knowledge base data.</div>`;
             return;
         }
         
-        // In a real implementation, this would involve a library like D3 or Vis.js
-        const nodeCount = kbData.results ? kbData.results.length : (kbData.nodes ? kbData.nodes.length : 0);
-        this.kbGraphContainer.innerHTML = `<div class="placeholder">Graph rendering is not yet implemented. ${nodeCount} nodes found.</div>`;
+        const results = kbData.results || [];
+        if (results.length === 0) {
+            this.kbGraphContainer.innerHTML = `<div class="placeholder">No documents found in knowledge base.</div>`;
+            return;
+        }
+        
+        // Always destroy and recreate graph to avoid state issues
+        this.graphDraw = null;
+        this.graphDraw = new GraphDraw(this.kbGraphContainer);
+        this.graphDraw.initialize();
+        
+        // Setup event listeners for graph interactions
+        this.kbGraphContainer.addEventListener('kb-node-selected', (e) => {
+            this.selectedKbNode = e.detail.node;
+            this.openKbBtn.style.display = this.selectedKbNode ? 'inline-flex' : 'none';
+        });
+        
+        this.kbGraphContainer.addEventListener('kb-node-open', (e) => {
+            if (e.detail.node) {
+                // Trigger the open handler
+                const handlers = this._handlers;
+                if (handlers && handlers.onOpenKbDocument) {
+                    handlers.onOpenKbDocument(e.detail.node);
+                }
+            }
+        });
+        
+        // Listen for graph ready event to clear loading state
+        this.kbGraphContainer.addEventListener('kb-graph-ready', () => {
+            console.log('[Panel] Graph ready, clearing loading state');
+            // Loading state should already be cleared since we're not in showLoading anymore
+        });
+        
+        // Set data and render
+        this.graphDraw.setData(results);
     }
 
     /**
@@ -420,6 +468,7 @@ export class MCPControlPanel {
      * @param {string} message - The loading message to display.
      */
     showLoading(widgetName, message = 'Loading...') {
+        console.log(`[Panel] showLoading called for: ${widgetName} with message: ${message}`);
         const containers = {
             health: this.healthContent,
             fs: this.fsTreeContainer,
@@ -467,6 +516,14 @@ export class MCPControlPanel {
      */
     setFileViewerLoading() {
         textViewModal.setLoading();
+    }
+
+    /**
+     * Store handlers reference for later use
+     * @private
+     */
+    _storeHandlers(handlers) {
+        this._handlers = handlers;
     }
 
     /**

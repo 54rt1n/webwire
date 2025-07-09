@@ -488,3 +488,22 @@ body {
     max-height: 400px;
     overflow-y: auto;
 }
+
+/* Knowledge Base Graph Container */
+.widget-kb .widget-content {
+    padding: 0;
+    position: relative;
+    min-height: 400px;
+}
+
+/* Ensure the open button matches filesystem button style */
+#open-kb-btn {
+    display: none;
+}
+
+/* Graph container takes full space */
+#kb-graph-container {
+    width: 100%;
+    height: 100%;
+    min-height: 400px;
+}
