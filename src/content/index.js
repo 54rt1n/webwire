@@ -6,6 +6,18 @@ import { ToolFormatter } from '../js/mcp/tool-formatter.js';
 import { EventBus } from '../js/core/event-bus.js';
 import { WebWirePanel } from './panel.js';
 import { pageUtils } from './page-utils.js';
+import { setupDebugMethods, setupGlobalDebugAccess } from './debug.js';
+import {
+    BACKGROUND_ACTIONS,
+    BACKGROUND_HANDLERS,
+    PANEL_ACTIONS,
+    PANEL_MESSAGE_TYPES,
+    MESSAGE_ROLES,
+    KEYBOARD_SHORTCUTS,
+    DOM_READY_STATES
+} from './constants.js';
+import '../shared/global.scss';
+import './style.css';
 
 /**
  * WebWire Content Script - Lightweight Version
@@ -106,7 +118,7 @@ class WebWireContentScript {
     async loadSettingsFromBackground() {
         try {
             const response = await chrome.runtime.sendMessage({
-                action: 'GET_WEBWIRE_SETTINGS'
+                action: BACKGROUND_ACTIONS.GET_WEBWIRE_SETTINGS
             });
 
             console.log('[WebWireContent] Settings from background:', response);
@@ -176,9 +188,9 @@ class WebWireContentScript {
         window.addEventListener('message', (event) => {
             if (event.source !== window) return;
             
-            if (event.data.type === 'WEBWIRE_PANEL_MESSAGE') {
+            if (event.data.type === PANEL_MESSAGE_TYPES.WEBWIRE_PANEL_MESSAGE) {
                 this.handlePanelMessage(event.data);
-            } else if (event.data.type === 'WEBWIRE_PANEL_READY') {
+            } else if (event.data.type === PANEL_MESSAGE_TYPES.WEBWIRE_PANEL_READY) {
                 // Panel has loaded, send current state
                 this.sendInitialState();
             }
@@ -190,44 +202,44 @@ class WebWireContentScript {
 
         try {
             switch (action) {
-                case 'SEND_CHAT_MESSAGE':
+                case PANEL_ACTIONS.SEND_CHAT_MESSAGE:
                     await this.handleChatMessage(data.message);
                     break;
                     
-                case 'ANALYZE_PAGE_CONTENT':
+                case PANEL_ACTIONS.ANALYZE_PAGE_CONTENT:
                     const analysisRequest = pageUtils.buildAnalysisRequest();
                     await this.handleChatMessage(analysisRequest);
                     break;
                     
-                case 'CONNECT_MCP':
+                case PANEL_ACTIONS.CONNECT_MCP:
                     await this.connectToMCP(data.url);
                     break;
                     
-                case 'DISCONNECT_MCP':
+                case PANEL_ACTIONS.DISCONNECT_MCP:
                     if (this.mcpConnector) {
                         this.mcpConnector.disconnect();
                         this.mcpConnector = null;
                     }
                     break;
                     
-                case 'GET_PAGE_CONTENT':
+                case PANEL_ACTIONS.GET_PAGE_CONTENT:
                     const content = pageUtils.getCurrentPageContent();
                     this.sendToPanel({ 
-                        type: 'PAGE_CONTENT_RESPONSE', 
+                        type: PANEL_MESSAGE_TYPES.PAGE_CONTENT_RESPONSE, 
                         content 
                     });
                     break;
                     
-                case 'GET_STATE':
+                case PANEL_ACTIONS.GET_STATE:
                     // Get current thread and settings from background
                     try {
                         const threadResponse = await chrome.runtime.sendMessage({
-                            action: 'GET_ACTIVE_THREAD'
+                            action: BACKGROUND_ACTIONS.GET_ACTIVE_THREAD
                         });
                         const currentThread = threadResponse.success ? threadResponse.thread : null;
                         
                         this.sendToPanel({
-                            type: 'STATE_RESPONSE',
+                            type: PANEL_MESSAGE_TYPES.STATE_RESPONSE,
                             state: {
                                 currentThread: currentThread,
                                 settings: this.currentSettings,
@@ -237,7 +249,7 @@ class WebWireContentScript {
                         });
                     } catch (error) {
                         this.sendToPanel({
-                            type: 'STATE_RESPONSE',
+                            type: PANEL_MESSAGE_TYPES.STATE_RESPONSE,
                             state: {
                                 currentThread: null,
                                 settings: {},
@@ -248,19 +260,19 @@ class WebWireContentScript {
                     }
                     break;
                     
-                case 'SAVE_SETTINGS':
+                case PANEL_ACTIONS.SAVE_SETTINGS:
                     try {
                         const response = await chrome.runtime.sendMessage({
-                            action: 'SAVE_WEBWIRE_SETTINGS',
+                            action: BACKGROUND_ACTIONS.SAVE_WEBWIRE_SETTINGS,
                             settings: data.settings
                         });
                         this.sendToPanel({
-                            type: 'SAVE_SETTINGS_RESPONSE',
+                            type: PANEL_MESSAGE_TYPES.SAVE_SETTINGS_RESPONSE,
                             success: response.success
                         });
                     } catch (error) {
                         this.sendToPanel({
-                            type: 'SAVE_SETTINGS_RESPONSE',
+                            type: PANEL_MESSAGE_TYPES.SAVE_SETTINGS_RESPONSE,
                             success: false
                         });
                     }
@@ -272,7 +284,7 @@ class WebWireContentScript {
         } catch (error) {
             console.error('Error handling panel message:', error);
             this.sendToPanel({
-                type: 'ERROR',
+                type: PANEL_MESSAGE_TYPES.ERROR,
                 error: error.message
             });
         }
@@ -284,7 +296,7 @@ class WebWireContentScript {
         if (!this.aiClient) {
             console.log('[WebWireContent] No AI client configured, sending error to panel');
             this.sendToPanel({
-                type: 'ERROR',
+                type: PANEL_MESSAGE_TYPES.ERROR,
                 error: 'AI client not configured'
             });
             return;
@@ -294,13 +306,13 @@ class WebWireContentScript {
             // Add user message to panel
             console.log('[WebWireContent] Sending user message to panel');
             this.sendToPanel({
-                type: 'CHAT_MESSAGE',
-                message: { role: 'user', content: userMessage }
+                type: PANEL_MESSAGE_TYPES.CHAT_MESSAGE,
+                message: { role: MESSAGE_ROLES.USER, content: userMessage }
             });
 
             // Get or create current thread from background
             const threadResponse = await chrome.runtime.sendMessage({
-                action: 'GET_OR_CREATE_CURRENT_THREAD',
+                action: BACKGROUND_ACTIONS.GET_OR_CREATE_CURRENT_THREAD,
                 options: {
                     title: `Page: ${document.title}`,
                     url: window.location.href
@@ -335,7 +347,7 @@ class WebWireContentScript {
             
             // Add current user message to conversation history
             const newUserMessage = {
-                role: 'user',
+                role: MESSAGE_ROLES.USER,
                 content: userMessage,
                 timestamp: Date.now()
             };
@@ -343,7 +355,7 @@ class WebWireContentScript {
             
             // Create enhanced version for API - enhance the first user message with page context
             const messagesForAPI = [...allMessages];
-            const firstUserIndex = messagesForAPI.findIndex(msg => msg.role === 'user');
+            const firstUserIndex = messagesForAPI.findIndex(msg => msg.role === MESSAGE_ROLES.USER);
             if (firstUserIndex !== -1) {
                 const firstUserMessage = messagesForAPI[firstUserIndex];
                 
@@ -411,7 +423,7 @@ class WebWireContentScript {
 
             // Prepare messages for storage (using original unenhanced content)
             const userMsg = { 
-                role: 'user', 
+                role: MESSAGE_ROLES.USER, 
                 content: userMessage, // Original user message without page context
                 timestamp,
                 url: window.location.href,
@@ -419,7 +431,7 @@ class WebWireContentScript {
             };
             
             const assistantMsg = { 
-                role: 'assistant', 
+                role: MESSAGE_ROLES.ASSISTANT, 
                 content: response,
                 timestamp: timestamp + 1,
                 toolResults,
@@ -431,13 +443,13 @@ class WebWireContentScript {
 
             // Store conversation in background with complete storeMessage parameters
             const saveResponse = await chrome.runtime.sendMessage({
-                action: 'SAVE_THREAD_MESSAGE',
+                action: BACKGROUND_ACTIONS.SAVE_THREAD_MESSAGE,
                 threadId: threadId,
                 userMessage: userMsg,
                 assistantMessage: assistantMsg,
                 options: {
-                    userName: this.currentSettings?.aim?.userName || 'user',
-                    personaName: this.currentSettings?.aim?.personaName || 'assistant',
+                    userName: this.currentSettings?.aim?.userName || MESSAGE_ROLES.USER,
+                    personaName: this.currentSettings?.aim?.personaName || MESSAGE_ROLES.ASSISTANT,
                     mood: this.currentSettings?.aim?.mood || null,
                     location: window.location.href,
                     timestamp,
@@ -460,7 +472,7 @@ class WebWireContentScript {
         } catch (error) {
             console.error('Error handling chat message:', error);
             this.sendToPanel({
-                type: 'ERROR',
+                type: PANEL_MESSAGE_TYPES.ERROR,
                 error: error.message
             });
         }
@@ -472,7 +484,7 @@ class WebWireContentScript {
         for (const toolCall of toolCalls) {
             try {
                 this.sendToPanel({
-                    type: 'TOOL_EXECUTION_START',
+                    type: PANEL_MESSAGE_TYPES.TOOL_EXECUTION_START,
                     toolName: toolCall.name
                 });
 
@@ -490,7 +502,7 @@ class WebWireContentScript {
                 });
 
                 this.sendToPanel({
-                    type: 'TOOL_EXECUTION_COMPLETE',
+                    type: PANEL_MESSAGE_TYPES.TOOL_EXECUTION_COMPLETE,
                     toolName: toolCall.name,
                     result
                 });
@@ -505,7 +517,7 @@ class WebWireContentScript {
                 });
 
                 this.sendToPanel({
-                    type: 'TOOL_EXECUTION_ERROR',
+                    type: PANEL_MESSAGE_TYPES.TOOL_EXECUTION_ERROR,
                     toolName: toolCall.name,
                     error: error.message
                 });
@@ -520,19 +532,19 @@ class WebWireContentScript {
         console.log('[WebWireContent] Calling panel method directly:', message);
         
         switch (message.type) {
-            case 'CHAT_MESSAGE':
+            case PANEL_MESSAGE_TYPES.CHAT_MESSAGE:
                 this.panel.displayMessage(message.message);
                 break;
                 
-            case 'CHAT_THINKING_START':
+            case PANEL_MESSAGE_TYPES.CHAT_THINKING_START:
                 this.panel.displayThinkingMessage(message.message);
                 break;
                 
-            case 'CHAT_STREAMING_CHUNK':
+            case PANEL_MESSAGE_TYPES.CHAT_STREAMING_CHUNK:
                 this.panel.updateStreamingMessage(message.messageId, message.fullContent);
                 break;
                 
-            case 'CHAT_THINKING_COMPLETE':
+            case PANEL_MESSAGE_TYPES.CHAT_THINKING_COMPLETE:
                 if (message.finalContent) {
                     // Finalize the thinking message with final content
                     this.panel.finalizeThinkingMessage(message.messageId, message.finalContent);
@@ -542,19 +554,19 @@ class WebWireContentScript {
                 }
                 break;
                 
-            case 'CONVERSATION_UPDATED':
+            case PANEL_MESSAGE_TYPES.CONVERSATION_UPDATED:
                 this.panel.displayConversation(message.conversation);
                 break;
                 
-            case 'CONNECTION_STATUS_UPDATE':
+            case PANEL_MESSAGE_TYPES.CONNECTION_STATUS_UPDATE:
                 this.panel.updateConnectionStatus(message.status, message.aiConnected, message.mcpConnected);
                 break;
                 
-            case 'INITIAL_STATE':
+            case PANEL_MESSAGE_TYPES.INITIAL_STATE:
                 this.panel.handleInitialState(message.state);
                 break;
                 
-            case 'ERROR':
+            case PANEL_MESSAGE_TYPES.ERROR:
                 this.panel.displayError(message.error);
                 break;
                 
@@ -581,7 +593,7 @@ class WebWireContentScript {
         
         // Send status update to panel
         this.sendToPanel({
-            type: 'CONNECTION_STATUS_UPDATE',
+            type: PANEL_MESSAGE_TYPES.CONNECTION_STATUS_UPDATE,
             aiConnected,
             mcpConnected,
             status
@@ -597,7 +609,9 @@ class WebWireContentScript {
         // Listen for keyboard shortcuts
         document.addEventListener('keydown', (event) => {
             // Ctrl+Shift+W to toggle panel
-            if (event.ctrlKey && event.shiftKey && event.key === 'W') {
+            if (event.ctrlKey === KEYBOARD_SHORTCUTS.TOGGLE_PANEL.ctrlKey && 
+                event.shiftKey === KEYBOARD_SHORTCUTS.TOGGLE_PANEL.shiftKey && 
+                event.key === KEYBOARD_SHORTCUTS.TOGGLE_PANEL.key) {
                 event.preventDefault();
                 this.togglePanel();
             }
@@ -643,7 +657,7 @@ class WebWireContentScript {
             let currentThread = null;
             try {
                 const threadResponse = await chrome.runtime.sendMessage({
-                    action: 'GET_ACTIVE_THREAD'
+                    action: BACKGROUND_ACTIONS.GET_ACTIVE_THREAD
                 });
                 if (threadResponse.success) {
                     currentThread = threadResponse.thread;
@@ -700,7 +714,7 @@ class WebWireContentScript {
             console.log(`[WebWireContent] Saving panel visibility state to background: ${visible}`);
             
             const response = await chrome.runtime.sendMessage({
-                action: 'SAVE_PANEL_VISIBILITY',
+                action: BACKGROUND_ACTIONS.SAVE_PANEL_VISIBILITY,
                 visible: visible
             });
 
@@ -720,7 +734,7 @@ class WebWireContentScript {
     async getBackgroundState() {
         try {
             const response = await chrome.runtime.sendMessage({
-                action: 'GET_WEBWIRE_STATE'
+                action: BACKGROUND_ACTIONS.GET_WEBWIRE_STATE
             });
 
             if (response && response.success) {
@@ -883,25 +897,25 @@ class WebWireContentScript {
         
         try {
             switch (message.action) {
-                case 'INJECT_WEBWIRE_PANEL':
+                case BACKGROUND_HANDLERS.INJECT_WEBWIRE_PANEL:
                     this.injectPanel()
                         .then(() => sendResponse({ success: true }))
                         .catch(error => sendResponse({ success: false, error: error.message }));
                     return true;
                     
-                case 'TOGGLE_WEBWIRE_PANEL':
+                case BACKGROUND_HANDLERS.TOGGLE_WEBWIRE_PANEL:
                     this.togglePanel();
                     sendResponse({ success: true });
                     return false;
                     
-                case 'CAPTURE_PAGE_CONTENT':
+                case BACKGROUND_HANDLERS.CAPTURE_PAGE_CONTENT:
                     sendResponse({
                         success: true,
                         data: this.getPageContent()
                     });
                     return false;
                     
-                case 'GET_WEBWIRE_STATE':
+                case BACKGROUND_HANDLERS.GET_WEBWIRE_STATE:
                     try {
                         sendResponse({
                             success: true,
@@ -924,19 +938,19 @@ class WebWireContentScript {
                     }
                     return false;
                     
-                case 'SETTINGS_CHANGED':
+                case BACKGROUND_HANDLERS.SETTINGS_CHANGED:
                     // Settings have been updated - notify panel and update local cache
                     this.handleSettingsChanged(message.data);
                     sendResponse({ success: true });
                     return false;
                     
-                case 'CONVERSATION_UPDATED':
+                case BACKGROUND_HANDLERS.CONVERSATION_UPDATED:
                     // Conversation has been updated - notify panel
                     this.handleConversationUpdate(message.data);
                     sendResponse({ success: true });
                     return false;
                     
-                case 'PING':
+                case BACKGROUND_HANDLERS.PING:
                     // Health check endpoint
                     sendResponse({ success: true, status: 'ready' });
                     return false;
@@ -963,11 +977,11 @@ class WebWireContentScript {
         
         // Send thinking message start to panel
         this.sendToPanel({
-            type: 'CHAT_THINKING_START',
+            type: PANEL_MESSAGE_TYPES.CHAT_THINKING_START,
             message: {
                 id: messageId,
                 content: message,
-                role: 'assistant'
+                role: MESSAGE_ROLES.ASSISTANT
             }
         });
         
@@ -992,7 +1006,7 @@ class WebWireContentScript {
         
         // Send chunk update to panel
         this.sendToPanel({
-            type: 'CHAT_STREAMING_CHUNK',
+            type: PANEL_MESSAGE_TYPES.CHAT_STREAMING_CHUNK,
             messageId: messageHandle.id,
             chunk: chunk,
             fullContent: this.streamingState.streamingText
@@ -1010,152 +1024,34 @@ class WebWireContentScript {
         
         // Send finalization to panel
         this.sendToPanel({
-            type: 'CHAT_THINKING_COMPLETE',
+            type: PANEL_MESSAGE_TYPES.CHAT_THINKING_COMPLETE,
             messageId: messageHandle.id,
             finalContent: finalContent // Pass the final content
         });
     }
 
-
-
+    /**
+     * Show error notification in the panel
+     * @param {string} message - Error message to display
+     */
     showError(message) {
         console.error('WebWire Error:', message);
         
-        const notification = document.createElement('div');
-        notification.style.cssText = `
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            background: #ef4444;
-            color: white;
-            padding: 12px 16px;
-            border-radius: 8px;
-            z-index: 2147483647;
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            box-shadow: 0 10px 25px -3px rgba(0, 0, 0, 0.1);
-        `;
-        notification.textContent = message;
-        
-        document.body.appendChild(notification);
-        
-        setTimeout(() => {
-            if (notification.parentNode) {
-                notification.parentNode.removeChild(notification);
-            }
-        }, 5000);
+        // Delegate to panel for DOM manipulation
+        if (this.panel && this.panel.isReady()) {
+            this.panel.showErrorNotification(message);
+        } else {
+            // Fallback for when panel is not ready
+            console.error('WebWire panel not ready, cannot show error notification:', message);
+        }
     }
-}
-
-/**
- * Export functions for testing and debugging
- */
-export function getWebWireInstance() {
-    return webwireContentScript;
-}
-
-export function isWebWireReady() {
-    return webwireContentScript && (webwireContentScript.aiClient || webwireContentScript.mcpConnector);
-}
-
-// Add debug methods to the WebWire class prototype for window access
-if (typeof window !== 'undefined') {
-    WebWireContentScript.prototype.debug = function() {
-        return {
-            panelInjected: this.panel.isReady(),
-            mcpConnected: this.mcpConnector ? true : false,
-            aiClientConfigured: this.aiClient ? true : false,
-            currentThreadId: this.currentThreadId,
-            frameworkReady: true,
-            streamingActive: this.streamingState.isActive,
-            currentContent: this.streamingState.currentContent,
-            currentSettings: this.currentSettings
-        };
-    };
-
-    WebWireContentScript.prototype.forceInject = function() {
-        console.log('Force injecting WebWire panel...');
-        return this.injectPanel();
-    };
-
-    WebWireContentScript.prototype.forceToggle = function() {
-        console.log('Force toggling WebWire panel...');
-        this.togglePanel();
-    };
-
-    WebWireContentScript.prototype.getPageInfo = function() {
-        console.log('Getting page content...');
-        return pageUtils.getCurrentPageContent();
-    };
-
-    WebWireContentScript.prototype.debugMessageEnhancement = function(testMessage = 'Test message') {
-        console.log('=== WebWire Message Enhancement Debug ===');
-        const original = testMessage;
-        const enhanced = pageUtils.enhanceMessageWithContext(testMessage);
-        
-        console.log('Original Message:', original);
-        console.log('Enhanced Message (sent to API):', enhanced);
-        console.log('Difference in length:', enhanced.length - original.length, 'characters');
-        
-        return {
-            original,
-            enhanced,
-            lengthDiff: enhanced.length - original.length
-        };
-    };
-
-    WebWireContentScript.prototype.debugPanelPersistence = function() {
-        console.log('=== WebWire Panel Persistence Debug ===');
-        console.log('Current panel visible state:', this.panel.isVisible);
-        
-        const testActions = {
-            showPanel: () => {
-                console.log('Testing: Show panel (will persist state to background)');
-                return this.showPanel();
-            },
-            hidePanel: () => {
-                console.log('Testing: Hide panel (will persist state to background)');
-                return this.hidePanel();
-            },
-            togglePanel: () => {
-                console.log('Testing: Toggle panel (will persist state to background)');
-                return this.togglePanel();
-            },
-            checkBackgroundState: async () => {
-                console.log('Testing: Check background state');
-                const state = await this.getBackgroundState();
-                console.log('Background state:', state);
-                console.log('Panel visible in background:', state?.ui?.panelVisible);
-                return state;
-            },
-            testRestore: async () => {
-                console.log('Testing: Restore panel from background state');
-                const state = await this.getBackgroundState();
-                const shouldShow = state?.ui?.panelVisible || false;
-                console.log('Should show panel:', shouldShow);
-                if (shouldShow) {
-                    this.panel.show();
-                    console.log('Panel restored to visible state');
-                } else {
-                    this.panel.hide();
-                    console.log('Panel restored to hidden state');
-                }
-                return shouldShow;
-            }
-        };
-        
-        console.log('Available test actions:', Object.keys(testActions));
-        console.log('Usage: webwire.debugPanelPersistence().showPanel()');
-        console.log('Usage: webwire.debugPanelPersistence().checkBackgroundState()');
-        
-        return testActions;
-    };
 }
 
 // Global instance
 let webwireContentScript = null;
 
 // Wait for the DOM to be fully loaded
-if (document.readyState === 'loading') {
+if (document.readyState === DOM_READY_STATES.LOADING) {
     document.addEventListener('DOMContentLoaded', initialize);
 } else {
     initialize();
@@ -1168,6 +1064,9 @@ async function initialize() {
     console.log('WebWire content script initializing...');
     
     try {
+        // Setup debug methods on the class prototype
+        setupDebugMethods(WebWireContentScript);
+        
         // Create instance
         webwireContentScript = new WebWireContentScript();
         
@@ -1175,22 +1074,9 @@ async function initialize() {
         await webwireContentScript.initialize();
         
         console.log('WebWire content script initialized successfully');
-        
-        // Hook to window for global access and debugging
-        if (typeof window !== 'undefined') {
-            window.webwireContentScript = webwireContentScript;
-            window.webwire = webwireContentScript; // Shorter alias
-            console.log('WebWire hooked to window.webwireContentScript and window.webwire');
-        }
-        
     } catch (error) {
         console.error('Failed to initialize WebWire content script:', error);
-        
-        // Still hook to window for debugging failed states
-        if (typeof window !== 'undefined') {
-            window.webwireContentScript = webwireContentScript;
-            window.webwire = webwireContentScript;
-            console.log('WebWire hooked to window despite initialization failure (for debugging)');
-        }
+    } finally {
+        setupGlobalDebugAccess(webwireContentScript);
     }
 }

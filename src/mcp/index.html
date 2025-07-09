@@ -3,125 +3,113 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WebWire MCP Test Interface</title>
+    <title>WebWire - MCP Control Panel</title>
+    <!-- We'll bundle global.scss and style.css into this single file -->
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <div class="container">
-        <h1>WebWire MCP Test Interface</h1>
-        
-                <!-- MCP Configuration Section -->
-        <div class="section" data-section="mcp-config">
-            <h2 class="collapsible-header">
-                <span class="section-title">MCP Configuration</span>
-                <span class="chevron collapsed">▼</span>
-            </h2>
-            <div class="section-summary visible" id="mcpConfigSummary">
-                <span class="summary-url">No URL configured</span> • 
-                <span class="summary-status">Disconnected</span>
-            </div>
-            <div class="section-content collapsed">
-                <div class="form-group">
-                    <label for="mcpUrl">MCP Server URL:</label>
-                    <input type="text" id="mcpUrl" placeholder="Enter MCP server URL (e.g., http://localhost:8000/sse)">
-                    <small>The URL of your MCP server for tool-enabled agents.</small>
+    <div class="mcp-dashboard">
+        <!-- ======================= HEADER ======================= -->
+        <header class="widget widget-header">
+            <h1>MCP Control Panel</h1>
+            <div id="connection-status" class="connection-status-widget">
+                <div class="status-light disconnected" id="connection-light"></div>
+                <div class="status-text">
+                    <span id="server-status-text">Disconnected</span>
+                    <span id="server-url-display">No server configured</span>
                 </div>
-                <div class="form-group">
-                    <label class="checkbox-label">
-                        <input type="checkbox" id="autoConnectCheckbox">
-                        <span class="checkbox-text">Auto-connect on page load</span>
-                    </label>
-                    <small>Automatically connect to the MCP server when the page loads.</small>
-                </div>
-            <div class="button-group">
-                <button id="connectBtn">Connect to MCP Server</button>
-                <button id="disconnectBtn" disabled>Disconnect</button>
+                <button id="reconnect-btn" class="btn btn-sm">Reconnect</button>
             </div>
-            <div class="status-container">
-                <span id="connectionStatus" class="connection-status disconnected">Disconnected</span>
-                <div id="connectionMessage" class="status-message" style="display: none;"></div>
-            </div>
-            </div>
-        </div>
+        </header>
 
-        <!-- Available Tools Section -->
-        <div class="section" data-section="tools">
-            <h2 class="collapsible-header">
-                <span class="section-title">Available Tools</span>
-                <span class="chevron collapsed">▼</span>
-            </h2>
-            <div class="section-summary visible" id="toolsSummary">
-                <span class="summary-tools">0 Tools Available</span>
+        <!-- ======================= HEALTH CHECK ======================= -->
+        <section id="health-check-widget" class="widget widget-health">
+            <div class="widget-header">
+                <h2>Health Check</h2>
+                <button id="refresh-health-btn" class="btn btn-icon" title="Refresh Health">
+                    <!-- Refresh Icon SVG -->
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                      <path fill-rule="evenodd" d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2v1z"/>
+                      <path d="M8 4.466V.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384L8.41 4.658A.25.25 0 0 1 8 4.466z"/>
+                    </svg>
+                </button>
             </div>
-            <div class="section-content collapsed">
-                <div class="button-group">
-                    <button id="listToolsBtn" disabled>List Available Tools</button>
-                    <button id="refreshToolsBtn" disabled>Refresh Tools</button>
-                </div>
-                <div id="toolsContainer" class="tools-container">
-                    <div class="status-message info">Connect to MCP server to see available tools</div>
-                </div>
+            <div id="health-check-content" class="widget-content">
+                <!-- Health data will be rendered here by panel.js -->
+                <div class="placeholder">Click Refresh to check server health.</div>
             </div>
-        </div>
+        </section>
 
-        <!-- MCP System Message Section -->
-        <div class="section full-width" data-section="mcp-system">
-            <h2 class="collapsible-header">
-                <span class="section-title">MCP System Message</span>
-                <span class="chevron collapsed">▼</span>
-            </h2>
-            <div class="section-summary visible" id="mcpSystemSummary">
-                <span class="summary-system-message">No custom system message</span>
-            </div>
-            <div class="section-content collapsed">
-                <div class="form-group">
-                    <label for="mcpSystemMessage">Custom System Message:</label>
-                    <textarea id="mcpSystemMessage" class="system-message-textarea" placeholder="Enter a custom system message for MCP tool interactions (optional)"></textarea>
-                    <small>This message will used for your system prompt.</small>
-                </div>
-                <div class="system-message-controls">
-                    <button id="saveSystemMessageBtn" class="save-btn" style="display: none;">
-                        <span class="btn-icon">✓</span> Save Changes
+        <!-- ======================= FILESYSTEM ======================= -->
+        <main id="filesystem-widget" class="widget widget-filesystem">
+            <div class="widget-header">
+                <h2>Filesystem Explorer</h2>
+                <div class="widget-actions">
+                    <button id="open-file-btn" class="btn btn-icon" title="Open Selected File" style="display: none;">
+                        📂
                     </button>
-                    <button id="discardSystemMessageBtn" class="discard-btn" style="display: none;">
-                        <span class="btn-icon">✗</span> Discard Changes
+                    <button id="refresh-fs-btn" class="btn btn-icon" title="Refresh Filesystem">
+                        <!-- Refresh Icon SVG -->
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                          <path fill-rule="evenodd" d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2v1z"/>
+                          <path d="M8 4.466V.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384L8.41 4.658A.25.25 0 0 1 8 4.466z"/>
+                        </svg>
                     </button>
                 </div>
             </div>
-        </div>
+            <div id="fs-tree-container" class="widget-content fs-tree">
+                 <!-- FS tree will be rendered here by panel.js -->
+                 <div class="placeholder">Connect to server to browse filesystem.</div>
+            </div>
+        </main>
 
-        <!-- Chat Interface Section -->
-        <div class="section full-width">
-            <h2>Chat Interface</h2>
-            <div class="chat-container">
-                <div id="chatMessages" class="chat-messages">
-                    <div class="status-message info">Connect to MCP server to start testing tool calls</div>
-                </div>
-                <div class="chat-input-container">
-                    <textarea id="chatInput" class="chat-input" placeholder="Type your message here..." disabled></textarea>
-                    <div class="button-group">
-                        <button id="sendChatBtn" disabled>Send Message</button>
-                        <button id="retryChatBtn" disabled>Retry Message</button>
-                        <button id="replayToolsBtn" disabled>Replay Tool</button>
-                        <button id="clearChatBtn">Clear Chat</button>
-                    </div>
-                </div>
+        <!-- ======================= KNOWLEDGE BASE ======================= -->
+        <aside id="kb-widget" class="widget widget-kb">
+            <div class="widget-header">
+                <h2>Knowledge Base Graph</h2>
+                 <button id="refresh-kb-btn" class="btn btn-icon" title="Refresh Knowledge Base">
+                    <!-- Refresh Icon SVG -->
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                      <path fill-rule="evenodd" d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2v1z"/>
+                      <path d="M8 4.466V.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384L8.41 4.658A.25.25 0 0 1 8 4.466z"/>
+                    </svg>
+                </button>
             </div>
-        </div>
+            <div id="kb-graph-container" class="widget-content kb-graph">
+                 <!-- Graph visualization will be rendered here by panel.js -->
+                 <div class="placeholder">Connect to server to visualize knowledge base.</div>
+            </div>
+        </aside>
 
-        <!-- Debug Section -->
-        <div class="section">
-            <h2>Debug Information</h2>
-            <div class="button-group">
-                <button id="showStateBtn">Show State</button>
-                <button id="showStatsBtn">Show Stats</button>
+        <!-- ======================= LISTS ======================= -->
+        <section id="lists-widget" class="widget widget-lists">
+            <div class="lists-browser-pane">
+                 <div class="widget-header">
+                    <h3>Lists</h3>
+                     <button id="refresh-lists-btn" class="btn btn-icon" title="Refresh Lists">
+                        <!-- Refresh Icon SVG -->
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                          <path fill-rule="evenodd" d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2v1z"/>
+                          <path d="M8 4.466V.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384L8.41 4.658A.25.25 0 0 1 8 4.466z"/>
+                        </svg>
+                    </button>
+                </div>
+                <ul id="lists-browser" class="widget-content">
+                    <!-- List of lists will be rendered here -->
+                    <li class="placeholder">No lists found.</li>
+                </ul>
             </div>
-            <div id="debugContainer" class="debug-container">
-                <div class="status-message info">Debug information will appear here</div>
+            <div class="list-content-pane">
+                 <div class="widget-header">
+                    <h3 id="list-content-title">Select a list</h3>
+                </div>
+                <div id="list-content-view" class="widget-content">
+                    <!-- Content of selected list will be rendered here -->
+                    <div class="placeholder">Select a list from the left to view its contents.</div>
+                </div>
             </div>
-        </div>
+        </section>
     </div>
-
     <script src="./index.js" type="module"></script>
 </body>
 </html>

@@ -1,807 +1,216 @@
-import { MCPTestPanel } from './panel.js';
+import { MCPControlPanel } from './panel.js';
 import { initializeContext } from '../js/context/context-init.js';
-import { EVENTS } from '../js/core/events.js';
 import MCPConnector from '../js/mcp/mcp-connector.js';
-import { ToolParser } from '../js/mcp/tool-parser.js';
-import { ToolFormatter } from '../js/mcp/tool-formatter.js';
-import { AIClientFactory } from '../js/ai/ai-client-factory.js';
 
 /**
- * MCP Test Application - Main business logic for testing MCP server connections.
- * Handles MCP connection management, tool execution, AI chat integration,
- * and conversation persistence for the MCP testing interface.
- * 
- * @example
- * const app = new MCPTestApp();
- * await app.initialize();
- * 
- * // App automatically handles:
- * // - MCP server connections
- * // - Tool discovery and execution
- * // - AI chat with tool calling
- * // - Conversation history persistence
- * // - Error handling and reconnection
+ * MCPControlPanelApp
+ * The main controller for the MCP Control Panel. This class wires together the
+ * MCPConnector (data/business logic) and the MCPControlPanel (UI/view logic).
  */
-class MCPTestApp {
+class MCPControlPanelApp {
     constructor() {
-        this.panel = new MCPTestPanel();
-        this.storage = null;
+        this.panel = new MCPControlPanel();
         this.stateService = null;
-        this.dispatcher = null;
         this.mcpConnector = null;
-        this.aiClient = null;
-        this.toolParser = new ToolParser();
-        this.currentStreamingMessage = null;
+        this.serverUrl = null;
     }
 
     /**
-     * Initialize the MCP test application
+     * Initializes the entire application.
      */
     async initialize() {
-        console.log('[MCPTestApp] Initializing MCP Test Application...');
-        
-        try {
-
-            const { dispatcher, stateService, storage } = await initializeContext();
-            this.dispatcher = dispatcher;
-            this.stateService = stateService;
-            this.storage = storage;
-            // Load settings and state first
-            await this.stateService.settings.loadSettings();
-            await this.stateService.disk.loadFromStorage();
-            
-            // Set state service for the panel and initialize
-            this.panel.setStateService(this.stateService);
-            await this.panel.initialize();
-            
-            this.renderHistory();
-
-            console.log('[MCPTestApp] State:', this.stateService.state);
-            
-            // Load MCP URL from settings
-            const mcpUrl = this.stateService.state.settings?.mcp?.serverUrl;
-            if (mcpUrl) {
-                this.panel.setMcpUrl(mcpUrl);
-            }
-            
-            // Setup AI client for chat functionality
-            await this.setupAIClient();
-            
-            // Setup event listeners
-            this.setupEventListeners();
-            
-            // Subscribe to MCP events
-            this.setupMCPEventListeners();
-            
-            // Auto-connect if enabled
-            await this.handleAutoConnect();
-            
-            console.log('[MCPTestApp] MCP Test Application initialized successfully');
-            
-        } catch (error) {
-            console.error('[MCPTestApp] Failed to initialize:', error);
-            this.panel.addChatMessage('error', `Initialization failed: ${error.message}`, { isHtml: true });
-        }
-    }
-
-    /**
-     * Renders the conversation history on load.
-     */
-    renderHistory() {
-        const conversationId = this.panel.getConversationId();
-        const messages = this.stateService.conversation.getConversationMessages(conversationId);
-        
-        // Keep track of the last user message for retry functionality
-        let lastUserMessage = null;
-        
-        messages.forEach(msg => {
-            const { role, content, toolCalls, toolResults, timestamp, parseErrors, ...rest } = msg;
-            
-            // Track the last user message (excluding retry messages)
-            if (role === 'user' && !content.startsWith('[Retry]')) {
-                lastUserMessage = content;
-            }
-            
-            if (role === 'assistant') {
-                let statusText = '';
-                let additionalContent = '';
-                if (toolCalls && toolCalls.length > 0) {
-                    statusText = `Executed ${toolCalls.length} tool call(s)...`;
-                }
-                if (toolResults && toolResults.length > 0) {
-                    const toolResultsContent = toolResults.map(result => JSON.stringify(result.response, null, 2)).join('\n\n');
-                    additionalContent = `Tool results: ${toolResultsContent}`;
-                }
-                if (parseErrors && parseErrors.length > 0) {
-                    additionalContent = `Parse errors: ${parseErrors.join(', ')}`;
-                }
-                this.panel.addChatMessage(role, content, { statusText, additionalContent, ...rest });
-            } else {
-                this.panel.addChatMessage(role, content, { ...rest });
-            }
-        });
-        
-        // Restore the last user message for retry functionality
-        if (lastUserMessage) {
-            this.panel.setLastUserMessage(lastUserMessage);
-        }
-        
-        console.log(`[MCPTestApp] Rendered ${messages.length} messages from history.`);
-    }
-
-    /**
-     * Setup AI client for chat functionality
-     */
-    async setupAIClient() {
-        try {
-            const modelConfig = this.stateService.settings.getModelConfig('tools');
-            if (modelConfig && modelConfig.provider && modelConfig.model) {
-                this.aiClient = AIClientFactory.createClient(this.dispatcher, modelConfig);
-                console.log('[MCPTestApp] AI client configured:', modelConfig.provider, modelConfig.model);
-            } else {
-                console.warn('[MCPTestApp] No AI model configuration found');
-            }
-        } catch (error) {
-            console.error('[MCPTestApp] Failed to setup AI client:', error);
-        }
-    }
-
-    /**
-     * Setup event listeners for UI interactions
-     */
-    setupEventListeners() {
-        this.panel.setupEventListeners({
-            onConnect: () => this.connectToMCP(),
-            onDisconnect: () => this.disconnectFromMCP(),
-            onListTools: () => this.listTools(),
-            onRefreshTools: () => this.refreshTools(),
-            onSendChat: () => this.sendChatMessage(),
-            onRetryChat: () => this.retryChatMessage(),
-            onReplayTools: () => this.replayLastToolCall(),
-            onClearChat: () => this.clearChat(),
-            onShowState: () => this.showState(),
-            onShowStats: () => this.showStats(),
-            onAutoConnectChanged: () => this.handleAutoConnectChanged(),
-        });
-
-        // Listen for streaming AI responses
-        this.dispatcher.on(EVENTS.AI.STREAM_CHUNK, ({ chunk }) => {
-            if (this.currentStreamingMessage) {
-                this.panel.updateStreamingMessage(this.currentStreamingMessage, chunk);
-            }
-        });
-    }
-
-    /**
-     * Setup MCP event listeners
-     */
-    setupMCPEventListeners() {
-        this.dispatcher.on(EVENTS.MCP.CONNECTED, () => {
-            this.panel.updateConnectionStatus('connected', 'Successfully connected to MCP server');
-        });
-
-        this.dispatcher.on(EVENTS.MCP.DISCONNECTED, () => {
-            this.panel.updateConnectionStatus('disconnected', 'Disconnected from MCP server');
-        });
-
-        this.dispatcher.on(EVENTS.MCP.CONNECTION_ERROR, ({ error }) => {
-            this.panel.updateConnectionStatus('disconnected', `Connection error: ${error}`);
-        });
-
-        this.dispatcher.on(EVENTS.MCP.INITIALIZED, () => {
-            this.listTools();
-        });
-
-        this.dispatcher.on(EVENTS.MCP.TOOLS_UPDATED, ({ tools, count }) => {
-            this.panel.renderTools(tools);
-        });
-    }
-
-    /**
-     * Connect to MCP server
-     */
-    async connectToMCP() {
-        const url = this.panel.getMcpUrl();
-        if (!url) {
-            this.panel.updateConnectionStatus('disconnected', 'Please enter a valid MCP server URL');
-            return;
-        }
-
-        try {
-            this.panel.setConnectionLoading(true);
-
-            // Create new MCP connector
-            this.mcpConnector = new MCPConnector(url, this.stateService);
-            
-            // Initialize the connection
-            const tools = await this.mcpConnector.initialize();
-            
-            // Save the URL to settings
-            await this.saveMcpUrl(url);
-            
-        } catch (error) {
-            console.error('[MCPTestApp] Failed to connect to MCP:', error);
-            this.panel.updateConnectionStatus('disconnected', `Connection failed: ${error.message}`);
-        } finally {
-            this.panel.setConnectionLoading(false);
-        }
-    }
-
-    /**
-     * Disconnect from MCP server
-     */
-    async disconnectFromMCP() {
-        if (this.mcpConnector) {
-            this.mcpConnector.disconnect();
-            this.mcpConnector = null;
-        }
-    }
-
-    /**
-     * List available tools
-     */
-    async listTools() {
-        if (!this.mcpConnector) {
-            return;
-        }
-
-        try {
-            this.panel.setToolsLoading(true);
-
-            const tools = this.stateService.mcp.getMcpTools();
-            this.panel.renderTools(tools);
-            
-        } catch (error) {
-            console.error('[MCPTestApp] Failed to list tools:', error);
-        } finally {
-            this.panel.setToolsLoading(false);
-        }
-    }
-
-    /**
-     * Refresh tools (same as list tools but with different messaging)
-     */
-    async refreshTools() {
-        if (!this.mcpConnector) {
-            return;
-        }
-
-        try {
-            this.panel.setToolsLoading(true);
-
-            // Re-fetch tools from server
-            const tools = await this.mcpConnector.fetchTools();
-            this.stateService.mcp.setMcpTools(tools);
-            this.panel.renderTools(tools);
-            
-        } catch (error) {
-            console.error('[MCPTestApp] Failed to refresh tools:', error);
-        } finally {
-            this.panel.setToolsLoading(false);
-        }
-    }
-
-    /**
-     * Send chat message
-     */
-    async sendChatMessage() {
-        const message = this.panel.getChatInput();
-        if (!message) return;
-
-        if (!this.mcpConnector) {
-            this.panel.addChatMessage('error', 'Not connected to MCP server');
-            return;
-        }
-
-        if (!this.aiClient) {
-            this.panel.addChatMessage('error', 'AI client not configured. Please configure AI settings in the options page.');
-            return;
-        }
-
-        try {
-            this.panel.clearChatInput();
-            this.panel.addChatMessage('user', message);
-            
-            // Store the last user message for retry functionality
-            this.panel.setLastUserMessage(message);
-
-            // Add thinking message
-            this.currentStreamingMessage = this.panel.addChatMessage('assistant', '', { isLoading: true, statusText: 'Thinking...' });
-
-            // Get conversation history
-            const conversationId = this.panel.getConversationId();
-            const history = this.stateService.conversation.getConversationMessages(conversationId);
-
-            // Get previous tool results from last assistant message
-            const lastAssistantMessage = this.stateService.conversation.getLastAssistantMessage(conversationId);
-            const previousToolResults = lastAssistantMessage?.toolResults || [];
-
-            // Create system prompt that includes available tools
-            const tools = this.stateService.mcp.getMcpTools();
-            const systemPrompt = ToolFormatter.generateSystemPrompt(tools);
-            const userHeader = ToolFormatter.generateUserHeader(tools, previousToolResults);
-            const metadata = this.stateService.aim.getAimMetadata();
-
-            // Prepend user header to the message
-            const messageWithHeader = `${userHeader}\n\n${message}`;
-
-            console.log('[MCPTestApp] System prompt:', systemPrompt);
-            console.log('[MCPTestApp] User header:', userHeader);
-            console.log('[MCPTestApp] Message with header:', messageWithHeader);
-            console.log('[MCPTestApp] Metadata:', metadata);
-            console.log('[MCPTestApp] Tools:', tools);
-
-            // Generate AI response
-            const response = await this.aiClient.generateTurn(messageWithHeader, history, { 
-                systemPrompt,
-                metadata,
-                maxHistory: 10 
-            });
-
-            // Parse response for tool calls
-            const parseResult = this.toolParser.parseResponse(response);
-            
-            // Execute any tool calls found
-            let toolExecutionResults = [];
-            if (parseResult.success && parseResult.toolCalls.length > 0) {
-                toolExecutionResults = await this.executeToolCalls(parseResult.toolCalls, this.currentStreamingMessage);
-            } else {
-                // No tool calls - update status to Complete
-                this.panel.updateCardStatus(this.currentStreamingMessage, 'Complete');
-            }
-
-            // Store messages in conversation history (use original message without header)
-            const userMessage = { role: 'user', content: message };
-            const assistantMessage = { 
-                role: 'assistant', 
-                content: response,
-                toolCalls: parseResult.toolCalls || [],
-                toolResults: toolExecutionResults,
-                parseErrors: parseResult.errors || [],
-            };
-
-            const messageOptions = this.stateService.aim.getAimMessageOptions();
-            this.stateService.conversation.storeMessage(
-                conversationId, 
-                userMessage, 
-                assistantMessage, 
-                messageOptions
-            );
-
-            // Clear streaming message
-            this.currentStreamingMessage = null;
-
-            // Save state
-            await this.stateService.disk.saveState();
-
-        } catch (error) {
-            console.error('[MCPTestApp] Failed to send chat message:', error);
-            this.panel.addChatMessage('error', `Failed to send message: ${error.message}`);
-            this.currentStreamingMessage = null;
-        }
-    }
-
-
-
-    /**
-     * Replay the last tool call - reparse and re-execute tools from the last assistant message
-     */
-    async replayLastToolCall() {
-        if (!this.mcpConnector) {
-            this.panel.addChatMessage('error', 'Not connected to MCP server');
-            return;
-        }
-
-        try {
-            // Get the last assistant message from state service
-            const conversationId = this.panel.getConversationId();
-            const lastAssistantMessage = this.stateService.conversation.getLastAssistantMessage(conversationId);
-            
-            if (!lastAssistantMessage) {
-                return;
-            }
-
-            this.panel.addChatMessage('system', `Replaying tool calls from last assistant message...`);
-
-            // Parse the message content for tool calls
-            const parseResult = this.toolParser.parseResponse(lastAssistantMessage.content);
-            
-            if (!parseResult.success || parseResult.toolCalls.length === 0) {
-                this.panel.addChatMessage('system', 'No tool calls found in the last assistant message');
-                return;
-            }
-
-            // Add a status message for the replay
-            this.currentStreamingMessage = this.panel.addChatMessage('assistant', 
-                `Replaying ${parseResult.toolCalls.length} tool call(s)...`, 
-                { isLoading: true, statusText: 'Re-executing tools...' }
-            );
-
-            // Execute the tool calls
-            const toolExecutionResults = await this.executeToolCalls(parseResult.toolCalls, this.currentStreamingMessage);
-
-            // Update the original message in conversation history with new tool results
-            lastAssistantMessage.toolCalls = parseResult.toolCalls;
-            lastAssistantMessage.toolResults = toolExecutionResults;
-            lastAssistantMessage.parseErrors = parseResult.errors || [];
-            lastAssistantMessage.isReplay = true;
-            
-            // Update the conversation state
-            this.stateService.conversation.storeMessage(
-                conversationId,
-                { role: 'user', content: '[Tool Replay]' },
-                lastAssistantMessage,
-                {}
-            );
-
-            // Clear the replay message loading state and show final status
-            this.currentStreamingMessage = null;
-            //this.panel.updateCardStatus(replayMessage, `✓ Replayed ${parseResult.toolCalls.length} tool call(s)`);
-
-            // Save state
-            await this.stateService.disk.saveState();
-
-            console.log(`[MCPTestApp] Replayed ${parseResult.toolCalls.length} tool calls from last assistant message`);
-            
-        } catch (error) {
-            console.error('[MCPTestApp] Failed to replay tool calls:', error);
-            this.panel.addChatMessage('error', `Failed to replay tool calls: ${error.message}`);
-        }
-    }
-
-    /**
-     * Retry the last chat message
-     */
-    async retryChatMessage() {
-        const lastMessage = this.panel.getLastUserMessage();
-        if (!lastMessage) {
-            //this.panel.addChatMessage('error', 'No message to retry');
-            return;
-        }
-
-        if (!this.mcpConnector) {
-            //this.panel.addChatMessage('error', 'Not connected to MCP server');
-            return;
-        }
-
-        if (!this.aiClient) {
-            //this.panel.addChatMessage('error', 'AI client not configured. Please configure AI settings in the options page.');
-            return;
-        }
-
-        try {
-            //this.panel.addChatMessage('user', `[Retry] ${lastMessage}`);
-
-            // Add thinking message
-            this.currentStreamingMessage = this.panel.addChatMessage('assistant', '', { isLoading: true });
-
-            // Get conversation history
-            const conversationId = this.panel.getConversationId();
-            const history = this.stateService.conversation.getConversationMessages(conversationId);
-
-            // Get previous tool results from last assistant message
-            const lastAssistantMessage = this.stateService.conversation.getLastAssistantMessage(conversationId);
-            const previousToolResults = lastAssistantMessage?.toolResults || [];
-
-            // Create system prompt that includes available tools
-            const tools = this.stateService.mcp.getMcpTools();
-            const systemPrompt = ToolFormatter.generateSystemPrompt(tools);
-            const userHeader = ToolFormatter.generateUserHeader(tools, previousToolResults);
-            const metadata = this.stateService.aim.getAimMetadata();
-
-            // Prepend user header to the message
-            const messageWithHeader = `${userHeader}\n\n${lastMessage}`;
-
-            console.log('[MCPTestApp] Retrying message:', lastMessage);
-
-            // Generate AI response
-            const response = await this.aiClient.generateTurn(messageWithHeader, history, { 
-                systemPrompt,
-                metadata,
-                maxHistory: 10 
-            });
-
-            // Parse response for tool calls
-            const parseResult = this.toolParser.parseResponse(response);
-
-            // Execute any tool calls found
-            let toolExecutionResults = [];
-            if (parseResult.success && parseResult.toolCalls.length > 0) {
-                toolExecutionResults = await this.executeToolCalls(parseResult.toolCalls, this.currentStreamingMessage);
-            } else {
-                // No tool calls - update status to Complete
-                this.panel.updateCardStatus(this.currentStreamingMessage, 'Complete');
-            }
-
-            // Store messages in conversation history (use original message without header)
-            const userMessage = { role: 'user', content: `[Retry] ${lastMessage}` };
-            const assistantMessage = { 
-                role: 'assistant', 
-                content: response,
-                toolCalls: parseResult.toolCalls || [],
-                toolResults: toolExecutionResults,
-                parseErrors: parseResult.errors || [],
-                isRetry: true
-            };
-
-            const messageOptions = this.stateService.aim.getAimMessageOptions();
-            this.stateService.conversation.storeMessage(
-                conversationId, 
-                userMessage, 
-                assistantMessage, 
-                messageOptions
-            );
-
-            // Save state
-            await this.stateService.disk.saveState();
-
-            // Clear streaming message
-            this.currentStreamingMessage = null;
-
-        } catch (error) {
-            console.error('[MCPTestApp] Failed to retry chat message:', error);
-            //this.panel.addChatMessage('error', `Failed to retry message: ${error.message}`);
-            this.currentStreamingMessage = null;
-        }
-    }
-
-    /**
-     * Execute tool calls and return structured results
-     */
-    async executeToolCalls(toolCalls, streamingMessage) {
-        const results = [];
-        
-        //this.panel.addChatMessage('system', `Executing ${toolCalls.length} tool call(s)...`);
-        
-        for (let i = 0; i < toolCalls.length; i++) {
-            const toolCall = toolCalls[i];
-            const executionStart = Date.now();
-
-            if (!toolCall.name || toolCall.name === 'undefined') {
-                console.error(`[MCPTestApp] Tool call ${i + 1} has no name`);
-                continue;
-            }
-            
-            let resultEntry = {
-                index: i + 1,
-                request: {
-                    name: toolCall.name,
-                    parameters: toolCall.parameters,
-                    timestamp: new Date().toISOString()
-                }
-            };
-            
-            try {
-                //this.panel.addChatMessage('system', `[${i + 1}/${toolCalls.length}] Executing: ${toolCall.name}`);
-                console.log(`[MCPTestApp] Executing tool ${toolCall.name} with parameters:`, toolCall.parameters);
-                
-                const { success, executionTime, ...response }= await this.mcpConnector.executeTool(toolCall.name, toolCall.parameters);
-
-                resultEntry.response = response;
-                resultEntry.success = success;
-                resultEntry.executionTime = executionTime;
-
-                // Display result
-                this.panel.updateCardStatus(streamingMessage, `[${i + 1}/${toolCalls.length}] ✓ ${toolCall.name} completed (${resultEntry.executionTime}ms)`);
-                
-                // Show result content if not too long
-                const toolResultsContent = JSON.stringify(resultEntry.response, null, 2);
-                this.panel.updateCardAdditionalContent(streamingMessage, `Result: ${toolResultsContent}`);
-                
-                console.log(`[MCPTestApp] Tool ${toolCall.name} completed ${success ? 'successfully' : 'with error'}:`, resultEntry.response);
-                
-            } catch (error) {
-                resultEntry.success = false;
-                resultEntry.error = error.message;
-                resultEntry.executionTime = Date.now() - executionStart;
-                
-                console.error(`[MCPTestApp] Tool ${toolCall.name} execution failed:`, error);
-                this.panel.updateCardStatus(streamingMessage, `[${i + 1}/${toolCalls.length}] ✗ ${toolCall.name} failed: ${error.message}`);
-            }
-            
-            results.push(resultEntry);
-        }
-        
-        // Summary
-        const successful = results.filter(r => r.success).length;
-        const failed = results.length - successful;
-        const totalTime = results.reduce((sum, r) => sum + r.executionTime, 0);
-        
-        //this.panel.addChatMessage('system', `Tool execution summary: ${successful} successful, ${failed} failed, ${totalTime}ms total`);
-        
-        if (failed > 0) {
-            const failedTools = results.filter(r => !r.success);
-            console.warn(`[MCPTestApp] Failed tools:`, failedTools);
-        }
-        
-        return results;
-    }
-
-    /**
-     * Clear chat messages
-     */
-    clearChat() {
-        this.panel.clearChat();
-        
-        // Clear conversation history
-        const conversationId = this.panel.getConversationId();
-        this.stateService.conversation.clearConversationHistory(conversationId);
-    }
-
-    /**
-     * Show current state
-     */
-    showState() {
-        this.panel.showDebugLoading('Loading state...');
-        
-        try {
-            const mcpState = this.stateService.mcp.getMcpState();
-            const mcpSummary = this.stateService.mcp.getMcpSummary();
-            
-            const debugInfo = {
-                mcpState,
-                mcpSummary,
-                timestamp: new Date().toISOString()
-            };
-            
-            this.panel.showDebugInfo(debugInfo, 'MCP State');
-            
-        } catch (error) {
-            console.error('[MCPTestApp] Failed to show state:', error);
-            this.panel.addChatMessage('error', `Failed to show state: ${error.message}`);
-        }
-    }
-
-    /**
-     * Show statistics
-     */
-    showStats() {
-        this.panel.showDebugLoading('Loading statistics...');
-        
-        try {
-            // Get conversation history for tool execution stats
-            const conversationId = this.panel.getConversationId();
-            const history = this.stateService.conversation.getConversationMessages(conversationId);
-            
-            // Calculate tool execution statistics
-            const toolStats = this.calculateToolStats(history);
-            
-            const stats = {
-                mcp: {
-                    connected: this.stateService.mcp.isMcpConnected(),
-                    initialized: this.stateService.mcp.isMcpInitialized(),
-                    toolsCount: this.stateService.mcp.getMcpTools().length,
-                    pendingRequestsCount: Object.keys(this.stateService.mcp.getMcpPendingRequests()).length
-                },
-                ai: {
-                    configured: this.aiClient?.isConfigured() || false,
-                    stats: this.aiClient?.getStats() || null
-                },
-                session: {
-                    conversationId: this.panel.getConversationId(),
-                    messageCount: history.length,
-                    timestamp: new Date().toISOString()
-                },
-                toolExecution: toolStats
-            };
-            
-            this.panel.showDebugInfo(stats, 'Statistics');
-            
-        } catch (error) {
-            console.error('[MCPTestApp] Failed to show stats:', error);
-            this.panel.addChatMessage('error', `Failed to show stats: ${error.message}`);
-        }
-    }
-
-    /**
-     * Calculate tool execution statistics from conversation history
-     */
-    calculateToolStats(history) {
-        const stats = {
-            totalToolCalls: 0,
-            successfulCalls: 0,
-            failedCalls: 0,
-            toolUsageCount: {},
-            averageExecutionTime: 0,
-            totalExecutionTime: 0,
-            lastToolCall: null
+        console.log('[MCPApp] Initializing Control Panel...');
+
+        // 1. Initialize core services (state, storage)
+        const { stateService } = await initializeContext();
+        this.stateService = stateService;
+        await this.stateService.settings.loadSettings();
+
+        // 2. Setup UI event handlers
+        const handlers = {
+            onReconnect: this.connect.bind(this),
+            onRefreshHealth: this.fetchHealthCheck.bind(this),
+            onRefreshFs: this.fetchFilesystem.bind(this),
+            onOpenFile: this.openFile.bind(this),
+            onRefreshKb: this.fetchKnowledgeBase.bind(this),
+            onRefreshLists: this.fetchLists.bind(this),
+            onSelectList: this.fetchListContent.bind(this),
         };
+        this.panel.initialize(handlers);
 
-        let totalExecutionTime = 0;
-        let executionCount = 0;
-
-        history.forEach(message => {
-            if (message.role === 'assistant' && message.metadata?.toolResults) {
-                const toolResults = message.metadata.toolResults;
-                
-                toolResults.forEach(result => {
-                    stats.totalToolCalls++;
-                    
-                    if (result.success) {
-                        stats.successfulCalls++;
-                    } else {
-                        stats.failedCalls++;
-                    }
-                    
-                    // Count tool usage
-                    if (!stats.toolUsageCount[result.toolName]) {
-                        stats.toolUsageCount[result.toolName] = 0;
-                    }
-                    stats.toolUsageCount[result.toolName]++;
-                    
-                    // Execution time tracking
-                    if (result.executionTime) {
-                        totalExecutionTime += result.executionTime;
-                        executionCount++;
-                    }
-                    
-                    // Track last tool call
-                    if (!stats.lastToolCall || result.timestamp > stats.lastToolCall.timestamp) {
-                        stats.lastToolCall = {
-                            toolName: result.toolName,
-                            success: result.success,
-                            timestamp: result.timestamp
-                        };
-                    }
-                });
-            }
-        });
-
-        stats.totalExecutionTime = totalExecutionTime;
-        stats.averageExecutionTime = executionCount > 0 ? Math.round(totalExecutionTime / executionCount) : 0;
-
-        return stats;
+        // 3. Attempt to auto-connect
+        await this.connect();
     }
 
     /**
-     * Handle auto-connect checkbox change
+     * Connects to the MCP server and fetches initial data.
      */
-    async handleAutoConnectChanged() {
+    async connect() {
+        this.serverUrl = this.stateService.state.settings?.mcp?.serverUrl || 'http://localhost:8000/sse';
+        console.log(`[MCPApp] Attempting to connect to: ${this.serverUrl}`);
+        this.panel.renderConnectionStatus('connecting', this.serverUrl);
+
         try {
-            const autoConnect = this.panel.getAutoConnect();
-            
-            this.stateService.state.settings.mcp.autoConnect = autoConnect;
-            await this.stateService.settings.saveSettings();
-            console.log('[MCPTestApp] Auto-connect saved:', autoConnect, this.stateService.state);
-            console.log('[MCPTestApp] Auto-connect setting saved:', autoConnect);
+            this.mcpConnector = new MCPConnector(this.serverUrl, this.stateService);
+            await this.mcpConnector.initialize();
+
+            console.log('[MCPApp] Connection successful.');
+            this.panel.renderConnectionStatus('connected', this.serverUrl);
+
+            // Fetch initial data for all widgets upon successful connection
+            this.fetchAllData();
+
         } catch (error) {
-            console.error('[MCPTestApp] Failed to save auto-connect setting:', error);
+            console.error('[MCPApp] Connection failed:', error);
+            this.panel.renderConnectionStatus('disconnected', `Failed: ${error.message}`);
         }
     }
 
     /**
-     * Handle auto-connect on initialization
+     * Fetches and renders data for all widgets simultaneously.
      */
-    async handleAutoConnect() {
+    fetchAllData() {
+        this.fetchHealthCheck();
+        this.fetchFilesystem();
+        this.fetchKnowledgeBase();
+        this.fetchLists();
+    }
+
+    /**
+     * Fetches and renders the health check data.
+     */
+    async fetchHealthCheck() {
+        if (!this.mcpConnector) return;
+        this.panel.showLoading('health');
         try {
-            const autoConnect = this.stateService.state.settings?.mcp?.autoConnect;
-            const mcpUrl = this.stateService.state.settings?.mcp?.serverUrl;
-            
-            if (autoConnect && mcpUrl) {
-                console.log('[MCPTestApp] Auto-connecting to MCP server:', mcpUrl);
-                await this.connectToMCP();
+            const result = await this.mcpConnector.executeTool('health_check');
+            if (result.success) {
+                this.panel.renderHealthCheck(result);
+            } else {
+                throw new Error(result.error || 'Unknown error');
             }
         } catch (error) {
-            console.error('[MCPTestApp] Auto-connect failed:', error);
+            console.error('[MCPApp] Health check failed:', error);
+            this.panel.renderHealthCheck(null); // Renders an error state
         }
     }
 
     /**
-     * Save MCP URL to settings
+     * Fetches and renders the filesystem tree.
      */
-    async saveMcpUrl(url) {
+    async fetchFilesystem() {
+        if (!this.mcpConnector) return;
+        this.panel.showLoading('fs');
         try {
-            this.stateService.mcp.setMcpServerUrl(url);
-            await this.stateService.settings.saveSettings();
-            console.log('[MCPTestApp] MCP URL saved to settings');
+            const result = await this.mcpConnector.executeTool('fs_list', { path: '/', recursive: true });
+            if (result.success) {
+                this.panel.renderFilesystem(result.entries);
+            } else {
+                throw new Error(result.error || 'Unknown error');
+            }
         } catch (error) {
-            console.error('[MCPTestApp] Failed to save MCP URL:', error);
+            console.error('[MCPApp] Filesystem fetch failed:', error);
+            this.panel.renderFilesystem(null); // Renders an error state
+        }
+    }
+
+    /**
+     * Fetches and renders the knowledge base graph data.
+     */
+    async fetchKnowledgeBase() {
+        if (!this.mcpConnector) return;
+        this.panel.showLoading('kb');
+        try {
+             const result = await this.mcpConnector.executeTool('kb_search', { graph_expand_hops: 1 });
+             if (result.success) {
+                // This will just show the placeholder with the node count for now
+                this.panel.renderKbGraph(result);
+            } else {
+                throw new Error(result.error || 'Unknown error');
+            }
+        } catch (error) {
+            console.error('[MCPApp] KB fetch failed:', error);
+            this.panel.renderKbGraph(null);
+        }
+    }
+
+    /**
+     * Fetches and renders the list of all lists.
+     */
+    async fetchLists() {
+        if (!this.mcpConnector) return;
+        this.panel.showLoading('lists');
+        this.panel.showLoading('listContent', 'Select a list from the left...');
+
+        try {
+            const result = await this.mcpConnector.executeTool('list_get', { summary_only: true });
+            if (result.success) {
+                this.panel.renderListsBrowser(result.lists);
+            } else {
+                throw new Error(result.error || 'Unknown error');
+            }
+        } catch (error) {
+            console.error('[MCPApp] Fetching lists failed:', error);
+            this.panel.renderListsBrowser(null);
+        }
+    }
+
+    /**
+     * Fetches and renders the content of a specific list.
+     * @param {string} listName - The name of the list to fetch.
+     */
+    async fetchListContent(listName) {
+        if (!this.mcpConnector) return;
+        this.panel.showLoading('listContent');
+        try {
+            const result = await this.mcpConnector.executeTool('list_get', { name: listName, include_items: true });
+            if (result.success) {
+                this.panel.renderListContent(result);
+            } else {
+                throw new Error(result.error || 'Unknown error');
+            }
+        } catch (error) {
+            console.error(`[MCPApp] Fetching content for list "${listName}" failed:`, error);
+            this.panel.listContentView.innerHTML = `<div class="placeholder error">Failed to load list content.</div>`;
+        }
+    }
+
+    /**
+     * Opens a file by fetching its content and displaying it in the file viewer modal.
+     * @param {string} filePath - The path of the file to open.
+     */
+    async openFile(filePath) {
+        if (!this.mcpConnector) return;
+        
+        console.log(`[MCPApp] Opening file: ${filePath}`);
+        
+        try {
+            // Show modal with loading state first
+            this.panel.openFileViewer(filePath, '');
+            this.panel.setFileViewerLoading();
+            
+            // Fetch file content
+            const result = await this.mcpConnector.executeTool('fs_read', { path: filePath });
+            
+            if (result.success) {
+                // Update modal with actual content
+                this.panel.updateFileViewerContent(result.content || result.text || '');
+            } else {
+                // Show error in modal
+                const errorMsg = `Error reading file: ${result.error || 'Unknown error'}`;
+                this.panel.updateFileViewerContent(errorMsg);
+            }
+        } catch (error) {
+            console.error(`[MCPApp] Failed to open file "${filePath}":`, error);
+            // Show error in modal
+            const errorMsg = `Failed to read file: ${error.message}`;
+            this.panel.updateFileViewerContent(errorMsg);
         }
     }
 }
 
-// Initialize the application when DOM is ready
+// Kick off the application.
 document.addEventListener('DOMContentLoaded', () => {
-    const app = new MCPTestApp();
+    const app = new MCPControlPanelApp();
     app.initialize();
 });

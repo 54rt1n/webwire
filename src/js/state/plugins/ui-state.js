@@ -43,4 +43,19 @@ export class UiStatePlugin {
     getUiState() {
         return this.stateService.state.ui;
     }
+
+    /**
+     * Set auto-inject settings
+     * @param {boolean} autoInject 
+     */
+    setAutoInject(autoInject) {
+        this.stateService.state.settings.ui.autoInject = autoInject;
+    }
+
+    /**
+     * Get auto-inject settings
+     */
+    getAutoInject() {
+        return this.stateService.state.settings.ui.autoInject;
+    }
 } 

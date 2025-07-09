@@ -31,9 +31,6 @@ export class WebWirePanel {
         // Create container
         this.createContainer();
         
-        // Inject CSS
-        this.injectCSS();
-        
         // Create HTML structure
         this.createHTML();
         
@@ -56,393 +53,9 @@ export class WebWirePanel {
     createContainer() {
         this.container = document.createElement('div');
         this.container.id = 'webwire-container';
-        this.container.style.cssText = `
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            pointer-events: none;
-            z-index: 2147483647;
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-        `;
     }
 
-    /**
-     * Inject panel CSS styles
-     */
-    injectCSS() {
-        if (document.getElementById('webwire-panel-styles')) return;
-        
-        const style = document.createElement('style');
-        style.id = 'webwire-panel-styles';
-        style.textContent = `
-            .webwire-panel {
-                position: fixed;
-                top: 20px;
-                right: 20px;
-                width: 400px;
-                height: 600px;
-                background: white;
-                border: 1px solid #e2e8f0;
-                border-radius: 12px;
-                box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
-                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-                z-index: 2147483647;
-                display: flex;
-                flex-direction: column;
-                overflow: hidden;
-                transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-                pointer-events: auto;
-            }
-            
-            .webwire-panel.hidden {
-                opacity: 0;
-                transform: translateX(100%) scale(0.95);
-                pointer-events: none;
-            }
-            
-            .webwire-fab {
-                position: fixed;
-                bottom: 24px;
-                right: 24px;
-                width: 56px;
-                height: 56px;
-                background: #3b82f6;
-                color: white;
-                border: none;
-                border-radius: 50%;
-                cursor: pointer;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                box-shadow: 0 10px 25px -3px rgba(0, 0, 0, 0.1);
-                z-index: 2147483646;
-                transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-                pointer-events: auto;
-            }
-            
-            .webwire-fab:hover {
-                background: #2563eb;
-                transform: scale(1.1);
-            }
-            
-            .webwire-fab.hidden {
-                opacity: 0;
-                transform: scale(0);
-                pointer-events: none;
-            }
-            
-            .panel-header {
-                padding: 16px;
-                border-bottom: 1px solid #e2e8f0;
-                background: #f8fafc;
-                flex-shrink: 0;
-            }
-            
-            .header-top {
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-                margin-bottom: 8px;
-            }
-            
-            .agent-info {
-                display: flex;
-                flex-direction: column;
-            }
-            
-            .agent-name {
-                font-weight: 600;
-                color: #1e293b;
-                font-size: 14px;
-            }
-            
-            .conversation-id {
-                font-size: 12px;
-                color: #64748b;
-            }
-            
-            .header-actions {
-                display: flex;
-                gap: 8px;
-            }
-            
-            .btn-icon {
-                width: 32px;
-                height: 32px;
-                border: none;
-                background: transparent;
-                border-radius: 6px;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                cursor: pointer;
-                color: #64748b;
-                transition: all 0.2s;
-            }
-            
-            .btn-icon:hover {
-                background: #e2e8f0;
-                color: #1e293b;
-            }
-            
-            .connection-status {
-                display: flex;
-                align-items: center;
-                gap: 8px;
-                font-size: 12px;
-                color: #64748b;
-            }
-            
-            .status-indicator {
-                width: 8px;
-                height: 8px;
-                border-radius: 50%;
-                background: #10b981;
-            }
-            
-            .chat-content {
-                flex: 1;
-                overflow-y: auto;
-                padding: 16px;
-                display: flex;
-                flex-direction: column;
-                gap: 12px;
-            }
-            
-            .welcome-message {
-                text-align: center;
-                padding: 32px 16px;
-                color: #64748b;
-            }
-            
-            .welcome-icon {
-                font-size: 48px;
-                margin-bottom: 16px;
-            }
-            
-            .welcome-message h3 {
-                margin: 0 0 8px 0;
-                color: #1e293b;
-                font-size: 18px;
-            }
-            
-            .welcome-message p {
-                margin: 0 0 24px 0;
-                line-height: 1.5;
-            }
-            
-            .quick-actions {
-                display: flex;
-                justify-content: center;
-            }
-            
-            .quick-action-btn {
-                display: flex;
-                align-items: center;
-                gap: 8px;
-                padding: 12px 16px;
-                border: 1px solid #e2e8f0;
-                border-radius: 8px;
-                background: white;
-                color: #1e293b;
-                cursor: pointer;
-                transition: all 0.2s;
-                font-size: 14px;
-            }
-            
-            .quick-action-btn:hover {
-                background: #f8fafc;
-                border-color: #cbd5e1;
-            }
-            
-            .chat-message {
-                display: flex;
-                flex-direction: column;
-                max-width: 85%;
-                padding: 12px 16px;
-                border-radius: 12px;
-                animation: messageSlideIn 0.3s ease-out;
-                word-wrap: break-word;
-            }
-            
-            .chat-message.user {
-                background: #dbeafe;
-                align-self: flex-end;
-                border-bottom-right-radius: 4px;
-                color: #1e293b;
-            }
-            
-            .chat-message.assistant {
-                background: #f0f9ff;
-                align-self: flex-start;
-                border-bottom-left-radius: 4px;
-                color: #1e293b;
-            }
-            
-            .chat-message.thinking {
-                background: #f3f4f6;
-                border: 1px dashed #9ca3af;
-                align-self: flex-start;
-                opacity: 0.8;
-                color: #374151;
-            }
-            
-            .chat-message.error {
-                background: #fee2e2;
-                border: 1px solid #fecaca;
-                color: #dc2626;
-                align-self: flex-start;
-            }
-            
-            .message-content {
-                line-height: 1.5;
-                margin-bottom: 4px;
-                color: #1e293b;
-                font-weight: 400;
-            }
-            
-            .message-time {
-                font-size: 11px;
-                color: #6b7280;
-                align-self: flex-end;
-            }
-            
-            .thinking-indicator {
-                margin-right: 8px;
-                animation: pulse 2s infinite;
-            }
-            
-            .thinking-text {
-                font-style: italic;
-            }
-            
-            .streaming-content {
-                font-style: normal;
-            }
-            
-            .cursor {
-                animation: blink 1s infinite;
-                color: #3b82f6;
-                font-weight: bold;
-                margin-left: 2px;
-            }
-            
-            .error-icon {
-                margin-right: 8px;
-            }
-            
-            .chat-input-container {
-                padding: 16px;
-                border-top: 1px solid #e2e8f0;
-                background: white;
-                flex-shrink: 0;
-            }
-            
-            .input-wrapper {
-                display: flex;
-                gap: 8px;
-                align-items: flex-end;
-            }
-            
-            .chat-input {
-                flex: 1;
-                border: 1px solid #e2e8f0;
-                border-radius: 8px;
-                padding: 12px;
-                font-size: 14px;
-                resize: none;
-                outline: none;
-                max-height: 120px;
-                font-family: inherit;
-                line-height: 1.4;
-            }
-            
-            .chat-input:focus {
-                border-color: #3b82f6;
-                box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-            }
-            
-            .send-button {
-                width: 40px;
-                height: 40px;
-                border: none;
-                border-radius: 8px;
-                background: #3b82f6;
-                color: white;
-                cursor: pointer;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                transition: all 0.2s;
-                flex-shrink: 0;
-            }
-            
-            .send-button:hover:not(:disabled) {
-                background: #2563eb;
-            }
-            
-            .send-button:disabled {
-                background: #cbd5e1;
-                cursor: not-allowed;
-            }
-            
-            @keyframes messageSlideIn {
-                from { 
-                    opacity: 0; 
-                    transform: translateY(10px); 
-                }
-                to { 
-                    opacity: 1; 
-                    transform: translateY(0); 
-                }
-            }
-            
-            @keyframes pulse {
-                0%, 100% { opacity: 1; }
-                50% { opacity: 0.5; }
-            }
-            
-            @keyframes blink {
-                0%, 50% { opacity: 1; }
-                51%, 100% { opacity: 0; }
-            }
-            
-            @keyframes spin {
-                to { transform: rotate(360deg); }
-            }
-            
-            .loading-indicator {
-                position: absolute;
-                top: 50%;
-                left: 50%;
-                transform: translate(-50%, -50%);
-                background: rgba(255, 255, 255, 0.95);
-                padding: 20px;
-                border-radius: 8px;
-                box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-                z-index: 10;
-            }
-            
-            .loading-content {
-                display: flex;
-                align-items: center;
-                gap: 12px;
-                color: #64748b;
-            }
-            
-            .spinner {
-                width: 20px;
-                height: 20px;
-                border: 2px solid #e2e8f0;
-                border-top: 2px solid #3b82f6;
-                border-radius: 50%;
-                animation: spin 1s linear infinite;
-            }
-        `;
-        document.head.appendChild(style);
-    }
+
 
     /**
      * Create HTML structure
@@ -823,7 +436,7 @@ export class WebWirePanel {
     }
 
     /**
-     * Display error message
+     * Display error message in chat
      */
     displayError(error) {
         this.displayMessage({
@@ -831,6 +444,25 @@ export class WebWirePanel {
             content: `<span class="error-icon">❌</span><span class="error-text">${error}</span>`,
             timestamp: Date.now()
         });
+    }
+
+    /**
+     * Show error notification (for system-level errors)
+     */
+    showErrorNotification(message) {
+        console.error('WebWire Error:', message);
+        
+        const notification = document.createElement('div');
+        notification.className = 'webwire-error-notification';
+        notification.textContent = message;
+        
+        document.body.appendChild(notification);
+        
+        setTimeout(() => {
+            if (notification.parentNode) {
+                notification.parentNode.removeChild(notification);
+            }
+        }, 5000);
     }
 
     /**

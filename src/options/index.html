@@ -1,248 +1,16 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Webpage Capture Assistant - Options</title>
-  <style>
-    body {
-      padding: 20px;
-      font-family: Arial, sans-serif;
-      max-width: 800px;
-      margin: 0 auto;
-    }
-
-    .container {
-      display: flex;
-      flex-direction: column;
-      gap: 20px;
-    }
-
-    .form-group {
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-    }
-
-    .form-section {
-      border: 1px solid #ddd;
-      padding: 15px;
-      border-radius: 4px;
-      margin-bottom: 10px;
-      background-color: #fff;
-    }
-
-    .form-section h2 {
-      margin-top: 0;
-      font-size: 1.2em;
-      color: #333;
-    }
-    
-    .form-section h3 {
-      margin-top: 0;
-      font-size: 1.1em;
-      color: #555;
-      border-bottom: 1px solid #eee;
-      padding-bottom: 8px;
-      margin-bottom: 15px;
-    }
-
-    label {
-      font-weight: bold;
-    }
-
-    input[type="text"],
-    input[type="password"],
-    input[type="number"],
-    select,
-    textarea {
-      padding: 8px;
-      border: 1px solid #ddd;
-      border-radius: 4px;
-      font-size: 14px;
-      width: 100%;
-      box-sizing: border-box;
-    }
-
-    select {
-      background-color: white;
-      cursor: pointer;
-    }
-
-    textarea {
-      min-height: 100px;
-      font-family: monospace;
-      resize: vertical;
-    }
-
-    input[type="number"] {
-      width: 120px;
-    }
-
-    button {
-      background-color: #4CAF50;
-      color: white;
-      padding: 10px 15px;
-      border: none;
-      border-radius: 4px;
-      cursor: pointer;
-      font-size: 14px;
-      transition: background-color 0.3s;
-      align-self: flex-start;
-    }
-
-    button:hover {
-      background-color: #45a049;
-    }
-
-    button.secondary-btn {
-      background-color: #607d8b;
-    }
-
-    button.secondary-btn:hover {
-      background-color: #546e7a;
-    }
-
-    button.delete-btn {
-      background-color: #f44336;
-      color: white;
-      padding: 6px 12px;
-      font-size: 12px;
-    }
-
-    button.delete-btn:hover {
-      background-color: #d32f2f;
-    }
-
-    .status {
-      padding: 10px;
-      border-radius: 4px;
-      display: none;
-      margin-top: 15px;
-    }
-
-    .success {
-      background-color: #dff0d8;
-      color: #3c763d;
-      border: 1px solid #d6e9c6;
-    }
-
-    .error {
-      background-color: #f2dede;
-      color: #a94442;
-      border: 1px solid #ebccd1;
-    }
-
-    small {
-      color: #666;
-      font-size: 12px;
-    }
-
-    .grid-2 {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 15px;
-    }
-
-    .model-config-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-      gap: 12px;
-    }
-
-    .model-config {
-      border: 1px solid #ddd;
-      padding: 15px;
-      border-radius: 4px;
-      margin-bottom: 10px;
-      background-color: #fff;
-    }
-
-    .model-config h3 {
-      margin-top: 0;
-      font-size: 1.1em;
-      color: #555;
-      border-bottom: 1px solid #eee;
-      padding-bottom: 8px;
-      margin-bottom: 15px;
-    }
-
-    .drag-handle {
-      cursor: grab;
-      opacity: 0.5;
-      padding: 4px;
-      transition: opacity 0.2s;
-    }
-
-    .drag-handle:hover {
-      opacity: 1;
-    }
-
-    .collapse-btn {
-      background: none;
-      border: none;
-      color: #607d8b;
-      cursor: pointer;
-      font-size: 14px;
-      padding: 4px 8px;
-      transition: all 0.2s;
-      align-self: flex-start;
-    }
-
-    .collapse-btn:hover {
-      color: #455a64;
-      background-color: rgba(0, 0, 0, 0.05);
-      border-radius: 4px;
-    }
-
-    .advanced-settings {
-      background-color: #f5f5f5;
-      border: 1px solid #e0e0e0;
-      border-radius: 4px;
-      padding: 12px;
-      margin-top: 10px;
-    }
-
-    .advanced-settings h4 {
-      margin-top: 0;
-      margin-bottom: 12px;
-      color: #555;
-      font-size: 14px;
-    }
-
-    .advanced-toggle {
-      background: none;
-      border: none;
-      color: #2196F3;
-      cursor: pointer;
-      padding: 4px 0;
-      font-size: 13px;
-      text-align: left;
-    }
-
-    .advanced-toggle:hover {
-      text-decoration: underline;
-    }
-
-    .checkbox-group {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-
-    .checkbox-group input[type="checkbox"] {
-      width: auto;
-      margin: 0;
-    }
-
-    @media (max-width: 768px) {
-      .grid-2 {
-        grid-template-columns: 1fr;
-      }
-    }
-  </style>
+  <title>WebWire - Options</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
 </head>
 <body>
   <div class="container">
-    <h1>Webpage Capture Assistant Options</h1>
+    <div class="text-center" style="margin-bottom: var(--space-8);">
+      <h1>WebWire Options</h1>
+      <p class="text-secondary">Configure your AI assistant settings</p>
+    </div>
     
     <div class="form-section">
       <h2>General Settings</h2>
@@ -263,7 +31,7 @@
           <small>The URL of your MCP server for tool-enabled agents.</small>
         </div>
       </div>
-      <div class="grid-2" style="margin-top: 15px;">
+      <div class="grid-2" style="margin-top: var(--space-4);">
         <div class="form-group checkbox-group">
           <input type="checkbox" id="showThought">
           <label for="showThought">Show Thought Process</label>
@@ -271,6 +39,12 @@
         <div class="form-group checkbox-group">
           <input type="checkbox" id="autoThink">
           <label for="autoThink">Enable Auto-Think</label>
+        </div>
+      </div>
+      <div class="grid-2" style="margin-top: var(--space-4);">
+        <div class="form-group checkbox-group">
+          <input type="checkbox" id="autoInject">
+          <label for="autoInject">Auto-Inject WebWire Panel</label>
         </div>
       </div>
     </div>
@@ -489,7 +263,10 @@
       </div>
     </div>
     
-    <button id="saveBtn">Save All Settings</button>
+    <div class="text-center" style="margin-top: var(--space-8);">
+      <button id="saveBtn" class="btn btn-primary btn-lg">💾 Save All Settings</button>
+    </div>
+    
     <div id="status" class="status"></div>
   </div>
 </body>

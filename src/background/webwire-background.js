@@ -1,5 +1,5 @@
-import { EVENT_TYPES, EVENT_CONTEXT } from './js/core/events.js';
-import { initializeContext } from './js/context/context-init.js';
+import { EVENT_TYPES, EVENT_CONTEXT } from '../js/core/events.js';
+import { initializeContext } from '../js/context/context-init.js';
 
 /**
  * WebWire Extension Background Script

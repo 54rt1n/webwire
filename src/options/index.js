@@ -1,13 +1,12 @@
+import { initializeContext } from '../js/context/context-init.js';
+import { OptionsPanel } from './panel.js';
+import { createInitialState } from '../js/state/state-container.js';
+
 /**
  * Options Page Script
  * 
  * Handles options page UI and interactions for configuring the extension.
  */
-
-import { initializeContext } from '../js/context/context-init.js';
-import { OptionsPanel } from './panel.js';
-import { createInitialState } from '../js/state/state-container.js';
-
 class OptionsApp {
     constructor() {
         this.panel = new OptionsPanel();

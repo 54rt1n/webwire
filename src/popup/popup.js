@@ -1,3 +1,6 @@
+import '../shared/global.scss';
+import './style.css';
+
 /**
  * UI management for the WebWire popup providing status display and user interaction controls.
  * Handles status updates, button interactions, and communication with the background script.

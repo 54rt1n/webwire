@@ -1,3 +1,6 @@
+import '../shared/global.scss';
+import './style.css';
+
 export class OptionsPanel {
     constructor() {
         // General settings
@@ -6,6 +9,7 @@ export class OptionsPanel {
         this.mcpServerUrlInput = document.getElementById('mcpServerUrl');
         this.showThoughtCheckbox = document.getElementById('showThought');
         this.autoThinkCheckbox = document.getElementById('autoThink');
+        this.autoInjectCheckbox = document.getElementById('autoInject');
 
         // Provider settings
         this.providerInputs = {
@@ -92,6 +96,7 @@ export class OptionsPanel {
         this.mcpServerUrlInput.value = settings.mcp?.serverUrl || '';
         this.showThoughtCheckbox.checked = settings.aim?.showThought || false;
         this.autoThinkCheckbox.checked = settings.aim?.autoThink || false;
+        this.autoInjectCheckbox.checked = settings.ui?.autoInject || false;
 
         // Provider settings
         if (settings.ai?.providers) {
@@ -143,6 +148,9 @@ export class OptionsPanel {
             ai: {
                 providers: {},
                 models: {}
+            },
+            ui: {
+                autoInject: this.autoInjectCheckbox.checked
             }
         };
 

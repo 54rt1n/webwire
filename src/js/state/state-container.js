@@ -72,6 +72,9 @@ export function createInitialState() {
                 serverUrl: undefined,
                 autoConnect: false,
                 systemMessage: undefined,
+            },
+            ui: {
+                autoInject: false,
             }
         },
 

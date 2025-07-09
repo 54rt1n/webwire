@@ -16,7 +16,7 @@
   ],
   
   "background": {
-    "service_worker": "webwire-background.js",
+    "service_worker": "background/webwire-background.js",
     "type": "module"
   },
   

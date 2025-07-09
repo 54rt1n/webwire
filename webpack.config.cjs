@@ -10,7 +10,7 @@ module.exports = (env, argv) => {
     mode: isProd ? 'production' : 'development',
     devtool: isProd ? false : 'inline-source-map',
     entry: {
-      background: './src/webwire-background.js',
+      background: './src/background/webwire-background.js',
       content: './src/content/index.js',
       popup: './src/popup/index.js',
       mcp_status: './src/mcp/index.js',
@@ -34,10 +34,11 @@ module.exports = (env, argv) => {
           }
         },
         {
-          test: /\.css$/,
+          test: /\.(css|scss)$/,
           use: [
             isProd ? MiniCssExtractPlugin.loader : 'style-loader',
-            'css-loader'
+            'css-loader',
+            'sass-loader'
           ]
         },
         {
