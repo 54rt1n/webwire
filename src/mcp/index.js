@@ -1,9 +1,12 @@
+import { EVENTS, EVENT_CONTEXT } from '../js/core/events.js';
 import { MCPControlPanel } from './panel.js';
 import { WebWireClientCore } from '../js/client/webwire-client-core.js';
+import { PanelEventHandlers } from '../js/client/panel-event-handlers.js';
+import { CMCPHelper } from '../js/client/cmcp-helper.js';
 import { documentModal } from './document-modal.js';
 import { ChatService } from '../chat/chat-service.js';
 import { EventBus } from '../js/core/event-bus.js';
-import { EventDispatcher } from '../js/core/event-dispatcher.js';
+import { StashPanel } from './stash-panel.js';
 import '../chat/chat.css'; // Import chat panel styles
 
 /**
@@ -16,11 +19,12 @@ class MCPControlPanelApp {
     constructor() {
         // Add ChatService integration
         this.eventBus = new EventBus({domain: 'mcp', debug: true});
-        this.dispatcher = new EventDispatcher(this, this.eventBus, {backendIsLocal: true});
-        this.core = new WebWireClientCore(this.eventBus);    
+        this.core = new WebWireClientCore(this.eventBus);
+        this.panelEventHandlers = null;
         this.panel = new MCPControlPanel(this.eventBus);
-        
-        this.chatService = new ChatService(this.dispatcher);
+        this.chatService = new ChatService(this.eventBus);
+        this.cmcpHelper = null;
+        this.stashPanel = null;
         
         // Setup chat service event handling
         this.setupChatServiceEvents();
@@ -34,33 +38,29 @@ class MCPControlPanelApp {
         console.log('[MCPApp] Initializing Control Panel...');
 
         await this.core.initialize();
+        this.panelEventHandlers = new PanelEventHandlers(this.core);
+        this.panelEventHandlers.setupEventListeners();
+        this.setupStashEventHandlers();
+        this.cmcpHelper = new CMCPHelper(this.core.mcpConnector);
+        this.chatService.mcpConnector = this.core.mcpConnector;
 
         // 2. Set up state service for modals
         if (this.core.stateService) {
-            // Load stash data from storage
-            await this.loadStash();
             documentModal.setStateService(this.core.stateService);
-            this.panel.setStateService(this.core.stateService, this.saveStash.bind(this));
+            this.panel.setStateService(this.core.stateService);
+            this.stashPanel = new StashPanel(this.eventBus, this.core.stateService);
             
-            // Set MCP connector for stash service if available
-            if (this.core.mcpConnector && this.core.stateService.stash) {
-                this.core.stateService.stash.setMCPConnector(this.core.mcpConnector);
-                console.log('[MCPApp] MCP connector connected to stash service');
-            }
+            // 3. Initialize ChatService
+            console.log('[MCPApp] Initializing ChatService...');
+            await this.chatService.initialize(this.core.aiClient, this.core.mcpConnector, this.core.stateService);
+
+            // 4. Update ChatService with current settings if available
+            this.chatService.handleSettingsUpdate({ settings: this.core.stateService.settings.getSettings() });
+
+            // 5. Initialize StashPanel
+            this.stashPanel.initialize();
         }
 
-        // 3. Initialize ChatService
-        console.log('[MCPApp] Initializing ChatService...');
-        await this.chatService.initialize(this.core.aiClient, this.core.mcpConnector, this.core.stateService);
-        
-        // 4. Update ChatService with current settings if available
-        if (this.core.stateService && this.core.stateService.settings) {
-            const settings = this.core.stateService.settings.getSettings();
-            if (settings) {
-                this.chatService.handleSettingsUpdate({ settings });
-            }
-        }
-        
         // 5. Show the chat panel by default (for debugging)
         console.log('[MCPApp] Showing chat panel...');
         setTimeout(() => {
@@ -99,6 +99,7 @@ class MCPControlPanelApp {
         console.log('[MCPApp] Setting up panel message bridge...');
         
         // Listen for window messages from the WebWirePanel
+        // TODO this is all wrong and needs to be setting up event listeners on the event bus
         window.addEventListener('message', (event) => {
             // Only handle our panel messages
             if (event.data && event.data.type === 'WEBWIRE_PANEL_MESSAGE') {
@@ -146,22 +147,7 @@ class MCPControlPanelApp {
      */
     setupStashEventHandlers() {
         // Handle stash add requests
-        this.eventBus.on('stash:add', async (data) => {
-            console.log('[MCPApp] Handling stash add request:', data);
-            await this.handleStashAdd(data);
-        });
-
-        // Handle stash remove requests
-        this.eventBus.on('stash:remove', (data) => {
-            console.log('[MCPApp] Handling stash remove request:', data);
-            this.handleStashRemove(data);
-        });
-
-        // Handle stash clear all requests
-        this.eventBus.on('stash:clear-all', () => {
-            console.log('[MCPApp] Handling stash clear all request');
-            this.handleStashClearAll();
-        });
+        this.eventBus.onExclusive(EVENTS.STASH.ADD, this.handleStashAdd.bind(this));
     }
 
     /**
@@ -218,17 +204,12 @@ class MCPControlPanelApp {
         const success = await this.core.connect();
         if (success) {
             this.panel.renderConnectionStatus('connected', this.core.serverUrl);
+
+            this.cmcpHelper.setMCPConnector(this.core.mcpConnector);
             
             // Share MCP connector with ChatService and StashService
             if (this.core.mcpConnector) {
-                this.chatService.mcpConnector = this.core.mcpConnector;
                 console.log('[MCPApp] Shared MCP connector with ChatService after connection');
-                
-                // Also set MCP connector for stash service
-                if (this.core.stateService && this.core.stateService.stash) {
-                    this.core.stateService.stash.setMCPConnector(this.core.mcpConnector);
-                    console.log('[MCPApp] MCP connector connected to stash service after connection');
-                }
                 
                 try {
                     const tools = await this.core.stateService.mcp.getMcpTools();
@@ -621,39 +602,34 @@ class MCPControlPanelApp {
      * Load stash data from storage
      */
     async loadStash() {
-        if (!this.core.stateService || !this.core.stateService.stash) return;
-        
-        try {
-            await this.core.stateService.stash.loadFromStorage();
-            console.log('[MCPApp] Stash data loaded successfully');
-        } catch (error) {
-            console.error('[MCPApp] Failed to load stash data:', error);
-        }
+        await this.panelEventHandlers.handleLoadStash();
     }
 
     /**
      * Handle stash add request by fetching content and storing it
      * @param {Object} data - { uri, source }
      */
-    async handleStashAdd(data) {
+    async handleStashAdd(data, { autoSave = true, ...options } = {}) {
         if (!this.core.stateService || !this.core.stateService.stash) {
             console.error('[MCPApp] No stash service available');
             return;
         }
 
-        const { uri, source } = data;
+        const { uri, source, ...rest } = data;
 
         try {
             let content = null;
 
             switch (source) {
                 case 'kb':
-                    content = await this.core.stateService.stash.fetchKbContent(uri);
+                    content = await this.cmcpHelper.fetchKbContent(uri);
+                    this.panelEventHandlers.handleStashAdd({ uri, content }, { autoSave, ...options });
                     break;
                 case 'fs':
                     // Extract path from fs://path format
                     const path = uri.startsWith('fs://') ? uri.substring(5) : uri;
-                    content = await this.core.stateService.stash.fetchFsContent(path);
+                    content = await this.cmcpHelper.fetchFsContent(path);
+                    this.panelEventHandlers.handleStashAdd({ uri, content }, { autoSave, ...options });
                     break;
                 case 'list':
                     // For lists, extract content from the already-displayed panel data
@@ -673,7 +649,7 @@ class MCPControlPanelApp {
                                 const status = statusElement.textContent.trim();
                                 const text = textElement.textContent.trim();
                                 content = `[${status}] ${text}`;
-                                this.core.stateService.stash.set(uri, content);
+                                this.panelEventHandlers.handleStashAdd({ uri, content }, { autoSave, ...options });
                             }
                         }
                     } else {
@@ -681,7 +657,7 @@ class MCPControlPanelApp {
                         const listTitle = this.panel.listContentTitle.textContent;
                         const itemCount = this.panel.listContentView.querySelectorAll('.list-item').length;
                         content = `List: ${listTitle} (${itemCount} items)`;
-                        this.core.stateService.stash.set(uri, content);
+                        this.panelEventHandlers.handleStashAdd({ uri, content }, { autoSave, ...options });
                     }
                     break;
                 default:
@@ -691,62 +667,12 @@ class MCPControlPanelApp {
 
             if (content !== null) {
                 console.log(`[MCPApp] Successfully stashed ${uri} (${content.length} chars)`);
-                await this.saveStash();
             } else {
                 console.warn(`[MCPApp] Failed to fetch content for ${uri}`);
             }
 
         } catch (error) {
             console.error(`[MCPApp] Error stashing ${uri}:`, error);
-        }
-    }
-
-    /**
-     * Handle stash remove request
-     * @param {Object} data - { uri, source }
-     */
-    handleStashRemove(data) {
-        if (!this.core.stateService || !this.core.stateService.stash) {
-            console.error('[MCPApp] No stash service available');
-            return;
-        }
-
-        const { uri } = data;
-        const removed = this.core.stateService.stash.delete(uri);
-        
-        if (removed) {
-            console.log(`[MCPApp] Removed ${uri} from stash`);
-            this.saveStash();
-        } else {
-            console.log(`[MCPApp] ${uri} was not in stash`);
-        }
-    }
-
-    /**
-     * Handle stash clear all request
-     */
-    handleStashClearAll() {
-        if (!this.core.stateService || !this.core.stateService.stash) {
-            console.error('[MCPApp] No stash service available');
-            return;
-        }
-
-        this.core.stateService.stash.clearAll();
-        console.log('[MCPApp] Cleared all stash content');
-        this.saveStash();
-    }
-
-    /**
-     * Save stash data to storage
-     */
-    async saveStash() {
-        if (!this.core.stateService || !this.core.stateService.stash) return;
-        
-        try {
-            await this.core.stateService.stash.save();
-            console.log('[MCPApp] Stash data saved successfully');
-        } catch (error) {
-            console.error('[MCPApp] Failed to save stash data:', error);
         }
     }
 }

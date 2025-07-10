@@ -86,6 +86,25 @@ export class EventBus {
     }
 
     /**
+     * onAsync - wrapping the callback in a promise that resolves with the result of the callback or the error using the offered notify/error pattern
+     */
+    onAsync(eventName, callback, options = {}) {
+        const wrappedCallback = async (message, { notify = null, error = null, ...opts } = {}, ...args) => {
+            try {
+                const result = await callback(message, { ...opts }, ...args);
+                if (notify) {
+                    notify(result);
+                }
+            } catch (err) {
+                if (error) {
+                    error(err);
+                }
+            }
+        };
+        return this.on(eventName, wrappedCallback, options);
+    }
+
+    /**
      * Subscribe to an event exclusively, removing all other listeners for that event
      * This will remove all existing listeners for the event before adding the new one
      * @param {string} eventName - The name of the event to listen for

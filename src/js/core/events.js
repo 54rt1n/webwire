@@ -1,22 +1,9 @@
 // js/core/events.js
-export const EVENT_TYPES = {
-  // Local events (within context)
-  LOCAL: {
-    AI_STREAM_CHUNK: 'local:ai:stream_chunk',
-    MCP_TOOL_EXECUTED: 'local:mcp:tool_executed',
-  },
-  
-  // Cross-context events (background ↔ content ↔ popup)
-  GLOBAL: {
-    PANEL_TOGGLE: 'global:ui:panel_toggle',
-    STATE_SYNC: 'global:state:sync',
-    PAGE_ANALYZE: 'global:ai:page_analyze',
-  },
-  
-  // Panel events (content ↔ injected panel)
-  PANEL: {
-    CHAT_MESSAGE: 'panel:chat:message',
-    TOOL_CALL: 'panel:mcp:tool_call',
+export const DISPATCH_TYPES = {
+  THREADS: {
+    SAVE_MESSAGE: 'threads:save-message',
+    CREATE_NEW: 'threads:create-new',
+    GET_OR_CREATE: 'threads:get-or-create'
   }
 };
 
@@ -47,14 +34,19 @@ export const EVENTS = {
         ACTIVATED: 'conversation:activated'
     },
     CHAT: {
-        SEND_MESSAGE: 'chat:send-message',
         ANALYZE_PAGE: 'chat:analyze-page',
-        START_NEW_CONVERSATION: 'chat:start-new-conversation',
-        REPLAY_LAST_TURN: 'chat:replay-last-turn',
-        UPDATE_SETTINGS: 'chat:update-settings',
-        UPDATE_MCP_STATUS: 'chat:update-mcp-status',
         CONVERSATION_LOADED: 'chat:conversation-loaded',
-        CONVERSATION_UPDATED: 'chat:conversation-updated'
+        CONVERSATION_UPDATED: 'chat:conversation-updated',
+        CREATE_NEW_THREAD: 'chat:create-new-thread',
+        GET_OR_CREATE_THREAD: 'chat:get-or-create-thread',
+        INJECT_PANEL: 'chat:inject-panel',
+        REPLAY_LAST_TURN: 'chat:replay-last-turn',
+        SAVE_MESSAGE: 'chat:save-message',
+        SAVE_PANEL_VISIBILITY: 'chat:save-panel-visibility',
+        SEND_MESSAGE: 'chat:send-message',
+        START_NEW_CONVERSATION: 'chat:start-new-conversation',
+        UPDATE_MCP_STATUS: 'chat:update-mcp-status',
+        UPDATE_SETTINGS: 'chat:update-settings'
     },
     AIM: {
         THOUGHT_TOGGLED: 'aim:thought_toggled',
@@ -84,25 +76,15 @@ export const EVENTS = {
     STASH: {
         ADD: 'stash:add',
         REMOVE: 'stash:remove',
-        CLEAR_ALL: 'stash:clear-all',
+        CLEAR: 'stash:clear',
+        SAVE: 'stash:save',
+        LOAD: 'stash:load',
         UPDATED: 'stash:updated',
         CLEARED: 'stash:cleared',
-        CLEARED_ALL: 'stash:cleared_all',
+        LOADED: 'stash:loaded',
         SAVED: 'stash:saved'
     }
 }; 
-
-// Event payload schemas
-export const EVENT_SCHEMAS = {
-  [EVENT_TYPES.GLOBAL.STATE_SYNC]: {
-    type: 'object',
-    properties: {
-      stateType: { enum: ['mcp', 'conversation', 'settings'] },
-      data: { type: 'object' },
-      timestamp: { type: 'number' }
-    }
-  }
-};
 
 export const EVENT_CONTEXT = {
   LOCAL: 'local',

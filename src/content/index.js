@@ -1,7 +1,6 @@
 import { EventBus } from '../js/core/event-bus.js';
-import { EventDispatcher } from '../js/core/event-dispatcher.js';
 import { ChatService } from '../chat/chat-service.js';
-import { pageUtils } from '../chat/page-utils.js';
+import { PageUtils } from '../chat/page-utils.js';
 import { setupDebugMethods, setupGlobalDebugAccess } from './debug.js';
 import {
     BACKGROUND_ACTIONS,
@@ -29,14 +28,13 @@ class WebWireContentHost {
     constructor() {
         // Create event bus for communication with ChatService
         this.eventBus = new EventBus({domain: 'content', debug: true});
-        this.dispatcher = new EventDispatcher(this, this.eventBus);
-        
         // Create the chat service (platform-agnostic core)
-        this.chatService = new ChatService(this.dispatcher);
+        this.chatService = new ChatService(this.eventBus);
         
         // Host state
         this.currentSettings = {};
         this.currentThreadId = null;
+        this.pageUtils = new PageUtils();
         
         // Setup host-specific event handlers
         this.setupHostEventHandlers();
@@ -322,7 +320,7 @@ class WebWireContentHost {
                     
                 case PANEL_ACTIONS.GET_PAGE_CONTENT:
                     // This is a host responsibility
-                    const content = pageUtils.getCurrentPageContent();
+                    const content = this.pageUtils.getCurrentPageContent();
                     // Send response directly to panel (if needed)
                     break;
                     
@@ -377,7 +375,7 @@ class WebWireContentHost {
                 case BACKGROUND_HANDLERS.CAPTURE_PAGE_CONTENT:
                     sendResponse({
                         success: true,
-                        data: pageUtils.getCurrentPageContent()
+                        data: this.pageUtils.getCurrentPageContent()
                     });
                     return false;
                     

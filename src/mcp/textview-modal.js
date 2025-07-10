@@ -201,10 +201,7 @@ export class TextViewModal {
             size: 'icon',
             onToggle: async (stashedUri, isStashed) => {
                 console.log(`[TextViewModal] ${isStashed ? 'Added to' : 'Removed from'} stash: ${stashedUri}`);
-                // Save stash to disk
-                if (this.saveStashFn) {
-                    await this.saveStashFn();
-                }
+                this.eventBus.emit(isStashed ? EVENTS.STASH.ADD : EVENTS.STASH.REMOVE, { uri: stashedUri, isStashed, type: 'fs' });
             }
         });
         

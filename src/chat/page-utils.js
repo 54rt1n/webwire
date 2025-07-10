@@ -515,14 +515,34 @@ export class PageUtils {
         const pageContent = this.getCurrentPageContent();
         return this.contextBuilder.buildStructuredContext(pageContent, userMessage);
     }
-}
 
-// Export default instance for convenience
-export const pageUtils = new PageUtils();
+    /**
+     * Get the page location
+     */
+    getPageLocation() {
+        if (typeof document === 'undefined') {
+            return {
+                title: '',
+                url: ''
+            };
+        }
+        if (typeof window === 'undefined') {
+            return {
+                title: document.title,
+                url: ''
+            };
+        }
+        return {
+            title: document.title,
+            url: window.location.href
+        };
+    }
+
+}
 
 // Add debug methods to window for testing
 if (typeof window !== 'undefined') {
-    window.webwirePageUtils = pageUtils;
+    window.webwirePageUtils = new PageUtils();
     
     // Add convenience methods to PageUtils prototype for debugging
     PageUtils.prototype.debugAnalyzeCurrentPage = function() {

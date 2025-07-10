@@ -13,7 +13,6 @@ import { EVENTS } from '../js/core/events.js';
  */
 export class MCPControlPanel {
     constructor(eventBus) {
-        this._cacheDOMElements();
         this.eventBus = eventBus;
         this.selectedList = null;
         this.selectedFile = null; // Track currently selected file
@@ -22,42 +21,39 @@ export class MCPControlPanel {
         this.graphDraw = null;      // Graph visualization instance
         this.stateService = null;   // State service for stash functionality
         this.textViewModal = new TextViewModal(this.eventBus, this.stateService);
+        
+        this.elements = this._DOMElements();
+
     }
 
     /**
      * Caches all necessary DOM elements for performance.
      * @private
      */
-    _cacheDOMElements() {
+    _DOMElements() {
         // Main sections
-        this.healthContent = document.getElementById('health-check-content');
-        this.fsTreeContainer = document.getElementById('fs-tree-container');
-        this.kbGraphContainer = document.getElementById('kb-graph-container');
-        this.listsBrowser = document.getElementById('lists-browser');
-        this.listContentTitle = document.getElementById('list-content-title');
-        this.listContentView = document.getElementById('list-content-view');
-
-        // Connection status
-        this.connectionLight = document.getElementById('connection-light');
-        this.serverStatusText = document.getElementById('server-status-text');
-        this.serverUrlDisplay = document.getElementById('server-url-display');
-
-        // Buttons
-        this.reconnectBtn = document.getElementById('reconnect-btn');
-        this.toggleChatBtn = document.getElementById('toggle-chat-btn');
-        this.refreshHealthBtn = document.getElementById('refresh-health-btn');
-        this.refreshFsBtn = document.getElementById('refresh-fs-btn');
-        this.openFileBtn = document.getElementById('open-file-btn');
-        this.refreshKbBtn = document.getElementById('refresh-kb-btn');
-        this.refreshListsBtn = document.getElementById('refresh-lists-btn');
-        
-        // Add KB open button reference
-        this.openKbBtn = document.getElementById('open-kb-btn');
-        
-        // Stash button references
-        this.fileStashButton = null;
-        this.kbStashButton = null;
-        this.listStashButton = null;
+        return {
+            healthContent: document.getElementById('health-check-content'),
+            fsTreeContainer: document.getElementById('fs-tree-container'),
+            kbGraphContainer: document.getElementById('kb-graph-container'),
+            listsBrowser: document.getElementById('lists-browser'),
+            listContentTitle: document.getElementById('list-content-title'),
+            listContentView: document.getElementById('list-content-view'),
+            connectionLight: document.getElementById('connection-light'),
+            serverStatusText: document.getElementById('server-status-text'),
+            serverUrlDisplay: document.getElementById('server-url-display'),
+            reconnectBtn: document.getElementById('reconnect-btn'),
+            toggleChatBtn: document.getElementById('toggle-chat-btn'),
+            refreshHealthBtn: document.getElementById('refresh-health-btn'),
+            refreshFsBtn: document.getElementById('refresh-fs-btn'),
+            openFileBtn: document.getElementById('open-file-btn'),
+            refreshKbBtn: document.getElementById('refresh-kb-btn'),
+            refreshListsBtn: document.getElementById('refresh-lists-btn'),
+            openKbBtn: document.getElementById('open-kb-btn'),
+            fileStashButton: null,
+            kbStashButton: null,
+            listStashButton: null
+        };
     }
 
     /**
@@ -74,26 +70,24 @@ export class MCPControlPanel {
      */
     initialize(handlers) {
         this._storeHandlers(handlers); // Add this line
-        this.reconnectBtn.addEventListener('click', handlers.onReconnect);
-        this.toggleChatBtn.addEventListener('click', handlers.onToggleChat);
-        this.refreshHealthBtn.addEventListener('click', handlers.onRefreshHealth);
-        this.refreshFsBtn.addEventListener('click', handlers.onRefreshFs);
-        this.openFileBtn.addEventListener('click', () => {
+        this.elements.reconnectBtn.addEventListener('click', handlers.onReconnect);
+        this.elements.toggleChatBtn.addEventListener('click', handlers.onToggleChat);
+        this.elements.refreshHealthBtn.addEventListener('click', handlers.onRefreshHealth);
+        this.elements.refreshFsBtn.addEventListener('click', handlers.onRefreshFs);
+        this.elements.openFileBtn.addEventListener('click', () => {
             if (this.selectedFile) {
                 handlers.onOpenFile(this.selectedFile);
             }
         });
-        this.refreshKbBtn.addEventListener('click', handlers.onRefreshKb);
-        this.refreshListsBtn.addEventListener('click', handlers.onRefreshLists);
-        
-        // Add after existing event listeners
-        this.openKbBtn.addEventListener('click', () => {
+        this.elements.refreshKbBtn.addEventListener('click', handlers.onRefreshKb);
+        this.elements.refreshListsBtn.addEventListener('click', handlers.onRefreshLists);
+        this.elements.openKbBtn.addEventListener('click', () => {
             if (this.selectedKbNode) {
                 handlers.onOpenKbDocument(this.selectedKbNode);
             }
         });
         
-        this.listsBrowser.addEventListener('click', (e) => {
+        this.elements.listsBrowser.addEventListener('click', (e) => {
             const listItem = e.target.closest('li[data-list-name]');
             if (listItem) {
                 const listName = listItem.dataset.listName;
@@ -110,9 +104,9 @@ export class MCPControlPanel {
      * @param {string} url - The server URL to display.
      */
     renderConnectionStatus(status, url) {
-        this.connectionLight.className = `status-light ${status}`;
-        this.serverStatusText.textContent = status.charAt(0).toUpperCase() + status.slice(1);
-        this.serverUrlDisplay.textContent = url || 'No server configured';
+        this.elements.connectionLight.className = `status-light ${status}`;
+        this.elements.serverStatusText.textContent = status.charAt(0).toUpperCase() + status.slice(1);
+        this.elements.serverUrlDisplay.textContent = url || 'No server configured';
     }
 
     /**
@@ -121,14 +115,14 @@ export class MCPControlPanel {
      */
     renderHealthCheck(healthData) {
         if (!healthData) {
-            this.healthContent.innerHTML = `<div class="placeholder error">Failed to fetch health data.</div>`;
+            this.elements.healthContent.innerHTML = `<div class="placeholder error">Failed to fetch health data.</div>`;
             return;
         }
-        this.healthContent.innerHTML = '';
+        this.elements.healthContent.innerHTML = '';
         for (const [key, value] of Object.entries(healthData)) {
             const keyEl = this._createEl('div', { className: 'key', textContent: key });
             const valueEl = this._createEl('div', { className: 'value', textContent: JSON.stringify(value) });
-            this.healthContent.append(keyEl, valueEl);
+            this.elements.healthContent.append(keyEl, valueEl);
         }
     }
 
@@ -137,20 +131,20 @@ export class MCPControlPanel {
      * @param {object[]} fsData - Array of file/folder entries from the server.
      */
     renderFilesystem(fsData) {
-        this.fsTreeContainer.innerHTML = '';
+        this.elements.fsTreeContainer.innerHTML = '';
         
         // Reset file selection state
         this.selectedFile = null;
-        this.openFileBtn.style.display = 'none';
+        this.elements.openFileBtn.style.display = 'none';
         
         if (!fsData || fsData.length === 0) {
-             this.fsTreeContainer.innerHTML = `<div class="placeholder">Filesystem is empty.</div>`;
+             this.elements.fsTreeContainer.innerHTML = `<div class="placeholder">Filesystem is empty.</div>`;
              return;
         }
 
         // Build and render tree
         const treeHtml = this._buildTreeHtml(fsData);
-        this.fsTreeContainer.innerHTML = treeHtml;
+        this.elements.fsTreeContainer.innerHTML = treeHtml;
         
         // Setup event handlers after DOM is created
         this._setupFileTreeHandlers();
@@ -302,7 +296,7 @@ export class MCPControlPanel {
      * @private
      */
     _setupFileTreeHandlers() {
-        this.fsTreeContainer.addEventListener('click', (e) => {
+        this.elements.fsTreeContainer.addEventListener('click', (e) => {
             // Handle line selection
             const treeLine = e.target.closest('.fs-tree-line');
             if (treeLine) {
@@ -318,7 +312,7 @@ export class MCPControlPanel {
      */
     _selectTreeLine(treeLine) {
         // Remove previous selection
-        this.fsTreeContainer.querySelectorAll('.fs-tree-line.selected').forEach(el => {
+        this.elements.fsTreeContainer.querySelectorAll('.fs-tree-line.selected').forEach(el => {
             el.classList.remove('selected');
         });
         
@@ -333,11 +327,11 @@ export class MCPControlPanel {
         // Update selected file state and button visibility
         if (fileType === 'file') {
             this.selectedFile = filePath;
-            this.openFileBtn.style.display = 'inline-flex';
+            this.elements.openFileBtn.style.display = 'inline-flex';
             this._updateFileStashButton(filePath);
         } else {
             this.selectedFile = null;
-            this.openFileBtn.style.display = 'none';
+            this.elements.openFileBtn.style.display = 'none';
             this._hideFileStashButton();
         }
     }
@@ -377,25 +371,25 @@ export class MCPControlPanel {
     renderKbGraph(kbData) {
         console.log(`[Panel] renderKbGraph called with data:`, kbData);
         if (!kbData) {
-            this.kbGraphContainer.innerHTML = `<div class="placeholder error">Failed to fetch knowledge base data.</div>`;
+            this.elements.kbGraphContainer.innerHTML = `<div class="placeholder error">Failed to fetch knowledge base data.</div>`;
             return;
         }
         
         const results = kbData.results || [];
         if (results.length === 0) {
-            this.kbGraphContainer.innerHTML = `<div class="placeholder">No documents found in knowledge base.</div>`;
+            this.elements.kbGraphContainer.innerHTML = `<div class="placeholder">No documents found in knowledge base.</div>`;
             return;
         }
         
         // Always destroy and recreate graph to avoid state issues
         this.graphDraw = null;
-        this.graphDraw = new GraphDraw(this.kbGraphContainer);
+        this.graphDraw = new GraphDraw(this.elements.kbGraphContainer);
         this.graphDraw.initialize();
         
         // Setup event listeners for graph interactions
-        this.kbGraphContainer.addEventListener('kb-node-selected', (e) => {
+        this.elements.kbGraphContainer.addEventListener('kb-node-selected', (e) => {
             this.selectedKbNode = e.detail.node;
-            this.openKbBtn.style.display = this.selectedKbNode ? 'inline-flex' : 'none';
+            this.elements.openKbBtn.style.display = this.selectedKbNode ? 'inline-flex' : 'none';
             
             if (this.selectedKbNode) {
                 this._updateKbStashButton(this.selectedKbNode);
@@ -404,7 +398,7 @@ export class MCPControlPanel {
             }
         });
         
-        this.kbGraphContainer.addEventListener('kb-node-open', (e) => {
+        this.elements.kbGraphContainer.addEventListener('kb-node-open', (e) => {
             if (e.detail.node) {
                 // Trigger the open handler
                 const handlers = this._handlers;
@@ -415,7 +409,7 @@ export class MCPControlPanel {
         });
         
         // Listen for graph ready event to clear loading state
-        this.kbGraphContainer.addEventListener('kb-graph-ready', () => {
+        this.elements.kbGraphContainer.addEventListener('kb-graph-ready', () => {
             console.log('[Panel] Graph ready, clearing loading state');
             // Loading state should already be cleared since we're not in showLoading anymore
         });
@@ -435,9 +429,9 @@ export class MCPControlPanel {
      * @param {object[]} lists - Array of list metadata objects.
      */
     renderListsBrowser(lists) {
-        this.listsBrowser.innerHTML = '';
+        this.elements.listsBrowser.innerHTML = '';
         if (!lists || lists.length === 0) {
-            this.listsBrowser.innerHTML = `<li class="placeholder">No lists created.</li>`;
+            this.elements.listsBrowser.innerHTML = `<li class="placeholder">No lists created.</li>`;
             return;
         }
         lists.forEach(list => {
@@ -445,7 +439,7 @@ export class MCPControlPanel {
                 'data-list-name': list.name,
                 textContent: list.title || list.name
             });
-            this.listsBrowser.appendChild(li);
+            this.elements.listsBrowser.appendChild(li);
         });
         this._updateActiveListSelection();
     }
@@ -455,15 +449,15 @@ export class MCPControlPanel {
      * @param {object} list - The full list object with items.
      */
     renderListContent(list) {
-        this.listContentTitle.textContent = list.metadata.title || list.name;
-        this.listContentView.innerHTML = '';
+        this.elements.listContentTitle.textContent = list.metadata.title || list.name;
+        this.elements.listContentView.innerHTML = '';
         
         // Reset list item selection
         this.selectedListItem = null;
         this._hideListStashButton();
         
         if (!list.items || list.items.length === 0) {
-            this.listContentView.innerHTML = `<div class="placeholder">This list is empty.</div>`;
+            this.elements.listContentView.innerHTML = `<div class="placeholder">This list is empty.</div>`;
             return;
         }
         
@@ -513,7 +507,7 @@ export class MCPControlPanel {
             }
         });
         
-        this.listContentView.appendChild(ul);
+        this.elements.listContentView.appendChild(ul);
     }
 
     /**
@@ -524,11 +518,11 @@ export class MCPControlPanel {
     showLoading(widgetName, message = 'Loading...') {
         console.log(`[Panel] showLoading called for: ${widgetName} with message: ${message}`);
         const containers = {
-            health: this.healthContent,
-            fs: this.fsTreeContainer,
-            kb: this.kbGraphContainer,
-            lists: this.listsBrowser,
-            listContent: this.listContentView
+            health: this.elements.healthContent,
+            fs: this.elements.fsTreeContainer,
+            kb: this.elements.kbGraphContainer,
+            lists: this.elements.listsBrowser,
+            listContent: this.elements.listContentView
         };
         const container = containers[widgetName];
         if (container) {
@@ -537,7 +531,7 @@ export class MCPControlPanel {
     }
 
     _updateActiveListSelection() {
-        this.listsBrowser.querySelectorAll('li').forEach(li => {
+        this.elements.listsBrowser.querySelectorAll('li').forEach(li => {
             if (li.dataset.listName === this.selectedList) {
                 li.classList.add('active');
             } else {
@@ -552,7 +546,7 @@ export class MCPControlPanel {
      * @param {string} content - The file content to display
      */
     openFileViewer(fileName, content) {
-        textViewModal.open(fileName, content, () => {
+        this.textViewModal.open(fileName, content, () => {
             console.log(`[FileViewer] Closed viewer for: ${fileName}`);
         });
     }
@@ -562,26 +556,24 @@ export class MCPControlPanel {
      * @param {string} content - The new content to display
      */
     updateFileViewerContent(content) {
-        textViewModal.updateContent(content);
+        this.textViewModal.updateContent(content);
     }
 
     /**
      * Sets the file viewer to loading state.
      */
     setFileViewerLoading() {
-        textViewModal.setLoading();
+        this.textViewModal.setLoading();
     }
 
     /**
      * Set the state service for stash functionality
      * @param {Object} stateService - The state service instance
-     * @param {Function} saveStashFn - Function to call when stash needs to be saved
      */
-    setStateService(stateService, saveStashFn = null) {
+    setStateService(stateService) {
         this.stateService = stateService;
-        this.saveStashFn = saveStashFn;
         // Also set for the textview modal
-        this.textViewModal.setStateService(this.eventBus, stateService, saveStashFn);
+        this.textViewModal.setStateService(this.eventBus, stateService);
         
         // Initialize stash buttons for dashboard
         this._initializeStashButtons();
@@ -609,7 +601,7 @@ export class MCPControlPanel {
         if (!this.stateService || !this.stateService.eventBus) return;
         
         // Listen for stash updates from other components (modals, etc.)
-        this.stateService.eventBus.on(EVENTS.STASH.UPDATED, async (data) => {
+        this.stateService.eventBus.on(EVENTS.STASH.ADD, async (data) => {
             console.log('[Panel] Received stash update:', data);
             
             if (data && data.uri && typeof data.isStashed === 'boolean') {
@@ -625,11 +617,6 @@ export class MCPControlPanel {
                         this._updateListItemStashState(data.uri, data.isStashed);
                         break;
                 }
-                
-                // Save stash to disk centrally
-                if (this.saveStashFn) {
-                    await this.saveStashFn();
-                }
             }
         });
     }
@@ -640,7 +627,7 @@ export class MCPControlPanel {
      */
     _ensureStashContainers() {
         // File system widget
-        const fsActions = this.refreshFsBtn.parentElement;
+        const fsActions = this.elements.refreshFsBtn.parentElement;
         if (fsActions && !fsActions.querySelector('.fs-stash-container')) {
             const container = document.createElement('div');
             container.className = 'fs-stash-container';
@@ -649,7 +636,7 @@ export class MCPControlPanel {
         }
         
         // KB widget
-        const kbActions = this.refreshKbBtn.parentElement;
+        const kbActions = this.elements.refreshKbBtn.parentElement;
         if (kbActions && !kbActions.querySelector('.kb-stash-container')) {
             const container = document.createElement('div');
             container.className = 'kb-stash-container';
@@ -658,7 +645,7 @@ export class MCPControlPanel {
         }
         
         // List content widget
-        const listContentHeader = this.listContentTitle.parentElement;
+        const listContentHeader = this.elements.listContentTitle.parentElement;
         const listActions = listContentHeader.querySelector('.widget-actions');
         if (listActions && !listActions.querySelector('.list-stash-container')) {
             const container = document.createElement('div');
@@ -683,17 +670,13 @@ export class MCPControlPanel {
         container.innerHTML = '';
         
         // Create new stash button
-        this.fileStashButton = new StashButton(this.eventBus, this.stateService);
-        const button = this.fileStashButton.create(filePath, 'fs', {
+        this.elements.fileStashButton = new StashButton(this.eventBus, this.stateService);
+        const button = this.elements.fileStashButton.create(filePath, 'fs', {
             size: 'icon',
             onToggle: async (stashedUri, isStashed) => {
                 console.log(`[Panel] File ${isStashed ? 'added to' : 'removed from'} stash: ${stashedUri}`);
                 // Update the visual state of the file tree
                 this._updateFileStashState(filePath, isStashed);
-                // Save stash to disk
-                if (this.saveStashFn) {
-                    await this.saveStashFn();
-                }
             }
         });
         
@@ -730,17 +713,14 @@ export class MCPControlPanel {
         container.innerHTML = '';
         
         // Create new stash button
-        this.kbStashButton = new StashButton(this.eventBus, this.stateService);
-        const button = this.kbStashButton.create(uri, 'kb', {
+        this.elements.kbStashButton = new StashButton(this.eventBus, this.stateService);
+        const button = this.elements.kbStashButton.create(uri, 'kb', {
             size: 'icon',
             onToggle: async (stashedUri, isStashed) => {
                 console.log(`[Panel] KB document ${isStashed ? 'added to' : 'removed from'} stash: ${stashedUri}`);
+                this.eventBus.emit(isStashed ? EVENTS.STASH.ADD : EVENTS.STASH.REMOVE, { uri, isStashed, type: 'kb' });
                 // Update the visual state of the KB node in the graph
                 this._updateKbNodeStashState(uri, isStashed);
-                // Save stash to disk
-                if (this.saveStashFn) {
-                    await this.saveStashFn();
-                }
             }
         });
         
@@ -769,7 +749,7 @@ export class MCPControlPanel {
         if (!this.stateService || !this.stateService.stash) return false;
         
         const fullUri = `fs://${filePath}`;
-        const stashItems = this.stateService.stash.getAllURIs('mcp');
+        const stashItems = this.stateService.stash.getAllKeys('mcp');
         return stashItems.includes(fullUri);
     }
 
@@ -784,7 +764,7 @@ export class MCPControlPanel {
         
         // KB URIs already have kb:// prefix, so use as-is
         const fullUri = uri.startsWith('kb://') ? uri : `kb://${uri}`;
-        const stashItems = this.stateService.stash.getAllURIs('mcp');
+        const stashItems = this.stateService.stash.getAllKeys('mcp');
         return stashItems.includes(fullUri);
     }
 
@@ -800,7 +780,7 @@ export class MCPControlPanel {
         // Convert listName:itemIndex to list://listName/itemIndex
         const [listName, itemIndex] = itemUri.split(':');
         const fullUri = `list://${listName}/${itemIndex}`;
-        const stashItems = this.stateService.stash.getAllURIs('mcp');
+        const stashItems = this.stateService.stash.getAllKeys('mcp');
         return stashItems.includes(fullUri);
     }
 
@@ -811,7 +791,7 @@ export class MCPControlPanel {
      */
     _selectListItem(listItem) {
         // Remove previous selection
-        this.listContentView.querySelectorAll('.list-item.selected').forEach(el => {
+        this.elements.listContentView.querySelectorAll('.list-item.selected').forEach(el => {
             el.classList.remove('selected');
         });
         
@@ -847,17 +827,14 @@ export class MCPControlPanel {
         container.innerHTML = '';
         
         // Create new stash button
-        this.listStashButton = new StashButton(this.eventBus, this.stateService);
-        const button = this.listStashButton.create(itemUri, 'list', {
+        this.elements.listStashButton = new StashButton(this.eventBus, this.stateService);
+        const button = this.elements.listStashButton.create(itemUri, 'list', {
             size: 'icon',
             onToggle: async (stashedUri, isStashed) => {
                 console.log(`[Panel] List item ${isStashed ? 'added to' : 'removed from'} stash: ${stashedUri}`);
                 // Update the visual state of the list item
                 this._updateListItemStashState(itemUri, isStashed);
-                // Save stash to disk
-                if (this.saveStashFn) {
-                    await this.saveStashFn();
-                }
+                this.eventBus.emit(isStashed ? EVENTS.STASH.ADD : EVENTS.STASH.REMOVE, { uri: itemUri, isStashed, type: 'list' });
             }
         });
         
@@ -883,7 +860,7 @@ export class MCPControlPanel {
      * @private
      */
     _updateFileStashState(filePath, isStashed) {
-        const fileElement = this.fsTreeContainer.querySelector(`[data-path="${filePath}"]`);
+        const fileElement = this.elements.fsTreeContainer.querySelector(`[data-path="${filePath}"]`);
         if (fileElement) {
             if (isStashed) {
                 fileElement.classList.add('fs-item-stashed');
@@ -913,7 +890,7 @@ export class MCPControlPanel {
      * @private
      */
     _updateListItemStashState(itemUri, isStashed) {
-        const listItem = this.listContentView.querySelector(`[data-item-uri="${itemUri}"]`);
+        const listItem = this.elements.listContentView.querySelector(`[data-item-uri="${itemUri}"]`);
         if (listItem) {
             if (isStashed) {
                 listItem.classList.add('list-item-stashed');

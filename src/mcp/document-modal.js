@@ -416,7 +416,7 @@ export class DocumentModal {
                 
                 // Emit event through the event bus to notify other components
                 if (this.stateService && this.stateService.eventBus) {
-                    this.stateService.eventBus.emit(EVENTS.STASH.UPDATED, {
+                    this.stateService.eventBus.emit(isStashed ? EVENTS.STASH.ADD : EVENTS.STASH.REMOVE, {
                         uri,
                         isStashed,
                         type: 'kb',

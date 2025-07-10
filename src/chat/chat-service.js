@@ -1,5 +1,4 @@
-import { EVENTS } from '../js/core/events.js';
-import { EventBus } from '../js/core/event-bus.js';
+import { EVENTS, EVENT_CONTEXT } from '../js/core/events.js';
 import { AIClientFactory } from '../js/ai/ai-client-factory.js';
 import { MCPConnector } from '../js/mcp/mcp-connector.js';
 import { ToolParser } from '../js/mcp/tool-parser.js';
@@ -11,18 +10,7 @@ import { PageUtils } from './page-utils.js';
  * WebWire Chat Service - Platform-Agnostic Core
  * 
  * This is the pure "Chat App" logic that is completely agnostic of the hosting environment.
- * It communicates only through events and knows nothing about Chrome APIs.
- * 
- * Inputs (Events it listens for):
- * - chat:send-message: User wants to send a message
- * - chat:analyze-page: User wants to analyze the current page
- * - chat:update-settings: Settings have been updated by the host
- * - chat:update-mcp-status: MCP connection status has changed
- * - chat:conversation-loaded: A conversation has been loaded from storage
- * 
- * Outputs (Events it emits):
- * - dispatch:outbound: Requests for the host to handle external operations
- * - ui:*: Direct panel UI updates (internal)
+ * It communicates only through events and knows nothing about Chrome APIs. It operates in the CHAT event namespace.
  */
 
 /**
@@ -36,9 +24,8 @@ const MESSAGE_ROLES = {
 };
 
 export class ChatService {
-    constructor(dispatcher) {
-        this.eventBus = new EventBus({domain: 'chat', debug: true});
-        this.dispatcher = dispatcher;
+    constructor(eventBus) {
+        this.eventBus = eventBus;
         
         // UI Components
         this.panel = new WebWirePanel(this.eventBus);
@@ -107,6 +94,11 @@ export class ChatService {
             // Load current conversation on startup
             console.log('[ChatService] Loading current conversation on startup...');
             this.loadCurrentConversation();
+
+            // Request thread from host
+            await this.eventBus.emit(EVENTS.CHAT.GET_OR_CREATE_THREAD, {
+                ...this.pageUtils.getPageLocation()
+            }, { target: EVENT_CONTEXT.BACKGROUND });
             
             console.log('[ChatService] Initialization complete');
         } catch (error) {
@@ -121,7 +113,7 @@ export class ChatService {
     async handleUserMessage(payload) {
         console.log('[ChatService] Handling user message:', payload);
         
-        const { message } = payload;
+        const { message, silent = false } = payload;
         
         if (!this.aiClient) {
             console.log('[ChatService] No AI client configured');
@@ -131,21 +123,13 @@ export class ChatService {
 
         try {
             // Display user message in panel
-            this.panel.displayMessage({ 
-                role: MESSAGE_ROLES.USER, 
-                content: message,
-                timestamp: Date.now()
-            });
-
-            // Request thread from host
-            this.eventBus.emit('dispatch:outbound', {
-                target: 'background',
-                event: 'threads:get-or-create',
-                data: {
-                    title: `Page: ${document.title}`,
-                    url: window.location.href
-                }
-            });
+            if (!silent) {
+                this.panel.displayMessage({ 
+                    role: MESSAGE_ROLES.USER, 
+                    content: message,
+                    timestamp: Date.now()
+                });
+            }
 
             // Create system prompt with tools if MCP is connected
             let systemPrompt = "You are a helpful assistant analyzing web pages and helping users.";
@@ -207,6 +191,7 @@ export class ChatService {
 
             // Create thinking message
             const thinkingMessage = this.addThinkingMessage('Thinking...');
+            this.streamingState.currentMessage = thinkingMessage;
             let streamingText = '';
 
             // Set up exclusive stream handler for this request
@@ -268,34 +253,29 @@ export class ChatService {
             };
 
             // Request host to save conversation
-            this.eventBus.emit('dispatch:outbound', {
-                target: 'background',
-                event: 'threads:save-message',
-                data: {
-                    userMessage: userMsg,
-                    assistantMessage: assistantMsg,
-                    options: {
-                        userName: this.currentSettings?.aim?.userName || MESSAGE_ROLES.USER,
-                        personaName: this.currentSettings?.aim?.personaName || MESSAGE_ROLES.ASSISTANT,
-                        mood: this.currentSettings?.aim?.mood || null,
-                        location: window.location.href,
-                        timestamp,
-                        toolResults,
-                        toolCalls,
-                        parseErrors,
-                        url: window.location.href,
-                        title: document.title
-                    }
-                }
-            });
+            await this.eventBus.emit(EVENTS.CHAT.SAVE_MESSAGE, {
+                userMessage: userMsg,
+                assistantMessage: assistantMsg,
+                metadata: {
+                    userName: this.currentSettings?.aim?.userName || MESSAGE_ROLES.USER,
+                    personaName: this.currentSettings?.aim?.personaName || MESSAGE_ROLES.ASSISTANT,
+                    mood: this.currentSettings?.aim?.mood || null,
+                    location: window.location.href,
+                    timestamp,
+                    toolResults,
+                    toolCalls,
+                    parseErrors,
+                    url: window.location.href,
+                    title: document.title
+                }}, { target: EVENT_CONTEXT.BACKGROUND }
+            );
 
             // Finalize the thinking message with the complete response
             this.finalizeStreamingMessage(thinkingMessage, response);
 
         } catch (error) {
             console.error('[ChatService] Error handling user message:', error);
-            const thinkingMessageId = this.streamingState.currentMessage?.id || null;
-            this.panel.displayError(error.message, thinkingMessageId);
+            this.panel.displayError(error.message, this.streamingState.currentMessage);
         }
     }
 
@@ -305,7 +285,7 @@ export class ChatService {
     async handlePageAnalysisRequest(payload) {
         console.log('[ChatService] Handling page analysis request');
         
-        const analysisRequest = pageUtils.buildAnalysisRequest();
+        const analysisRequest = this.pageUtils.buildAnalysisRequest();
         await this.handleUserMessage({ message: analysisRequest });
     }
 
@@ -374,14 +354,9 @@ export class ChatService {
         this.currentConversation = null;
         
         // Request host to create new conversation
-        this.eventBus.emit('dispatch:outbound', {
-            target: 'background',
-            event: 'threads:create-new',
-            data: {
-                title: `Page: ${document.title}`,
-                url: window.location.href
-            }
-        });
+        await this.eventBus.emit(EVENTS.CHAT.CREATE_NEW_THREAD, {
+            ...this.pageUtils.getPageLocation()
+        }, { target: EVENT_CONTEXT.BACKGROUND });
     }
 
     /**
@@ -434,9 +409,7 @@ export class ChatService {
         console.log('[ChatService] Replaying last user message:', lastUserMessage.content);
         
         // Re-send the message through the normal flow
-        this.eventBus.emit(EVENTS.CHAT.SEND_MESSAGE, { 
-            message: lastUserMessage.content.trim() 
-        });
+        await this.handleUserMessage({ message: lastUserMessage.content.trim(), silent: true });
     }
 
     /**
@@ -667,11 +640,7 @@ export class ChatService {
             this.panel.show();
             
             // Request host to persist visibility state
-            this.eventBus.emit('dispatch:outbound', {
-                target: 'background',
-                event: 'ui:save-panel-visibility',
-                data: { visible: true }
-            });
+            this.eventBus.emit(EVENTS.CHAT.SAVE_PANEL_VISIBILITY, { visible: true }, { target: EVENT_CONTEXT.BACKGROUND });
         }
     }
 
@@ -683,11 +652,7 @@ export class ChatService {
             this.panel.hide();
             
             // Request host to persist visibility state
-            this.eventBus.emit('dispatch:outbound', {
-                target: 'background',
-                event: 'ui:save-panel-visibility',
-                data: { visible: false }
-            });
+            this.eventBus.emit(EVENTS.CHAT.SAVE_PANEL_VISIBILITY, { visible: false }, { target: EVENT_CONTEXT.BACKGROUND });
         }
     }
 
@@ -697,11 +662,7 @@ export class ChatService {
     togglePanel() {
         if (!this.panel.isReady()) {
             // Request host to inject panel
-            this.eventBus.emit('dispatch:outbound', {
-                target: 'host',
-                event: 'ui:inject-panel',
-                data: {}
-            });
+            this.eventBus.emit(EVENTS.CHAT.INJECT_PANEL, {}, { target: EVENT_CONTEXT.HOST });
         } else {
             if (this.panel.isVisible) {
                 this.hidePanel();
@@ -734,14 +695,9 @@ export class ChatService {
         console.log('[ChatService] Requesting current conversation from host...');
         
         // Request the current conversation from the host
-        this.eventBus.emit('dispatch:outbound', {
-            target: 'background',
-            event: 'threads:get-or-create',
-            data: {
-                title: `Page: ${document.title}`,
-                url: window.location.href
-            }
-        });
+        this.eventBus.emit(EVENTS.CHAT.GET_OR_CREATE_THREAD, {
+            ...this.pageUtils.getPageLocation()
+        }, { target: EVENT_CONTEXT.BACKGROUND });
     }
 
     /**

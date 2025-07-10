@@ -221,7 +221,7 @@ export class StashButton {
      */
     getAllStashed() {
         if (!this.stateService.stash) return [];
-        return this.stateService.stash.getAllURIs();
+        return this.stateService.stash.getAllKeys();
     }
 
     /**

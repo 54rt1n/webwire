@@ -15,7 +15,6 @@ export class StashStatePlugin {
         this.stateService = stateService;
         this.eventBus = stateService.eventBus;
         this.stashAdapter = stateService.storage.stash;
-        this.mcpConnector = null; // Will be set when MCP is available
     }
 
     /**
@@ -25,15 +24,6 @@ export class StashStatePlugin {
         if (!this.stateService.state.stash) {
             this.stateService.state.stash = {};
         }
-    }
-
-    /**
-     * Set MCP connector for fetching content
-     * @param {Object} mcpConnector - MCP connector instance
-     */
-    setMCPConnector(mcpConnector) {
-        this.mcpConnector = mcpConnector;
-        console.log('[StateService::StashState] MCP connector set');
     }
 
     /**
@@ -102,111 +92,6 @@ export class StashStatePlugin {
     }
 
     /**
-     * Fetch and store content from MCP for a Knowledge Base URI
-     * @param {string} uri - KB URI (e.g., "kb://document-path")
-     * @param {Object} options - Options for fetching
-     * @param {boolean} options.includeIndex - Include document metadata
-     * @param {boolean} options.forceRefresh - Force fetch even if already cached
-     * @returns {Promise<string|null>} The fetched content, or null on error
-     */
-    async fetchKbContent(uri, { includeIndex = true, forceRefresh = false } = {}) {
-        if (!this.mcpConnector) {
-            console.error('[StateService::StashState] No MCP connector available for KB fetch');
-            return null;
-        }
-
-        // Return cached content if available and not forcing refresh
-        if (!forceRefresh && this.has(uri)) {
-            console.log(`[StateService::StashState] Returning cached content for KB URI '${uri}'`);
-            return this.get(uri);
-        }
-
-        try {
-            console.log(`[StateService::StashState] Fetching KB content for '${uri}'`);
-            const result = await this.mcpConnector.executeTool('kb_read', {
-                uri: uri,
-                include_content: true,
-                include_index: includeIndex
-            });
-
-            if (result.success && result.content) {
-                const content = result.content;
-                this.set(uri, content);
-                console.log(`[StateService::StashState] Fetched and cached KB content: ${content.length} chars`);
-                return content;
-            } else {
-                console.warn(`[StateService::StashState] Failed to fetch KB content for '${uri}':`, result.error);
-                return null;
-            }
-        } catch (error) {
-            console.error(`[StateService::StashState] Error fetching KB content for '${uri}':`, error);
-            return null;
-        }
-    }
-
-    /**
-     * Fetch and store content from MCP for a filesystem path
-     * @param {string} path - File path (will be stored as "fs://{path}")
-     * @param {Object} options - Options for fetching
-     * @param {string} options.encoding - File encoding (default: utf-8)
-     * @param {boolean} options.forceRefresh - Force fetch even if already cached
-     * @returns {Promise<string|null>} The fetched content, or null on error
-     */
-    async fetchFsContent(path, { encoding = 'utf-8', forceRefresh = false } = {}) {
-        if (!this.mcpConnector) {
-            console.error('[StateService::StashState] No MCP connector available for FS fetch');
-            return null;
-        }
-
-        const uri = `fs://${path}`;
-
-        // Return cached content if available and not forcing refresh
-        if (!forceRefresh && this.has(uri)) {
-            console.log(`[StateService::StashState] Returning cached content for FS path '${path}'`);
-            return this.get(uri);
-        }
-
-        try {
-            console.log(`[StateService::StashState] Fetching FS content for '${path}'`);
-            const result = await this.mcpConnector.executeTool('fs_read', {
-                path: path,
-                encoding: encoding
-            });
-
-            if (result.success && result.content) {
-                const content = result.content;
-                this.set(uri, content);
-                console.log(`[StateService::StashState] Fetched and cached FS content: ${content.length} chars`);
-                return content;
-            } else {
-                console.warn(`[StateService::StashState] Failed to fetch FS content for '${path}':`, result.error);
-                return null;
-            }
-        } catch (error) {
-            console.error(`[StateService::StashState] Error fetching FS content for '${path}':`, error);
-            return null;
-        }
-    }
-
-    /**
-     * Fetch content for any URI (auto-detects type)
-     * @param {string} uri - URI to fetch (kb://, fs://, or file path)
-     * @param {Object} options - Options for fetching
-     * @returns {Promise<string|null>} The fetched content, or null on error
-     */
-    async fetch(uri, options = {}) {
-        if (uri.startsWith('kb://')) {
-            return this.fetchKbContent(uri, options);
-        } else if (uri.startsWith('fs://')) {
-            const path = uri.substring(5); // Remove 'fs://' prefix
-            return this.fetchFsContent(path, options);
-        } else {
-            // Assume it's a file path
-            return this.fetchFsContent(uri, options);
-        }
-    }
-
-    /**
      * Load stash data from storage
      * @returns {Object} The loaded stash data
      */
@@ -252,84 +137,69 @@ export class StashStatePlugin {
     }
 
     /**
-     * Get all URIs in the stash
+     * Get all keys in the stash
      * @returns {Array<string>} Array of all URIs
      */
-    getAllURIs() {
+    getAllKeys() {
         this._ensureStashExists();
-        const uris = Object.keys(this.stateService.state.stash);
-        console.log(`[StateService::StashState] All URIs: ${uris.length} URIs`);
-        return [...uris]; // Return a copy
+        const keys = Object.keys(this.stateService.state.stash);
+        return [...keys];
     }
 
     /**
-     * Get all entries (URI-content pairs)
-     * @returns {Array<{uri: string, content: string, contentLength: number}>} Array of all entries
+     * Get all entries (key-value pairs)
+     * @returns {Array<{key: string, value: string, valueLength: number}>} Array of all entries
      */
     getAllEntries() {
         this._ensureStashExists();
-        const entries = Object.entries(this.stateService.state.stash).map(([uri, content]) => ({
-            uri,
-            content,
-            contentLength: content ? content.length : 0
+        const entries = Object.entries(this.stateService.state.stash).map(([key, value]) => ({
+            key,
+            value,
+            valueLength: value ? value.length : 0
         }));
-        console.log(`[StateService::StashState] All entries: ${entries.length} entries`);
         return entries;
     }
 
     /**
-     * Filter URIs by pattern
-     * @param {string|RegExp} pattern - Pattern to match URIs against
-     * @returns {Array<string>} Array of matching URIs
+     * Filter keys by pattern
+     * @param {string|RegExp} pattern - Pattern to match keys against
+     * @returns {Array<string>} Array of matching keys
      */
-    filterURIs(pattern) {
+    filter(pattern) {
         this._ensureStashExists();
-        const allURIs = this.getAllURIs();
+        const allKeys = this.getAll();
         const regex = pattern instanceof RegExp ? pattern : new RegExp(pattern);
-        const matching = allURIs.filter(uri => regex.test(uri));
-        console.log(`[StateService::StashState] Filtered URIs by pattern '${pattern}': ${matching.length} matches`);
+        const matching = allKeys.filter(key => regex.test(key));
+        console.log(`[StateService::StashState] Filtered keys by pattern '${pattern}': ${matching.length} matches`);
         return matching;
     }
 
     /**
      * Get stash statistics
-     * @returns {Object} Statistics object with URI count, total content size, etc.
+     * @returns {Object} Statistics object with key count, total value size, etc.
      */
     getStats() {
         this._ensureStashExists();
-        const uris = Object.keys(this.stateService.state.stash);
-        const uriCount = uris.length;
+        const keys = Object.keys(this.stateService.state.stash);
+        const keyCount = keys.length;
         
-        let totalContentSize = 0;
-        const uriStats = uris.map(uri => {
-            const content = this.stateService.state.stash[uri];
-            const contentLength = content ? content.length : 0;
-            totalContentSize += contentLength;
+        let totalValueSize = 0;
+        const keyStats = keys.map(key => {
+            const value = this.stateService.state.stash[key];
+            const valueLength = value ? value.length : 0;
+            totalValueSize += valueLength;
             
             return {
-                uri,
-                contentLength,
-                type: uri.startsWith('kb://') ? 'knowledge_base' : 
-                      uri.startsWith('fs://') ? 'filesystem' : 'unknown'
+                key,
+                valueLength
             };
         });
 
-        // Group by type
-        const typeStats = uriStats.reduce((acc, stat) => {
-            if (!acc[stat.type]) {
-                acc[stat.type] = { count: 0, totalSize: 0 };
-            }
-            acc[stat.type].count++;
-            acc[stat.type].totalSize += stat.contentLength;
-            return acc;
-        }, {});
-
         const stats = {
-            uriCount,
-            totalContentSize,
-            typeStats,
-            uriStats,
-            isEmpty: uriCount === 0
+            keyCount,
+            totalValueSize,
+            keyStats,
+            isEmpty: keyCount === 0
         };
 
         console.log('[StateService::StashState] Stats:', stats);

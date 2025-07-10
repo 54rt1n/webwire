@@ -128,44 +128,6 @@ export class EventErrorBoundary {
    */
   setupRecoveryStrategies() {
     this.recoveryStrategies = {
-      // AI Streaming errors - try to continue streaming
-      [EVENT_TYPES.LOCAL.AI_STREAM_CHUNK]: async (errorReport) => {
-        console.log('[Recovery] AI streaming error, attempting to continue...');
-        await this.dispatcher.dispatch('AI_STREAM_ERROR_RECOVERY', {
-          originalError: errorReport
-        });
-      },
-
-      // MCP connection errors - attempt reconnection
-      [EVENT_TYPES.LOCAL.MCP_TOOL_EXECUTED]: async (errorReport, handler, args) => {
-        const errorCount = this.errorCount.get(`${errorReport.event}:${handler.name}`) || 0;
-        
-        if (errorCount < this.maxRetries) {
-          console.log(`[Recovery] MCP tool error, retrying (${errorCount}/${this.maxRetries})...`);
-          
-          setTimeout(async () => {
-            try {
-              await handler(...args);
-              console.log('[Recovery] MCP tool retry succeeded');
-            } catch (retryError) {
-              console.error('[Recovery] MCP tool retry failed:', retryError);
-            }
-          }, this.retryDelay * errorCount);
-        }
-      },
-
-      // State sync errors - reload from storage
-      [EVENT_TYPES.GLOBAL.STATE_SYNC]: async (errorReport) => {
-        console.log('[Recovery] State sync error, reloading from storage...');
-        await this.dispatcher.dispatch('STATE_RELOAD_FROM_STORAGE');
-      },
-
-      // UI errors - reset UI state
-      [EVENT_TYPES.PANEL.CHAT_MESSAGE]: async (errorReport) => {
-        console.log('[Recovery] Chat UI error, resetting chat state...');
-        await this.dispatcher.dispatch('CHAT_RESET_STATE');
-      },
-
       // Default strategy - log and continue
       default: async (errorReport) => {
         console.log(`[Recovery] No specific recovery strategy for ${errorReport.event}, logging only`);
