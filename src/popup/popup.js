@@ -74,6 +74,7 @@ export class WebWirePopup {
         this.analyzePageBtn.addEventListener('click', handlers.onAnalyzePage);
         this.openOptionsBtn.addEventListener('click', handlers.onOpenOptions);
         this.helpLink.addEventListener('click', handlers.onHelp);
+        this.mcpLink.addEventListener('click', handlers.onMCP);
     }
 
     /**

@@ -51,7 +51,7 @@ class WebWirePopupApp {
             onAnalyzePage: () => this.analyzePage(),
             onOpenOptions: () => this.openOptions(),
             onHelp: (e) => this.openHelp(e),
-            onMCP: () => this.openMCP()
+            onMCP: (e) => this.openMCP(e)
         });
     }
 
@@ -156,20 +156,28 @@ class WebWirePopupApp {
 
     /**
      * Open the MCP panel
+     * @param {Event} e - Click event
      */
-    async openMCP() {
+    async openMCP(e) {
         try {
+            e.preventDefault();
             console.log('[WebWirePopupApp] Opening MCP panel...');
             
-            const mcpUrl = chrome.runtime.getURL('mcp/index.html');
-            await chrome.tabs.create({
+            const mcpUrl = chrome.runtime.getURL('mcp_status.html');
+            console.log('[WebWirePopupApp] MCP URL:', mcpUrl);
+            
+            const tab = await chrome.tabs.create({
                 url: mcpUrl
             });
+            console.log('[WebWirePopupApp] Tab created:', tab);
+            
             this.popup.close();
             
         } catch (error) {
             console.error('[WebWirePopupApp] Failed to open MCP panel:', error);
-            this.popup.showError('Failed to open MCP panel');
+            this.popup.showError(`Failed to open MCP panel: ${error.message}`);
+            
+            // Don't close popup if there's an error so user can see it
         }
     }
 

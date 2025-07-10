@@ -1,6 +1,6 @@
 import { EventBus } from '../js/core/event-bus.js';
 import { ChatService } from '../chat/chat-service.js';
-import { pageUtils } from './page-utils.js';
+import { pageUtils } from '../chat/page-utils.js';
 import { setupDebugMethods, setupGlobalDebugAccess } from './debug.js';
 import {
     BACKGROUND_ACTIONS,

@@ -5,7 +5,7 @@
  * Updated for the new ChatService architecture.
  */
 
-import { pageUtils } from './page-utils.js';
+import { PageUtils } from '../chat/page-utils.js';
 
 // Export functions for testing and debugging
 let webwireContentHost = null;
@@ -69,6 +69,7 @@ export function setupDebugMethods(WebWireContentHost) {
          */
         WebWireContentHost.prototype.getPageInfo = function() {
             console.log('Getting page content...');
+            const pageUtils = new PageUtils();
             return pageUtils.getCurrentPageContent();
         };
 
@@ -77,6 +78,7 @@ export function setupDebugMethods(WebWireContentHost) {
          */
         WebWireContentHost.prototype.debugMessageEnhancement = function(testMessage = 'Test message') {
             console.log('=== WebWire Message Enhancement Debug ===');
+            const pageUtils = new PageUtils();
             const original = testMessage;
             const enhanced = pageUtils.enhanceMessageWithContext(testMessage);
             
