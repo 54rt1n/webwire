@@ -612,6 +612,10 @@ button,
   margin-right: var(--space-2);
 }
 
+.error-text {
+  font-weight: var(--font-weight-medium);
+}
+
 /* Chat input styles */
 .chat-input-container {
   padding: var(--space-4);

@@ -294,7 +294,8 @@ export class ChatService {
 
         } catch (error) {
             console.error('[ChatService] Error handling user message:', error);
-            this.panel.displayError(error.message);
+            const thinkingMessageId = this.streamingState.currentMessage?.id || null;
+            this.panel.displayError(error.message, thinkingMessageId);
         }
     }
 

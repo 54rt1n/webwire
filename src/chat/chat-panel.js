@@ -350,7 +350,10 @@ export class WebWirePanel {
             messageEl.id = `message-${message.id}`;
         }
 
-        const content = this.formatMessageContent(message.content);
+        // For error messages, don't escape HTML since they contain intentional formatting
+        const content = message.role === 'error' 
+            ? message.content 
+            : this.formatMessageContent(message.content);
         const time = new Date(message.timestamp || Date.now()).toLocaleTimeString([], {
             hour: '2-digit', 
             minute: '2-digit'
@@ -464,7 +467,10 @@ export class WebWirePanel {
     /**
      * Display error message in chat
      */
-    displayError(error) {
+    displayError(error, thinkingMessageId = null) {
+        if (thinkingMessageId) {
+            this.removeThinkingMessage(thinkingMessageId);
+        }
         this.displayMessage({
             role: 'error',
             content: `<span class="error-icon">❌</span><span class="error-text">${error}</span>`,
