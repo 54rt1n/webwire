@@ -48,6 +48,8 @@ export class ChatService {
             streamingText: '',
             messageCounter: 0
         };
+
+        this.lastMessage = null;
         
         this.setupEventListeners();
         console.log('[ChatService] Initialized with event-driven architecture');
@@ -69,6 +71,7 @@ export class ChatService {
         
         // Listen for AI streaming events
         this.eventBus.on(EVENTS.AI.STREAM_CHUNK, this.handleStreamingChunk.bind(this));
+        this.eventBus.on(EVENTS.CHAT.TOGGLE_PAGE_CONTENT, this.handlePageContentToggle.bind(this));
         
         console.log('[ChatService] Event listeners set up');
     }
@@ -121,25 +124,30 @@ export class ChatService {
             return;
         }
 
+        this.panel.removeErrorMessages();
+
         try {
+            // Prepare messages for API with conversation history
+            let userMessage = {
+                role: MESSAGE_ROLES.USER,
+                content: message,
+                timestamp: Date.now()
+            };
+
             // Display user message in panel
             if (!silent) {
-                this.panel.displayMessage({ 
-                    role: MESSAGE_ROLES.USER, 
-                    content: message,
-                    timestamp: Date.now()
-                });
+                this.panel.displayMessage(userMessage);
             }
 
             // Create system prompt with tools if MCP is connected
-            let systemPrompt = "You are a helpful assistant analyzing web pages and helping users.";
+            let systemPrompts = ["You are a helpful assistant analyzing web pages and helping users."];
             let tools = [];
             
             if (this.mcpConnector && this.stateService) {
                 try {
                     tools = this.stateService.mcp.getMcpTools();
                     if (tools && tools.length > 0) {
-                        systemPrompt = ToolFormatter.generateSystemPrompt(tools);
+                        systemPrompts.push(ToolFormatter.generateSystemPrompt(tools));
                         console.log(`[ChatService] Using ${tools.length} MCP tools for system prompt`);
                     }
                 } catch (error) {
@@ -147,12 +155,6 @@ export class ChatService {
                 }
             }
 
-            // Prepare messages for API with conversation history
-            const userMessage = {
-                role: MESSAGE_ROLES.USER,
-                content: message,
-                timestamp: Date.now()
-            };
 
             // Build messages array including conversation history
             let messagesForAPI = [];
@@ -171,22 +173,35 @@ export class ChatService {
                 console.log(`[ChatService] Using ${messagesForAPI.length} messages from conversation history`);
             }
             
-            // Add the new user message
-            messagesForAPI.push(userMessage);
-            
+            let syntheticMessages = [];
+            let syntheticSources = [];
+            const stashContent = this.buildStashContext();
+            if (stashContent) {
+                syntheticMessages.push(stashContent);
+                syntheticSources.push('stash');
+            }
+
+            // TODO this should be passed in. Getting it like this is unreliable.
+            if (this.currentSettings?.ui?.includePageContent !== false) {
+                syntheticMessages.push(this.pageUtils.buildPageContext());
+                syntheticSources.push('page');
+            }
+
             // Enhance first user message with page context
             const firstUserIndex = messagesForAPI.findIndex(msg => msg.role === MESSAGE_ROLES.USER);
             if (firstUserIndex !== -1) {
                 const firstUserMessage = messagesForAPI[firstUserIndex];
                 messagesForAPI[firstUserIndex] = {
                     ...firstUserMessage,
-                    content: this.pageUtils.enhanceMessageWithContext(
-                        this.enhanceMessageWithStash(
-                            firstUserMessage.content
-                        )
-                    )
+                    content: syntheticMessages.join('\n\n') + '\n\n' + firstUserMessage.content
                 };
-                console.log('[ChatService] Enhanced first user message with page context for API');
+                console.log(`[ChatService] Enhanced first user message with ${syntheticSources.join(', ')} sources for API`);
+            } else {
+                userMessage = {
+                    ...userMessage,
+                    content: syntheticMessages.join('\n\n') + '\n\n' + userMessage.content
+                };
+                console.log(`[ChatService] Enhanced current user message with ${syntheticSources.join(', ')} sources for API`);
             }
 
             // Create thinking message
@@ -203,9 +218,12 @@ export class ChatService {
             let response = null;
             try {
                 console.log('[ChatService] Generating AI response...');
-                response = await this.aiClient.generateTurn('', messagesForAPI, { 
-                    systemPrompt,
-                    maxHistory: 10 
+                response = await this.aiClient.generateTurn(userMessage.content, messagesForAPI, { 
+                    systemPrompt: systemPrompts.join('\n\n'),
+                    maxHistory: 100, 
+                    samplerConfig: {
+                        maxTokens: 100
+                    }
                 });
 
                 if (!response) {
@@ -216,6 +234,9 @@ export class ChatService {
                 unsubscribeStream();
             }
 
+            // Finalize the thinking message with the complete response
+            this.finalizeStreamingMessage(thinkingMessage, response);
+            
             // Parse for tool calls if MCP is connected
             let toolResults = [];
             let toolCalls = [];
@@ -231,51 +252,58 @@ export class ChatService {
                 }
             }
 
+            const location = typeof window !== 'undefined' ? window.location.href : undefined;
+
             // Prepare messages for storage (original unenhanced content)
-            const timestamp = Date.now();
             const userMsg = { 
                 role: MESSAGE_ROLES.USER, 
-                content: message, // Original user message without page context
-                timestamp,
-                url: window.location.href,
+                content: message,
+                timestamp: userMessage.timestamp,
+                url: location,
                 title: document.title
             };
             
+            // TODO separate out think xml tags
             const assistantMsg = { 
                 role: MESSAGE_ROLES.ASSISTANT, 
                 content: response,
-                timestamp: timestamp + 1,
+                timestamp: userMessage.timestamp + 1,
                 toolResults,
                 toolCalls,
-                parseErrors,
-                url: window.location.href,
-                title: document.title
+                parseErrors
             };
 
+            this.lastMessage = message;
+
+            console.log('[ChatService] Saving message:', userMsg, assistantMsg);
+
             // Request host to save conversation
-            await this.eventBus.emit(EVENTS.CHAT.SAVE_MESSAGE, {
+            this.eventBus.emit(EVENTS.CHAT.SAVE_MESSAGE, {
                 userMessage: userMsg,
                 assistantMessage: assistantMsg,
-                metadata: {
+                options: {
                     userName: this.currentSettings?.aim?.userName || MESSAGE_ROLES.USER,
                     personaName: this.currentSettings?.aim?.personaName || MESSAGE_ROLES.ASSISTANT,
                     mood: this.currentSettings?.aim?.mood || null,
-                    location: window.location.href,
-                    timestamp,
+                    location: location,
+                    url: location,
+                    title: document.title,
                     toolResults,
                     toolCalls,
                     parseErrors,
-                    url: window.location.href,
-                    title: document.title
                 }}, { target: EVENT_CONTEXT.BACKGROUND }
             );
 
-            // Finalize the thinking message with the complete response
-            this.finalizeStreamingMessage(thinkingMessage, response);
+            console.log('[ChatService] Message saved');
 
         } catch (error) {
-            console.error('[ChatService] Error handling user message:', error);
-            this.panel.displayError(error.message, this.streamingState.currentMessage);
+            if (error.message.includes("Error: Empty response from AI provider")) {
+                console.log('[ChatService] Empty response from AI provider, skipping');
+                this.panel.displayError(error.message, this.streamingState.currentMessage?.id);
+            } else {
+                console.error('[ChatService] Error handling user message:', error);
+                this.panel.displayError(error.message, this.streamingState.currentMessage?.id);
+            }
         }
     }
 
@@ -362,54 +390,17 @@ export class ChatService {
     /**
      * Handle replay last turn request event
      */
-    async handleReplayLastTurn(payload) {
+    async handleReplayLastTurn() {
         console.log('[ChatService] Handling replay last turn request');
-        
-        // Get the current conversation history
-        let conversationMessages = [];
-        
-        if (this.currentConversation && this.currentConversation.messages) {
-            conversationMessages = this.currentConversation.messages;
-        } else if (this.stateService && this.stateService.conversation) {
-            // Fallback: try to get active conversation from state service
-            const activeConversationId = this.stateService.conversation.getActiveConversationId();
-            if (activeConversationId) {
-                conversationMessages = this.stateService.conversation.getConversationMessages(activeConversationId);
-            }
-        }
-        
-        if (conversationMessages.length === 0) {
-            console.log('[ChatService] No conversation history found');
-            this.panel.displayError('No conversation history found to replay');
+
+        if (!this.lastMessage) {
+            console.log('[ChatService] No last message found');
+            this.panel.displayError('No last message found to replay');
             return;
         }
-        
-        // Find the last user message
-        let lastUserMessage = null;
-        for (let i = conversationMessages.length - 1; i >= 0; i--) {
-            const message = conversationMessages[i];
-            if (message.role === MESSAGE_ROLES.USER) {
-                lastUserMessage = message;
-                break;
-            }
-        }
-        
-        if (!lastUserMessage) {
-            console.log('[ChatService] No user messages found in conversation history');
-            this.panel.displayError('No previous user messages found to replay');
-            return;
-        }
-        
-        if (!lastUserMessage.content || !lastUserMessage.content.trim()) {
-            console.log('[ChatService] Last user message is empty');
-            this.panel.displayError('Last user message is empty');
-            return;
-        }
-        
-        console.log('[ChatService] Replaying last user message:', lastUserMessage.content);
-        
+
         // Re-send the message through the normal flow
-        await this.handleUserMessage({ message: lastUserMessage.content.trim(), silent: true });
+        await this.handleUserMessage({ message: this.lastMessage.trim(), silent: true });
     }
 
     /**
@@ -578,14 +569,16 @@ export class ChatService {
     }
 
     /**
-     * Enhance message with stash content
+     * Build stash context
      */
-    enhanceMessageWithStash(message) {
+    buildStashContext() {
         const stashContent = this.stateService.stash.getAllEntries();
-        const stashContentString = stashContent.map(entry => `${entry.uri}: ${entry.content}`).join('\n');
-        const enhancedMessage = `${message}\n\nStash content:\n${stashContentString}`;
-        console.log('[ChatService] Enhanced message with stash content:', enhancedMessage);
-        return enhancedMessage;
+        if (stashContent.length === 0) {
+            return null;
+        }
+
+        const stashContentString = stashContent.map(entry => `${entry.key}: ${entry.value}`).join('\n');
+        return `Stash content:\n${stashContentString}`;
     }
 
     /**
@@ -633,6 +626,29 @@ export class ChatService {
     }
 
     /**
+     * Handle page content toggle event
+     */
+    async handlePageContentToggle(payload) {
+        console.log('[ChatService] Handling page content toggle:', payload);
+        
+        const { includePageContent } = payload;
+        
+        // Update settings
+        this.currentSettings.ui = this.currentSettings.ui || {};
+        this.currentSettings.ui.includePageContent = includePageContent;
+        
+        // Persist to storage via background
+        await this.eventBus.emit(EVENTS.CHAT.UPDATE_SETTINGS, { 
+            settings: this.currentSettings 
+        }, { target: EVENT_CONTEXT.BACKGROUND });
+        
+        // Update panel checkbox state
+        if (this.panel.isReady()) {
+            this.panel.updatePageContentSetting(includePageContent);
+        }
+    }
+
+    /**
      * Show the panel
      */
     showPanel() {
@@ -677,7 +693,11 @@ export class ChatService {
      */
     async sendInitialState(state) {
         if (this.panel.isReady()) {
-            this.panel.handleInitialState(state);
+            const enhancedState = {
+                ...state,
+                includePageContent: this.currentSettings?.ui?.includePageContent !== false
+            };
+            this.panel.handleInitialState(enhancedState);
         }
     }
 

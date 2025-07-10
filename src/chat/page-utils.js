@@ -346,11 +346,10 @@ export class ContextBuilder {
 
     /**
      * Build enhanced chat context (WebWire enhanced pattern)
-     * @param {string} userMessage - Original user message
      * @param {Object} pageContent - Page content data
      * @returns {string} Enhanced message with context
      */
-    buildChatMessageWithContext(userMessage, pageContent) {
+    buildChatMessageWithContext(pageContent) {
         const contextSections = [];
         
         // Page context header
@@ -372,7 +371,6 @@ export class ContextBuilder {
         // User message
         contextSections.push('');
         contextSections.push('User Message:');
-        contextSections.push(userMessage);
         
         return contextSections.join('\n');
     }
@@ -480,12 +478,11 @@ export class PageUtils {
 
     /**
      * Enhance a user message with page context
-     * @param {string} userMessage - Original user message
      * @returns {string} Enhanced message with context
      */
-    enhanceMessageWithContext(userMessage) {
+    buildPageContext() {
         const pageContent = this.getCurrentPageContent();
-        return this.contextBuilder.buildChatMessageWithContext(userMessage, pageContent);
+        return this.contextBuilder.buildChatMessageWithContext(pageContent);
     }
 
     /**

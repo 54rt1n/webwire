@@ -155,6 +155,9 @@ class MCPControlPanelApp {
      */
     setupChatServiceEvents() {
         // Handle outbound requests from ChatService
+        this.eventBus.onAsync(EVENTS.CHAT.SAVE_MESSAGE, this.handleSaveMessage.bind(this));
+        this.eventBus.onAsync(EVENTS.CHAT.GET_OR_CREATE_THREAD, this.handleGetOrCreateThread.bind(this));
+
         this.eventBus.on('dispatch:outbound', async (payload) => {
             console.log('[MCPApp] Handling outbound dispatch:', payload);
             
@@ -163,17 +166,6 @@ class MCPControlPanelApp {
             if (target === 'background') {
                 // For now, we'll handle some events locally since we're in a standalone app
                 // In a full Chrome extension, these would go to the background script
-                switch (event) {
-                    case 'threads:get-or-create':
-                        await this.handleGetOrCreateThread(data);
-                        break;
-                    case 'threads:save-message':
-                        await this.handleSaveMessage(data);
-                        break;
-                    case 'ui:save-panel-visibility':
-                        console.log('[MCPApp] Panel visibility (would go to background):', data);
-                        break;
-                }
             } else if (target === 'host') {
                 switch (event) {
                     case 'ui:inject-panel':
@@ -587,6 +579,8 @@ class MCPControlPanelApp {
             );
 
             console.log(`[MCPApp] Message saved to conversation ${conversationId}`);
+
+            await this.core.stateService.disk.saveState();
 
             // Update ChatService with the conversation ID
             this.eventBus.emit('chat:conversation-updated', {

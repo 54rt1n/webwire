@@ -75,6 +75,7 @@ export function createInitialState() {
             },
             ui: {
                 autoInject: false,
+                includePageContent: true,
             }
         },
 

@@ -231,6 +231,7 @@ export class EventBus {
      * @returns {Promise<*>} Promise that resolves with the response or rejects with error
      */
     async emitAsync(eventName, message, { ...options } = {}, ...args) {
+        console.log('[EventBus] Emitting async event:', eventName, message, options, args);
         return new Promise((resolve, reject) => {
             this.emit(eventName, message, { notify: resolve, error: reject, ...options }, ...args);
         });

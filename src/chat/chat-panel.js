@@ -97,6 +97,12 @@ export class WebWirePanel {
                         <span class="status-indicator"></span>
                         <span class="status-text">Ready</span>
                     </div>
+                    <div class="page-content-toggle">
+                        <label class="toggle-label">
+                            <input type="checkbox" class="page-content-checkbox" checked>
+                            <span class="toggle-text">Include page content</span>
+                        </label>
+                    </div>
                 </div>
 
                 <div class="chat-content">
@@ -158,7 +164,8 @@ export class WebWirePanel {
             statusIndicator: this.container.querySelector('.status-indicator'),
             statusText: this.container.querySelector('.status-text'),
             conversationId: this.container.querySelector('.conversation-id'),
-            welcomeMessage: this.container.querySelector('.welcome-message')
+            welcomeMessage: this.container.querySelector('.welcome-message'),
+            pageContentCheckbox: this.container.querySelector('.page-content-checkbox')
         };
     }
 
@@ -216,6 +223,10 @@ export class WebWirePanel {
         // Replay last turn button
         this.elements.replayTurnBtn?.addEventListener('click', () => {
             this.handleReplayLastTurn();
+        });
+
+        this.elements.pageContentCheckbox?.addEventListener('change', (e) => {
+            this.handlePageContentToggle(e.target.checked);
         });
     }
 
@@ -592,6 +603,16 @@ export class WebWirePanel {
     }
 
     /**
+     * Remove any error messages
+     */
+    removeErrorMessages() {
+        const errors = this.elements.chatContent?.querySelectorAll('.chat-message.error');
+        if (errors) {
+            errors.forEach(error => error.remove());
+        }
+    }
+
+    /**
      * Update connection status
      */
     updateConnectionStatus(status, aiConnected = false, mcpConnected = false) {
@@ -663,6 +684,10 @@ export class WebWirePanel {
             state.aiClientConfigured,
             state.mcpConnected
         );
+
+        if (state.includePageContent !== undefined) {
+            this.updatePageContentSetting(state.includePageContent);
+        }
         
         // Display current conversation if available
         if (state.currentThread && state.currentThread.messages) {
@@ -692,5 +717,22 @@ export class WebWirePanel {
         
         this.isInjected = false;
         this.isVisible = false;
+    }
+
+    /**
+     * Handle page content toggle
+     */
+    handlePageContentToggle(includeContent) {
+        console.log('[WebWirePanel] Page content toggle:', includeContent);
+        this.eventBus.emit(EVENTS.CHAT.TOGGLE_PAGE_CONTENT, { includePageContent: includeContent });
+    }
+
+    /**
+     * Update checkbox state from settings
+     */
+    updatePageContentSetting(includeContent) {
+        if (this.elements.pageContentCheckbox) {
+            this.elements.pageContentCheckbox.checked = includeContent;
+        }
     }
 } 

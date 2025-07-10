@@ -1,13 +1,4 @@
 // js/core/events.js
-export const DISPATCH_TYPES = {
-  THREADS: {
-    SAVE_MESSAGE: 'threads:save-message',
-    CREATE_NEW: 'threads:create-new',
-    GET_OR_CREATE: 'threads:get-or-create'
-  }
-};
-
-// Legacy events
 export const EVENTS = {
     AI: {
         STREAM_CHUNK: 'ai:stream_chunk',
@@ -46,7 +37,8 @@ export const EVENTS = {
         SEND_MESSAGE: 'chat:send-message',
         START_NEW_CONVERSATION: 'chat:start-new-conversation',
         UPDATE_MCP_STATUS: 'chat:update-mcp-status',
-        UPDATE_SETTINGS: 'chat:update-settings'
+        UPDATE_SETTINGS: 'chat:update-settings',
+        TOGGLE_PAGE_CONTENT: 'chat:toggle-page-content',
     },
     AIM: {
         THOUGHT_TOGGLED: 'aim:thought_toggled',

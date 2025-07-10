@@ -102,13 +102,6 @@ export class StashPanel {
 
     _shortLabel(uri) {
         // Show a short label for the stash item
-        if (uri.startsWith('fs://')) {
-            return uri.replace('fs://', '').split('/').slice(-2).join('/');
-        } else if (uri.startsWith('kb://')) {
-            return uri.replace('kb://', '').split('/').slice(-2).join('/');
-        } else if (uri.startsWith('list://')) {
-            return uri.replace('list://', '').replace('/', ':');
-        }
         return uri;
     }
 } 
