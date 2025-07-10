@@ -1,18 +1,11 @@
 // js/core/context-init.js
-import { initializeBackground } from './initialize-background.js';
-import { initializeContent } from './initialize-content.js';
-import { initializePopup } from './initialize-popup.js';
-import { initializePanel } from './initialize-panel.js';
-import { EventDispatcher } from '../core/event-dispatcher.js';
 import { EVENT_CONTEXT } from '../core/events.js';
-import { EventErrorBoundary } from '../core/error-boundary.js';
+import { contextFactory } from './context-factory.js';
 
-export async function initializeContext(eventBus, context = null) {
+export async function initializeContext(eventBus, context = null, {} = {}) {
   if (context === null) {
     context = detectContext();
   }
-  const dispatcher = new EventDispatcher(context, eventBus);
-  const errorBoundary = new EventErrorBoundary(dispatcher);
 
   console.log('[ContextInit] Context:', context);
   
@@ -25,7 +18,9 @@ export async function initializeContext(eventBus, context = null) {
         storage,
         centralState,
       */
-      results = await initializeBackground(dispatcher);
+      results = await contextFactory(eventBus, context,
+        {storage: true, state: true, ai: false, mcp: false},
+        {backgroundIsLocal: true, loadSettings: true, loadState: true, loadStash: true, loadUi: true});
       break;
     case EVENT_CONTEXT.CONTENT:
       /*
@@ -35,7 +30,11 @@ export async function initializeContext(eventBus, context = null) {
         mcpConnector,
         pageAnalyzer,
       */
-      results = await initializeContent(dispatcher);
+     // TODO our settings can't be loaded here, so we will need to get them from the background
+     throw new Error('Settings can\'t be loaded here, so we will need to get them from the background');
+      results = await contextFactory(eventBus, context,
+        {storage: false, state: true, ai: true, mcp: true},
+        {backgroundIsLocal: false, modelType: 'chat'});
       break;
     case EVENT_CONTEXT.POPUP:
       /*
@@ -45,7 +44,9 @@ export async function initializeContext(eventBus, context = null) {
         getStatus,
         getCurrentTab,
       */
-      results = await initializePopup(dispatcher);
+      results = await contextFactory(eventBus, context,
+        {storage: true, state: true, ai: false, mcp: false},
+        {backgroundIsLocal: true, loadSettings: true});
       break;
     case EVENT_CONTEXT.PANEL:
       /*
@@ -55,14 +56,12 @@ export async function initializeContext(eventBus, context = null) {
         chatState,
         sendToContent,
       */
-      results = await initializePanel(dispatcher);
+      results = await contextFactory(eventBus, context,
+        {storage: true, state: true, ai: true, mcp: true},
+        {backgroundIsLocal: true, loadSettings: true, loadState: true, loadStash: true, modelType: 'chat'});
       break;
   }
-  return {
-    dispatcher,
-    errorBoundary,
-    ...results,
-  };
+  return results;
 }
 
 function detectContext() {

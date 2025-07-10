@@ -10,8 +10,8 @@ import { EventBus } from '../js/core/event-bus.js';
  */
 class OptionsApp {
     constructor() {
-        this.panel = new OptionsPanel();
-        this.eventBus = new EventBus();
+        this.eventBus = new EventBus({domain: 'options', debug: true});
+        this.panel = new OptionsPanel(this.eventBus);
         this.storage = null;
         this.stateService = null;
         this.dispatcher = null;
@@ -202,7 +202,7 @@ class OptionsApp {
      */
     async loadSettings() {
         try {
-            const settings = await this.stateService.settings.loadSettings();
+            const settings = await this.stateService.settings.loadFromStorage();
             // If no settings, use the default initial state structure
             const hydratedSettings = this.hydrateSettings(settings);
             this.panel.setAllSettings(hydratedSettings);

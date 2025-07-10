@@ -37,9 +37,6 @@ export class WebWireClientCore {
         this.sendToContent = sendToContent;
 
         console.log('[WebWireClientCore] StateService:', this.stateService, 'storage:', this.storage, 'aiClient:', this.aiClient, 'chatState:', this.chatState, 'sendToContent:', this.sendToContent);
-
-        await this.stateService.settings.loadSettings();
-        await this.stateService.disk.loadFromStorage();
     }
 
     /**

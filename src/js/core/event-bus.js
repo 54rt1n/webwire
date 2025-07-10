@@ -26,12 +26,15 @@
 import { generateListenerId } from '../utils/id-generator.js';
 
 export class EventBus {
-    constructor() {
+    constructor({domain = null, debug = false, maxListeners = 100} = {}) {
+        if (domain === null)
+            domain = 'default';
+        this.domain = domain;
         this.events = new Map();
-        this.maxListeners = 100;
-        this.debug = false;
+        this.maxListeners = maxListeners;
+        this.debug = debug;
         
-        console.log('[EventBus]', 'EventBus initialized');
+        console.log(`[EventBus ${this.domain}] EventBus ${this.domain} initialized`);
     }
 
     /**
@@ -76,7 +79,7 @@ export class EventBus {
             listeners.splice(insertIndex, 0, listener);
         }
 
-        console.log('[EventBus]', `Subscribed to ${eventName} (ID: ${listener.id}, Priority: ${listener.priority})`);
+        console.log(`[EventBus ${this.domain}] Subscribed to ${eventName} (ID: ${listener.id}, Priority: ${listener.priority})`);
 
         // Return unsubscribe function
         return () => this.off(eventName, listener.id);
@@ -133,7 +136,7 @@ export class EventBus {
 
         if (index !== -1) {
             const removed = listeners.splice(index, 1)[0];
-            console.log('[EventBus]', `Unsubscribed from ${eventName} (ID: ${removed.id})`);
+            console.log(`[EventBus ${this.domain}] Unsubscribed from ${eventName} (ID: ${removed.id})`);
             
             // Clean up empty event arrays
             if (listeners.length === 0) {
@@ -158,17 +161,17 @@ export class EventBus {
     emit(eventName, message, options, ...args) {
         const listeners = this.events.get(eventName);
         if (!listeners || listeners.length === 0) {
-            console.log('[EventBus]', `No listeners for event: ${eventName}`, message, options, args);
+            console.log(`[EventBus ${this.domain}] No listeners for event: ${eventName}`, message, options, args);
             if (eventName === undefined) {
-                console.log('[EventBus]', 'Event name is undefined', message, options, args);
+                console.log(`[EventBus ${this.domain}] Event name is undefined`, message, options, args);
                 // Get the call stack
                 const callStack = new Error().stack;
-                console.log('[EventBus]', 'Call stack:', callStack);
+                console.log(`[EventBus ${this.domain}] Call stack:`, callStack);
             }
             return false;
         }
 
-        console.log('[EventBus]', `Emitting ${eventName} to ${listeners.length} listeners`);
+        console.log(`[EventBus ${this.domain}] Emitting ${eventName} to ${listeners.length} listeners`);
 
         // Create a copy to avoid issues if listeners modify the array
         const listenersToCall = [...listeners];
@@ -243,7 +246,7 @@ export class EventBus {
             if (listeners) {
                 const count = listeners.length;
                 this.events.delete(eventName);
-                console.log('[EventBus]', `Removed all ${count} listeners for ${eventName}`);
+                console.log(`[EventBus ${this.domain}] Removed all ${count} listeners for ${eventName}`);
                 return count;
             }
             return 0;
@@ -252,7 +255,7 @@ export class EventBus {
             const totalCount = Array.from(this.events.values())
                 .reduce((sum, listeners) => sum + listeners.length, 0);
             this.events.clear();
-            console.log('[EventBus]', `Removed all ${totalCount} listeners for all events`);
+            console.log(`[EventBus ${this.domain}] Removed all ${totalCount} listeners for all events`);
             return totalCount;
         }
     }
@@ -304,7 +307,7 @@ export class EventBus {
             throw new Error('Max listeners must be a non-negative number');
         }
         this.maxListeners = max;
-        console.log('[EventBus]', `Max listeners set to ${max}`);
+        console.log(`[EventBus ${this.domain}] Max listeners set to ${max}`);
     }
 
     /**
@@ -313,7 +316,7 @@ export class EventBus {
      */
     setDebug(enabled) {
         this.debug = !!enabled;
-        console.log('[EventBus]', `Debug logging ${enabled ? 'enabled' : 'disabled'}`);
+        console.log(`[EventBus ${this.domain}] Debug logging ${enabled ? 'enabled' : 'disabled'}`);
     }
 
     /**
@@ -334,7 +337,7 @@ export class EventBus {
      */
     destroy() {
         this.removeAllListeners();
-        console.log('[EventBus]', `EventBus destroyed. Had ${this.getTotalListeners()} listeners across ${this.events.size} events.`);
+        console.log(`[EventBus ${this.domain}] EventBus destroyed. Had ${this.getTotalListeners()} listeners across ${this.events.size} events.`);
     }
 
     /**
@@ -345,9 +348,3 @@ export class EventBus {
         return [...this.history];
     }
 }
-
-/**
- * Global event bus instance for the application
- */
-export const globalEventBus = new EventBus();
-globalEventBus.setDebug(true); // Enable debug logging

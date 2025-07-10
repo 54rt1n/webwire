@@ -46,6 +46,16 @@ export const EVENTS = {
         STATUS_UPDATED: 'conversation:status_updated',
         ACTIVATED: 'conversation:activated'
     },
+    CHAT: {
+        SEND_MESSAGE: 'chat:send-message',
+        ANALYZE_PAGE: 'chat:analyze-page',
+        START_NEW_CONVERSATION: 'chat:start-new-conversation',
+        REPLAY_LAST_TURN: 'chat:replay-last-turn',
+        UPDATE_SETTINGS: 'chat:update-settings',
+        UPDATE_MCP_STATUS: 'chat:update-mcp-status',
+        CONVERSATION_LOADED: 'chat:conversation-loaded',
+        CONVERSATION_UPDATED: 'chat:conversation-updated'
+    },
     AIM: {
         THOUGHT_TOGGLED: 'aim:thought_toggled',
         AUTO_THINK_TOGGLED: 'aim:auto_think_toggled',

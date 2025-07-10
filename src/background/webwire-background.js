@@ -12,7 +12,7 @@ import { EventBus } from '../js/core/event-bus.js';
 class WebWireBackground {
     constructor() {
         this.activeTabs = new Map();
-        this.eventBus = new EventBus();
+        this.eventBus = new EventBus({domain: 'background'});
         this.extensionSettings = {};
         this.dispatcher = null;
         this.errorBoundary = null;

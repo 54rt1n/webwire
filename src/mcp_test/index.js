@@ -26,7 +26,7 @@ import { EventBus } from '../js/core/event-bus.js';
 class MCPTestApp {
     constructor() {
         this.panel = new MCPTestPanel();
-        this.eventBus = new EventBus();
+        this.eventBus = new EventBus({domain: 'testpanel', debug: true});
         this.storage = null;
         this.stateService = null;
         this.dispatcher = null;
@@ -49,7 +49,7 @@ class MCPTestApp {
             this.stateService = stateService;
             this.storage = storage;
             // Load settings and state first
-            await this.stateService.settings.loadSettings();
+            await this.stateService.settings.loadFromStorage();
             await this.stateService.disk.loadFromStorage();
             
             // Set state service for the panel and initialize

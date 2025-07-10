@@ -1,10 +1,11 @@
 import { EVENTS } from '../js/core/events.js';
+import { EventBus } from '../js/core/event-bus.js';
 import { AIClientFactory } from '../js/ai/ai-client-factory.js';
 import { MCPConnector } from '../js/mcp/mcp-connector.js';
 import { ToolParser } from '../js/mcp/tool-parser.js';
 import { ToolFormatter } from '../js/mcp/tool-formatter.js';
 import { WebWirePanel } from './chat-panel.js';
-import { pageUtils } from './page-utils.js';
+import { PageUtils } from './page-utils.js';
 
 /**
  * WebWire Chat Service - Platform-Agnostic Core
@@ -35,12 +36,14 @@ const MESSAGE_ROLES = {
 };
 
 export class ChatService {
-    constructor(eventBus) {
-        this.eventBus = eventBus;
+    constructor(dispatcher) {
+        this.eventBus = new EventBus({domain: 'chat', debug: true});
+        this.dispatcher = dispatcher;
         
         // UI Components
-        this.panel = new WebWirePanel();
-        
+        this.panel = new WebWirePanel(this.eventBus);
+        this.pageUtils = new PageUtils();
+
         // AI/MCP Components  
         this.aiClient = null;
         this.mcpConnector = null;
@@ -68,12 +71,14 @@ export class ChatService {
      */
     setupEventListeners() {
         // Listen for chat events
-        this.eventBus.on('chat:send-message', this.handleUserMessage.bind(this));
-        this.eventBus.on('chat:analyze-page', this.handlePageAnalysisRequest.bind(this));
-        this.eventBus.on('chat:update-settings', this.handleSettingsUpdate.bind(this));
-        this.eventBus.on('chat:update-mcp-status', this.handleMCPStatusUpdate.bind(this));
-        this.eventBus.on('chat:conversation-loaded', this.handleConversationLoaded.bind(this));
-        this.eventBus.on('chat:conversation-updated', this.handleConversationUpdated.bind(this));
+        this.eventBus.on(EVENTS.CHAT.SEND_MESSAGE, this.handleUserMessage.bind(this));
+        this.eventBus.on(EVENTS.CHAT.ANALYZE_PAGE, this.handlePageAnalysisRequest.bind(this));
+        this.eventBus.on(EVENTS.CHAT.UPDATE_SETTINGS, this.handleSettingsUpdate.bind(this));
+        this.eventBus.on(EVENTS.CHAT.UPDATE_MCP_STATUS, this.handleMCPStatusUpdate.bind(this));
+        this.eventBus.on(EVENTS.CHAT.CONVERSATION_LOADED, this.handleConversationLoaded.bind(this));
+        this.eventBus.on(EVENTS.CHAT.CONVERSATION_UPDATED, this.handleConversationUpdated.bind(this));
+        this.eventBus.on(EVENTS.CHAT.START_NEW_CONVERSATION, this.handleNewConversationRequest.bind(this));
+        this.eventBus.on(EVENTS.CHAT.REPLAY_LAST_TURN, this.handleReplayLastTurn.bind(this));
         
         // Listen for AI streaming events
         this.eventBus.on(EVENTS.AI.STREAM_CHUNK, this.handleStreamingChunk.bind(this));
@@ -191,7 +196,7 @@ export class ChatService {
                 const firstUserMessage = messagesForAPI[firstUserIndex];
                 messagesForAPI[firstUserIndex] = {
                     ...firstUserMessage,
-                    content: pageUtils.enhanceMessageWithContext(
+                    content: this.pageUtils.enhanceMessageWithContext(
                         this.enhanceMessageWithStash(
                             firstUserMessage.content
                         )
@@ -356,6 +361,81 @@ export class ChatService {
         if (this.panel.isReady()) {
             this.panel.updateConversationIdDisplay(conversationId);
         }
+    }
+
+    /**
+     * Handle new conversation request event
+     */
+    async handleNewConversationRequest(payload) {
+        console.log('[ChatService] Handling new conversation request');
+        
+        // Clear current conversation
+        this.currentConversation = null;
+        
+        // Request host to create new conversation
+        this.eventBus.emit('dispatch:outbound', {
+            target: 'background',
+            event: 'threads:create-new',
+            data: {
+                title: `Page: ${document.title}`,
+                url: window.location.href
+            }
+        });
+    }
+
+    /**
+     * Handle replay last turn request event
+     */
+    async handleReplayLastTurn(payload) {
+        console.log('[ChatService] Handling replay last turn request');
+        
+        // Get the current conversation history
+        let conversationMessages = [];
+        
+        if (this.currentConversation && this.currentConversation.messages) {
+            conversationMessages = this.currentConversation.messages;
+        } else if (this.stateService && this.stateService.conversation) {
+            // Fallback: try to get active conversation from state service
+            const activeConversationId = this.stateService.conversation.getActiveConversationId();
+            if (activeConversationId) {
+                conversationMessages = this.stateService.conversation.getConversationMessages(activeConversationId);
+            }
+        }
+        
+        if (conversationMessages.length === 0) {
+            console.log('[ChatService] No conversation history found');
+            this.panel.displayError('No conversation history found to replay');
+            return;
+        }
+        
+        // Find the last user message
+        let lastUserMessage = null;
+        for (let i = conversationMessages.length - 1; i >= 0; i--) {
+            const message = conversationMessages[i];
+            if (message.role === MESSAGE_ROLES.USER) {
+                lastUserMessage = message;
+                break;
+            }
+        }
+        
+        if (!lastUserMessage) {
+            console.log('[ChatService] No user messages found in conversation history');
+            this.panel.displayError('No previous user messages found to replay');
+            return;
+        }
+        
+        if (!lastUserMessage.content || !lastUserMessage.content.trim()) {
+            console.log('[ChatService] Last user message is empty');
+            this.panel.displayError('Last user message is empty');
+            return;
+        }
+        
+        console.log('[ChatService] Replaying last user message:', lastUserMessage.content);
+        
+        // Re-send the message through the normal flow
+        this.eventBus.emit(EVENTS.CHAT.SEND_MESSAGE, { 
+            message: lastUserMessage.content.trim() 
+        });
     }
 
     /**

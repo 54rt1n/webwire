@@ -19,13 +19,6 @@ export class EventErrorBoundary {
    * Wrap the dispatcher's event registration to add error boundaries
    */
   setupGlobalErrorHandling() {
-    const originalOn = this.dispatcher.on.bind(this.dispatcher);
-    
-    this.dispatcher.on = (event, handler, options = {}) => {
-      const wrappedHandler = this.createErrorBoundaryWrapper(event, handler, options);
-      return originalOn(event, wrappedHandler, options);
-    };
-
     const originalDispatch = this.dispatcher.dispatch.bind(this.dispatcher);
     
     this.dispatcher.dispatch = async (event, data, options = {}) => {

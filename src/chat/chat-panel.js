@@ -1,9 +1,12 @@
+import { EVENTS } from '../js/core/events.js';
+
 /**
  * WebWire Panel - Manages the chat panel UI and interactions
  * Similar structure to MCP panel but focused on chat/conversation
  */
 export class WebWirePanel {
-    constructor() {
+    constructor(eventBus) {
+        this.eventBus = eventBus;
         this.container = null;
         this.isInjected = false;
         this.isVisible = false;
@@ -288,11 +291,7 @@ export class WebWirePanel {
         this.updateSendButton();
 
         // Emit event for parent to handle
-        window.postMessage({
-            type: 'WEBWIRE_PANEL_MESSAGE',
-            action: 'SEND_CHAT_MESSAGE',
-            data: { message }
-        }, '*');
+        this.eventBus.emit(EVENTS.CHAT.SEND_MESSAGE, { message });
     }
 
     /**
@@ -300,11 +299,7 @@ export class WebWirePanel {
      */
     handlePageAnalysisRequest() {
         // Request page analysis using the page utils pattern
-        window.postMessage({
-            type: 'WEBWIRE_PANEL_MESSAGE',
-            action: 'ANALYZE_PAGE_CONTENT',
-            data: {}
-        }, '*');
+        this.eventBus.emit(EVENTS.CHAT.ANALYZE_PAGE, {});
     }
 
     /**
@@ -320,11 +315,7 @@ export class WebWirePanel {
         this.updateConversationIdDisplay(null);
         
         // Request new conversation from host
-        window.postMessage({
-            type: 'WEBWIRE_PANEL_MESSAGE',
-            action: 'START_NEW_CONVERSATION',
-            data: {}
-        }, '*');
+        this.eventBus.emit(EVENTS.CHAT.START_NEW_CONVERSATION, {});
     }
 
     /**
@@ -333,38 +324,8 @@ export class WebWirePanel {
     handleReplayLastTurn() {
         console.log('[WebWirePanel] Replay last turn requested');
         
-        // Find the last user message from the visible chat
-        const userMessages = this.elements.chatContent.querySelectorAll('.chat-message.user');
-        
-        if (userMessages.length === 0) {
-            console.log('[WebWirePanel] No user messages found to replay');
-            this.displayError('No previous messages to replay');
-            return;
-        }
-        
-        // Get the last user message
-        const lastUserMessage = userMessages[userMessages.length - 1];
-        const messageContentEl = lastUserMessage.querySelector('.message-content');
-        
-        if (!messageContentEl) {
-            console.log('[WebWirePanel] Could not find message content to replay');
-            this.displayError('Could not find message content to replay');
-            return;
-        }
-        
-        // Extract the text content (strip HTML)
-        const messageText = messageContentEl.textContent || messageContentEl.innerText || '';
-        
-        if (!messageText.trim()) {
-            console.log('[WebWirePanel] Last message is empty');
-            this.displayError('Last message is empty');
-            return;
-        }
-        
-        console.log('[WebWirePanel] Replaying message:', messageText);
-        
-        // Send the message again using the same mechanism as new messages
-        this.handleSendMessage(messageText);
+        // Emit event for chat service to handle using conversation history
+        this.eventBus.emit(EVENTS.CHAT.REPLAY_LAST_TURN, {});
     }
 
     /**

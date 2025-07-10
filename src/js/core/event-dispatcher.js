@@ -2,11 +2,12 @@ import { EventErrorBoundary } from './error-boundary.js';
 import { EVENT_TYPES, EVENT_CONTEXT } from './events.js';
 
 export class EventDispatcher {
-  constructor(context, eventBus) {
+  constructor(context, eventBus, {backgroundIsLocal = false} = {}) {
     this.context = context;
     this.eventBus = eventBus;
     this.errorBoundary = new EventErrorBoundary(this);
-    
+    this.backgroundIsLocal = backgroundIsLocal;
+      
     // Track pending cross-context requests
     this.pendingRequests = new Map();
     this.requestId = 0;
@@ -26,6 +27,9 @@ export class EventDispatcher {
       }
       
       if (target === EVENT_CONTEXT.BACKGROUND) {
+        if (this.backgroundIsLocal) {
+          return this.eventBus.emit(event, data, {source: EVENT_CONTEXT.BACKGROUND});
+        }
         return this.sendToBackground(event, data, timeout);
       }
 
@@ -53,37 +57,12 @@ export class EventDispatcher {
     return this.dispatch(event, data, options);
   }
 
-  // ── Local Event Bus Methods ──────────────────────────────────────
-
-  on(event, handler, options = {}) {
-    const { source = EVENT_CONTEXT.LOCAL, once = false, priority = 0 } = options;
-    
-    if (source === EVENT_CONTEXT.LOCAL) {
-      return this.eventBus.on(event, handler, { once, priority });
-    }
-    
-    // Setup cross-context listeners
-    return this.setupCrossContextListener(event, handler, source);
-  }
-
-  once(event, handler, options = {}) {
-    return this.on(event, handler, { ...options, once: true });
-  }
-
-  off(event, handlerOrId) {
-    return this.eventBus.off(event, handlerOrId);
-  }
-
-  emit(event, data, options = {}) {
-    return this.eventBus.emit(event, data, options);
-  }
-
   // ── Cross-Context Communication ──────────────────────────────────
 
   async sendToBackground(event, data, timeout = 5000) {
-    if (this.context === EVENT_CONTEXT.BACKGROUND) {
+    if (this.context === EVENT_CONTEXT.BACKGROUND && this.backgroundIsLocal) {
       // Already in background, dispatch locally
-      return this.eventBus.emit(event, data);
+      return this.eventBus.emit(event, data, {source: EVENT_CONTEXT.BACKGROUND});
     }
 
     if (typeof chrome === 'undefined' || !chrome.runtime) {
@@ -406,7 +385,7 @@ export class EventDispatcher {
     });
   }
 
-  setupCrossContextListener(event, handler, source) {
+  setupCrossContextListener(event, handler, source, options = {}) {
     // Create a wrapper that only handles events from the specified source
     const wrappedHandler = (eventData, metadata = {}) => {
       if (metadata.source === source || source === 'any') {
@@ -414,7 +393,7 @@ export class EventDispatcher {
       }
     };
 
-    return this.eventBus.on(`cross_context:${event}`, wrappedHandler);
+    return this.eventBus.on(`cross_context:${event}`, wrappedHandler, options);
   }
 
   // ── Event Handlers ───────────────────────────────────────────────
@@ -432,8 +411,8 @@ export class EventDispatcher {
     }
   }
 
-  handlePanelMessage(event, data, requestId, source) {
-    this.eventBus.emit(event, data, { source: EVENT_CONTEXT.PANEL })
+  handlePanelMessage(event, data, requestId, source, options = {}) {
+    this.eventBus.emit(event, data, { source: EVENT_CONTEXT.PANEL, ...options })
       .then(result => {
         if (requestId) {
           source.postMessage({
@@ -483,38 +462,15 @@ export class EventDispatcher {
   // ── Context-Specific Handlers ────────────────────────────────────
 
   setupBackgroundHandlers() {
-    // Handle routing requests
-    this.on('ROUTE_TO_CONTENT', async ({ event, data, tabId }) => {
-      return this.sendToContent(event, data, 5000, tabId);
-    });
-
-    // Handle state synchronization
-    this.on('STATE_UPDATE', (update) => {
-      this.broadcast('STATE_SYNC', update, { exclude: ['background'] });
-    });
   }
 
   setupContentHandlers() {
-    // Handle panel routing
-    this.on('ROUTE_TO_PANEL', async ({ event, data }) => {
-      return this.sendToPanel(event, data);
-    });
-
-    // Handle state sync from background
-    this.on('STATE_SYNC', (update) => {
-      this.eventBus.emit('BACKGROUND_STATE_SYNC', update);
-    });
   }
 
   setupPopupHandlers() {
-    // Popup is mainly for sending commands, minimal handling needed
   }
 
   setupPanelHandlers() {
-    // Handle commands from content script
-    this.on('CONTENT_COMMAND', (command) => {
-      this.eventBus.emit('EXECUTE_COMMAND', command);
-    });
   }
 
   // ── Utility Methods ──────────────────────────────────────────────

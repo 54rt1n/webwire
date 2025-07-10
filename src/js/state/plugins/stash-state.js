@@ -210,7 +210,7 @@ export class StashStatePlugin {
      * Load stash data from storage
      * @returns {Object} The loaded stash data
      */
-    async load() {
+    async loadFromStorage() {
         try {
             const stashData = await this.stashAdapter.getAll();
             this.stateService.state.stash = stashData || {};
@@ -226,7 +226,7 @@ export class StashStatePlugin {
     /**
      * Save stash data to storage
      */
-    async save() {
+    async saveToStorage() {
         try {
             this._ensureStashExists();
             await this.stashAdapter.setAll(this.stateService.state.stash);

@@ -3,6 +3,7 @@ import { WebWireClientCore } from '../js/client/webwire-client-core.js';
 import { documentModal } from './document-modal.js';
 import { ChatService } from '../chat/chat-service.js';
 import { EventBus } from '../js/core/event-bus.js';
+import { EventDispatcher } from '../js/core/event-dispatcher.js';
 import '../chat/chat.css'; // Import chat panel styles
 
 /**
@@ -14,11 +15,12 @@ import '../chat/chat.css'; // Import chat panel styles
 class MCPControlPanelApp {
     constructor() {
         // Add ChatService integration
-        this.eventBus = new EventBus();
+        this.eventBus = new EventBus({domain: 'mcp', debug: true});
+        this.dispatcher = new EventDispatcher(this, this.eventBus, {backendIsLocal: true});
         this.core = new WebWireClientCore(this.eventBus);    
         this.panel = new MCPControlPanel(this.eventBus);
         
-        this.chatService = new ChatService(this.eventBus);
+        this.chatService = new ChatService(this.dispatcher);
         
         // Setup chat service event handling
         this.setupChatServiceEvents();
@@ -622,7 +624,7 @@ class MCPControlPanelApp {
         if (!this.core.stateService || !this.core.stateService.stash) return;
         
         try {
-            await this.core.stateService.stash.load();
+            await this.core.stateService.stash.loadFromStorage();
             console.log('[MCPApp] Stash data loaded successfully');
         } catch (error) {
             console.error('[MCPApp] Failed to load stash data:', error);

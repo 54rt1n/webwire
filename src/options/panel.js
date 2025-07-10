@@ -2,73 +2,78 @@ import '../shared/global.scss';
 import './style.css';
 
 export class OptionsPanel {
-    constructor() {
-        // General settings
-        this.userNameInput = document.getElementById('userName');
-        this.personaNameInput = document.getElementById('personaName');
-        this.mcpServerUrlInput = document.getElementById('mcpServerUrl');
-        this.showThoughtCheckbox = document.getElementById('showThought');
-        this.autoThinkCheckbox = document.getElementById('autoThink');
-        this.autoInjectCheckbox = document.getElementById('autoInject');
+    constructor(eventBus) {
+        this.eventBus = eventBus;
+        this.elements = this._DOMElements();
+    }
 
-        // Provider settings
-        this.providerInputs = {
-            featherless: { apiKey: document.getElementById('featherlessApiKey') },
-            openai: { apiKey: document.getElementById('openaiApiKey') },
-            google: { apiKey: document.getElementById('googleApiKey') },
-            anthropic: { apiKey: document.getElementById('anthropicApiKey') },
-            groq: { apiKey: document.getElementById('groqApiKey') },
-            meta: { apiKey: document.getElementById('metaApiKey') },
-            aimind: {
-                apiKey: document.getElementById('aimindApiKey'),
-                apiEndpoint: document.getElementById('aimindApiEndpoint')
+    /**
+     * Get elements from the DOM
+     */
+    _DOMElements() {
+        return {
+            userNameInput: document.getElementById('userName'),
+            personaNameInput: document.getElementById('personaName'),
+            mcpServerUrlInput: document.getElementById('mcpServerUrl'),
+            showThoughtCheckbox: document.getElementById('showThought'),
+            autoThinkCheckbox: document.getElementById('autoThink'),
+            autoInjectCheckbox: document.getElementById('autoInject'),
+            providerInputs: {
+                featherless: { apiKey: document.getElementById('featherlessApiKey') },
+                openai: { apiKey: document.getElementById('openaiApiKey') },
+                google: { apiKey: document.getElementById('googleApiKey') },
+                anthropic: { apiKey: document.getElementById('anthropicApiKey') },
+                groq: { apiKey: document.getElementById('groqApiKey') },
+                meta: { apiKey: document.getElementById('metaApiKey') },
+                aimind: {
+                    apiKey: document.getElementById('aimindApiKey'),
+                    apiEndpoint: document.getElementById('aimindApiEndpoint')
+                },
+                openrouter: {
+                    apiKey: document.getElementById('openrouterApiKey'),
+                    apiEndpoint: document.getElementById('openrouterApiEndpoint')
+                }
             },
-            openrouter: {
-                apiKey: document.getElementById('openrouterApiKey'),
-                apiEndpoint: document.getElementById('openrouterApiEndpoint')
-            }
+            modelConfigs: {
+                chat: {
+                    model: document.getElementById('chatModel'),
+                    provider: document.getElementById('chatProvider'),
+                    temperature: document.getElementById('chatTemp'),
+                    maxTokens: document.getElementById('chatMaxTokens'),
+                    topP: document.getElementById('chatTopP'),
+                    minP: document.getElementById('chatMinP'),
+                    topK: document.getElementById('chatTopK'),
+                    frequencyPenalty: document.getElementById('chatFreqPenalty'),
+                    presencePenalty: document.getElementById('chatPresPenalty'),
+                },
+                thought: {
+                    model: document.getElementById('thoughtModel'),
+                    provider: document.getElementById('thoughtProvider'),
+                    temperature: document.getElementById('thoughtTemp'),
+                    maxTokens: document.getElementById('thoughtMaxTokens'),
+                    topP: document.getElementById('thoughtTopP'),
+                    minP: document.getElementById('thoughtMinP'),
+                    topK: document.getElementById('thoughtTopK'),
+                    frequencyPenalty: document.getElementById('thoughtFreqPenalty'),
+                    presencePenalty: document.getElementById('thoughtPresPenalty'),
+                },
+                tool: {
+                    model: document.getElementById('toolModel'),
+                    provider: document.getElementById('toolProvider'),
+                    temperature: document.getElementById('toolTemp'),
+                    maxTokens: document.getElementById('toolMaxTokens'),
+                    topP: document.getElementById('toolTopP'),
+                    minP: document.getElementById('toolMinP'),
+                    topK: document.getElementById('toolTopK'),
+                    frequencyPenalty: document.getElementById('toolFreqPenalty'),
+                    presencePenalty: document.getElementById('toolPresPenalty'),
+                }
+            },
+            saveBtn: document.getElementById('saveBtn'),
+            status: document.getElementById('status')
         };
 
-        // Model settings
-        this.modelConfigs = {
-            chat: {
-                model: document.getElementById('chatModel'),
-                provider: document.getElementById('chatProvider'),
-                temperature: document.getElementById('chatTemp'),
-                maxTokens: document.getElementById('chatMaxTokens'),
-                topP: document.getElementById('chatTopP'),
-                minP: document.getElementById('chatMinP'),
-                topK: document.getElementById('chatTopK'),
-                frequencyPenalty: document.getElementById('chatFreqPenalty'),
-                presencePenalty: document.getElementById('chatPresPenalty'),
-            },
-            thought: {
-                model: document.getElementById('thoughtModel'),
-                provider: document.getElementById('thoughtProvider'),
-                temperature: document.getElementById('thoughtTemp'),
-                maxTokens: document.getElementById('thoughtMaxTokens'),
-                topP: document.getElementById('thoughtTopP'),
-                minP: document.getElementById('thoughtMinP'),
-                topK: document.getElementById('thoughtTopK'),
-                frequencyPenalty: document.getElementById('thoughtFreqPenalty'),
-                presencePenalty: document.getElementById('thoughtPresPenalty'),
-            },
-            tool: {
-                model: document.getElementById('toolModel'),
-                provider: document.getElementById('toolProvider'),
-                temperature: document.getElementById('toolTemp'),
-                maxTokens: document.getElementById('toolMaxTokens'),
-                topP: document.getElementById('toolTopP'),
-                minP: document.getElementById('toolMinP'),
-                topK: document.getElementById('toolTopK'),
-                frequencyPenalty: document.getElementById('toolFreqPenalty'),
-                presencePenalty: document.getElementById('toolPresPenalty'),
-            }
-        };
-        
-        // Save button and status
-        this.saveBtn = document.getElementById('saveBtn');
-        this.status = document.getElementById('status');
+        return elements;
     }
 
     /**
@@ -91,20 +96,20 @@ export class OptionsPanel {
         if (!settings) return;
 
         // General settings
-        this.userNameInput.value = settings.aim?.userName || '';
-        this.personaNameInput.value = settings.aim?.personaName || '';
-        this.mcpServerUrlInput.value = settings.mcp?.serverUrl || '';
-        this.showThoughtCheckbox.checked = settings.aim?.showThought || false;
-        this.autoThinkCheckbox.checked = settings.aim?.autoThink || false;
-        this.autoInjectCheckbox.checked = settings.ui?.autoInject || false;
+        this.elements.userNameInput.value = settings.aim?.userName || '';
+        this.elements.personaNameInput.value = settings.aim?.personaName || '';
+        this.elements.mcpServerUrlInput.value = settings.mcp?.serverUrl || '';
+        this.elements.showThoughtCheckbox.checked = settings.aim?.showThought || false;
+        this.elements.autoThinkCheckbox.checked = settings.aim?.autoThink || false;
+        this.elements.autoInjectCheckbox.checked = settings.ui?.autoInject || false;
 
         // Provider settings
         if (settings.ai?.providers) {
-            for (const provider in this.providerInputs) {
+            for (const provider in this.elements.providerInputs) {
                 const providerConfig = settings.ai.providers[provider];
                 if (providerConfig) {
-                    for (const key in this.providerInputs[provider]) {
-                        this.providerInputs[provider][key].value = providerConfig[key] || '';
+                    for (const key in this.elements.providerInputs[provider]) {
+                        this.elements.providerInputs[provider][key].value = providerConfig[key] || '';
                     }
                 }
             }
@@ -112,19 +117,19 @@ export class OptionsPanel {
         
         // Model settings
         if (settings.ai?.models) {
-            for (const modelType in this.modelConfigs) {
+            for (const modelType in this.elements.modelConfigs) {
                 const modelConfig = settings.ai.models[modelType];
                 if (modelConfig) {
-                    this.modelConfigs[modelType].model.value = modelConfig.model || '';
-                    this.modelConfigs[modelType].provider.value = modelConfig.provider || '';
+                    this.elements.modelConfigs[modelType].model.value = modelConfig.model || '';
+                    this.elements.modelConfigs[modelType].provider.value = modelConfig.provider || '';
                     if (modelConfig.samplerConfig) {
-                        this.modelConfigs[modelType].temperature.value = modelConfig.samplerConfig.temperature ?? '';
-                        this.modelConfigs[modelType].maxTokens.value = modelConfig.samplerConfig.maxTokens ?? '';
-                        this.modelConfigs[modelType].topP.value = modelConfig.samplerConfig.topP ?? '';
-                        this.modelConfigs[modelType].minP.value = modelConfig.samplerConfig.minP ?? '';
-                        this.modelConfigs[modelType].topK.value = modelConfig.samplerConfig.topK ?? '';
-                        this.modelConfigs[modelType].frequencyPenalty.value = modelConfig.samplerConfig.frequencyPenalty ?? '';
-                        this.modelConfigs[modelType].presencePenalty.value = modelConfig.samplerConfig.presencePenalty ?? '';
+                        this.elements.modelConfigs[modelType].temperature.value = modelConfig.samplerConfig.temperature ?? '';
+                        this.elements.modelConfigs[modelType].maxTokens.value = modelConfig.samplerConfig.maxTokens ?? '';
+                        this.elements.modelConfigs[modelType].topP.value = modelConfig.samplerConfig.topP ?? '';
+                        this.elements.modelConfigs[modelType].minP.value = modelConfig.samplerConfig.minP ?? '';
+                        this.elements.modelConfigs[modelType].topK.value = modelConfig.samplerConfig.topK ?? '';
+                        this.elements.modelConfigs[modelType].frequencyPenalty.value = modelConfig.samplerConfig.frequencyPenalty ?? '';
+                        this.elements.modelConfigs[modelType].presencePenalty.value = modelConfig.samplerConfig.presencePenalty ?? '';
                     }
                 }
             }
@@ -137,13 +142,13 @@ export class OptionsPanel {
     getAllSettings() {
         const settings = {
             aim: {
-                userName: this.userNameInput.value.trim(),
-                personaName: this.personaNameInput.value.trim(),
-                showThought: this.showThoughtCheckbox.checked,
-                autoThink: this.autoThinkCheckbox.checked,
+                userName: this.elements.userNameInput.value.trim(),
+                personaName: this.elements.personaNameInput.value.trim(),
+                showThought: this.elements.showThoughtCheckbox.checked,
+                autoThink: this.elements.autoThinkCheckbox.checked,
             },
             mcp: {
-                serverUrl: this.mcpServerUrlInput.value.trim()
+                serverUrl: this.elements.mcpServerUrlInput.value.trim()
             },
             ai: {
                 providers: {},
@@ -155,10 +160,10 @@ export class OptionsPanel {
         };
 
         // Get provider settings
-        for (const provider in this.providerInputs) {
+        for (const provider in this.elements.providerInputs) {
             settings.ai.providers[provider] = {};
-            for (const key in this.providerInputs[provider]) {
-                const value = this.providerInputs[provider][key].value.trim();
+            for (const key in this.elements.providerInputs[provider]) {
+                const value = this.elements.providerInputs[provider][key].value.trim();
                 if (value) {
                     settings.ai.providers[provider][key] = value;
                 }
@@ -166,32 +171,32 @@ export class OptionsPanel {
         }
         
         // Get model settings
-        for (const modelType in this.modelConfigs) {
+        for (const modelType in this.elements.modelConfigs) {
             const modelConfig = {
-                model: this.modelConfigs[modelType].model.value.trim(),
-                provider: this.modelConfigs[modelType].provider.value.trim(),
+                model: this.elements.modelConfigs[modelType].model.value.trim(),
+                provider: this.elements.modelConfigs[modelType].provider.value.trim(),
                 samplerConfig: {}
             };
             
-            const temp = this.modelConfigs[modelType].temperature.value.trim();
+            const temp = this.elements.modelConfigs[modelType].temperature.value.trim();
             if (temp) modelConfig.samplerConfig.temperature = parseFloat(temp);
             
-            const maxTokens = this.modelConfigs[modelType].maxTokens.value.trim();
+            const maxTokens = this.elements.modelConfigs[modelType].maxTokens.value.trim();
             if (maxTokens) modelConfig.samplerConfig.maxTokens = parseInt(maxTokens, 10);
 
-            const topP = this.modelConfigs[modelType].topP.value.trim();
+            const topP = this.elements.modelConfigs[modelType].topP.value.trim();
             if (topP) modelConfig.samplerConfig.topP = parseFloat(topP);
 
-            const minP = this.modelConfigs[modelType].minP.value.trim();
+            const minP = this.elements.modelConfigs[modelType].minP.value.trim();
             if (minP) modelConfig.samplerConfig.minP = parseFloat(minP);
 
-            const topK = this.modelConfigs[modelType].topK.value.trim();
+            const topK = this.elements.modelConfigs[modelType].topK.value.trim();
             if (topK) modelConfig.samplerConfig.topK = parseInt(topK, 10);
 
-            const freqPenalty = this.modelConfigs[modelType].frequencyPenalty.value.trim();
+            const freqPenalty = this.elements.modelConfigs[modelType].frequencyPenalty.value.trim();
             if (freqPenalty) modelConfig.samplerConfig.frequencyPenalty = parseFloat(freqPenalty);
             
-            const presPenalty = this.modelConfigs[modelType].presencePenalty.value.trim();
+            const presPenalty = this.elements.modelConfigs[modelType].presencePenalty.value.trim();
             if (presPenalty) modelConfig.samplerConfig.presencePenalty = parseFloat(presPenalty);
             
             // Only add model if name is specified

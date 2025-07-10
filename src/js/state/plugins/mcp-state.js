@@ -12,7 +12,7 @@ export class MCPStatePlugin {
      */
     constructor(stateService) {
         this.stateService = stateService;
-        this.dispatcher = stateService.eventBus;
+        this.eventBus = stateService.eventBus;
     }
 
     /**
@@ -115,11 +115,11 @@ export class MCPStatePlugin {
             this.stateService.state.mcp.connection.lastConnected = Date.now();
             this.clearMcpConnectionError();
             console.log('MCP connected');
-            this.dispatcher.dispatch(EVENTS.MCP.CONNECTED, {}, { target: EVENT_CONTEXT.BROADCAST });
+            this.eventBus.emit(EVENTS.MCP.CONNECTED, {}, { source: 'set-mcp-connected'});
         } else if (!isConnected && wasConnected) {
             this.stateService.state.mcp.connection.isInitialized = false;
             console.log('MCP disconnected');
-            this.dispatcher.dispatch(EVENTS.MCP.DISCONNECTED, {}, { target: EVENT_CONTEXT.BROADCAST });
+            this.eventBus.emit(EVENTS.MCP.DISCONNECTED, {}, { source: 'set-mcp-disconnected'});
         }
     }
 
@@ -133,7 +133,7 @@ export class MCPStatePlugin {
         
         if (isInitialized && !wasInitialized) {
             console.log('MCP initialized');
-            this.dispatcher.dispatch(EVENTS.MCP.INITIALIZED, {}, { target: EVENT_CONTEXT.BROADCAST });
+            this.eventBus.emit(EVENTS.MCP.INITIALIZED, {}, { source: 'set-mcp-initialized'});
         }
     }
 
@@ -146,10 +146,10 @@ export class MCPStatePlugin {
     setMcpTools(tools) {
         this.stateService.state.mcp.tools = tools || [];
         console.log(`Updated MCP tools: ${this.stateService.state.mcp.tools.length} tools available`);
-        this.dispatcher.dispatch(EVENTS.MCP.TOOLS_UPDATED, { 
+        this.eventBus.emit(EVENTS.MCP.TOOLS_UPDATED, { 
             tools: this.stateService.state.mcp.tools,
             count: this.stateService.state.mcp.tools.length 
-        }, { target: EVENT_CONTEXT.BROADCAST });
+        }, { source: 'set-mcp-tools'});
     }
 
     /**
@@ -187,7 +187,7 @@ export class MCPStatePlugin {
         };
 
         console.log(`Added pending MCP request ${requestId}: ${method}`);
-        this.dispatcher.dispatch(EVENTS.MCP.REQUEST_STARTED, { requestId, method, params }, { target: EVENT_CONTEXT.BROADCAST });
+        this.eventBus.emit(EVENTS.MCP.REQUEST_STARTED, { requestId, method, params }, { source: 'add-mcp-pending-request'});
     }
 
     /**
@@ -202,7 +202,7 @@ export class MCPStatePlugin {
             request.response = response;
             
             console.log(`Completed MCP request ${requestId}`);
-            this.dispatcher.dispatch(EVENTS.MCP.REQUEST_COMPLETED, { requestId, response }, { target: EVENT_CONTEXT.BROADCAST });
+            this.eventBus.emit(EVENTS.MCP.REQUEST_COMPLETED, { requestId, response }, { source: 'complete-mcp-request'});
         }
     }
 
@@ -218,7 +218,7 @@ export class MCPStatePlugin {
             request.error = error;
             
             console.error(`Failed MCP request ${requestId}: ${error}`);
-            this.dispatcher.dispatch(EVENTS.MCP.REQUEST_FAILED, { requestId, error }, { target: EVENT_CONTEXT.BROADCAST });
+            this.eventBus.emit(EVENTS.MCP.REQUEST_FAILED, { requestId, error }, { source: 'fail-mcp-request'});
         }
     }
 
@@ -233,7 +233,7 @@ export class MCPStatePlugin {
             request.error = 'Request timeout';
             
             console.warn(`MCP request ${requestId} timed out`);
-            this.dispatcher.dispatch(EVENTS.MCP.REQUEST_TIMEOUT, { requestId }, { target: EVENT_CONTEXT.BROADCAST });
+            this.eventBus.emit(EVENTS.MCP.REQUEST_TIMEOUT, { requestId }, { source: 'timeout-mcp-request'});
         }
     }
 

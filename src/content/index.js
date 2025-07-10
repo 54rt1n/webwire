@@ -1,4 +1,5 @@
 import { EventBus } from '../js/core/event-bus.js';
+import { EventDispatcher } from '../js/core/event-dispatcher.js';
 import { ChatService } from '../chat/chat-service.js';
 import { pageUtils } from '../chat/page-utils.js';
 import { setupDebugMethods, setupGlobalDebugAccess } from './debug.js';
@@ -27,10 +28,11 @@ import '../chat/chat.css';
 class WebWireContentHost {
     constructor() {
         // Create event bus for communication with ChatService
-        this.eventBus = new EventBus();
+        this.eventBus = new EventBus({domain: 'content', debug: true});
+        this.dispatcher = new EventDispatcher(this, this.eventBus);
         
         // Create the chat service (platform-agnostic core)
-        this.chatService = new ChatService(this.eventBus);
+        this.chatService = new ChatService(this.dispatcher);
         
         // Host state
         this.currentSettings = {};

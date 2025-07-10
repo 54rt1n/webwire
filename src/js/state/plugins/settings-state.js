@@ -22,7 +22,7 @@ export class SettingsStatePlugin {
     /**
      * Read settings and set them in the state
      */
-    async loadSettings() {
+    async loadFromStorage() {
         try {
             console.log('[StateService::SettingsState] Loading settings from adapter...');
             console.log('[StateService::SettingsState] Settings adapter:', this.settingsAdapter);
@@ -50,7 +50,7 @@ export class SettingsStatePlugin {
     /**
      * Save settings
      */
-    async saveSettings() {
+    async saveToStorage() {
         try {
             console.log('[StateService::SettingsState] Saving settings to adapter...');
             console.log('[StateService::SettingsState] Settings to save:', this.stateService.state.settings);

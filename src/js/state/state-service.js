@@ -1,4 +1,3 @@
-import { EventDispatcher } from '../core/event-dispatcher.js';
 import { StateValidator } from './state-validator.js';
 import { createInitialState } from './state-container.js';
 
@@ -32,16 +31,14 @@ class StateService {
      * Create a StateService instance with required dependencies
      * @param {Object} eventBus - Event bus instance for inter-component communication
      * @param {Object} storage - Storage adapter for persistence operations
-     * @param {string} context - Context of the state service (background, content, popup, panel)
      * @throws {Error} If eventBus or storage are not provided
      */
-    constructor(eventBus, storage, context) {
+    constructor(eventBus, storage) {
         if (!eventBus || !storage) {
             throw new Error('Event bus and storage are required');
         }
 
         this.eventBus = eventBus;
-        this.dispatch = new EventDispatcher(context, eventBus);
         this.storage = storage;
 
         // Initialize state with default structure
