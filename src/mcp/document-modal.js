@@ -408,7 +408,7 @@ export class DocumentModal {
         if (!uri) return;
         
         // Create stash button
-        this.stashButton = new StashButton(this.stateService);
+        this.stashButton = new StashButton(this.eventBus, this.stateService);
         const button = this.stashButton.create(uri, 'kb', {
             size: 'icon',
             onToggle: (stashedUri, isStashed) => {

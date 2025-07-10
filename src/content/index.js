@@ -1,10 +1,5 @@
-import { EVENTS } from '../js/core/events.js';
-import { AIClientFactory } from '../js/ai/ai-client-factory.js';
-import { MCPConnector } from '../js/mcp/mcp-connector.js';
-import { ToolParser } from '../js/mcp/tool-parser.js';
-import { ToolFormatter } from '../js/mcp/tool-formatter.js';
 import { EventBus } from '../js/core/event-bus.js';
-import { WebWirePanel } from './panel.js';
+import { ChatService } from '../chat/chat-service.js';
 import { pageUtils } from './page-utils.js';
 import { setupDebugMethods, setupGlobalDebugAccess } from './debug.js';
 import {
@@ -15,81 +10,93 @@ import {
     MESSAGE_ROLES,
     KEYBOARD_SHORTCUTS,
     DOM_READY_STATES
-} from './constants.js';
+} from '../chat/chat-constants.js';
 import '../shared/global.scss';
-import './style.css';
+import '../chat/chat.css';
 
 /**
- * WebWire Content Script - Lightweight Version
+ * WebWire Content Script - Thin Host/Adapter
  * 
- * Page-local AI and MCP processing with background thread storage:
- * - Manages AI client and MCP connector locally on the page
- * - Uses background script for conversation thread persistence
- * - Provides panel UI for user interaction
+ * This is now a lightweight adapter that hosts the ChatService and handles:
+ * - Chrome extension APIs (chrome.runtime, chrome.tabs)
+ * - Window/DOM event listeners
+ * - Translation between Chrome APIs and ChatService events
+ * 
+ * All the core chat logic has been moved to ChatService.
  */
-class WebWireContentScript {
+class WebWireContentHost {
     constructor() {
-        this.panel = new WebWirePanel();
-        this.streamingState = {
-            isActive: false,
-            currentContent: '',
-            messageId: null,
-            currentMessage: null,
-            streamingText: '',
-            messageCounter: 0
-        };
-        
-        // Page-local AI/MCP components only
+        // Create event bus for communication with ChatService
         this.eventBus = new EventBus();
-        this.aiClient = null;
-        this.mcpConnector = null;
-        this.toolParser = new ToolParser();
         
-        // Thread management via background script
-        this.currentThreadId = null;
+        // Create the chat service (platform-agnostic core)
+        this.chatService = new ChatService(this.eventBus);
+        
+        // Host state
         this.currentSettings = {};
+        this.currentThreadId = null;
+        
+        // Setup host-specific event handlers
+        this.setupHostEventHandlers();
     }
 
-    async initialize() {
-        console.log('WebWire content script starting initialization...');
+    /**
+     * Setup event handlers that the host manages
+     */
+    setupHostEventHandlers() {
+        // Listen for outbound dispatch requests from ChatService
+        this.eventBus.on('dispatch:outbound', this.handleOutboundDispatch.bind(this));
         
-        // Set up extension communication FIRST (critical for background script communication)
+        console.log('[WebWireContentHost] Host event handlers set up');
+    }
+
+    /**
+     * Initialize the content host
+     */
+    async initialize() {
+        console.log('[WebWireContentHost] Starting initialization...');
+        
+        // Set up Chrome extension communication
         if (typeof chrome !== 'undefined' && chrome.runtime) {
             this.setupExtensionCommunication();
-            console.log('Extension communication set up');
+            console.log('[WebWireContentHost] Extension communication set up');
         } else {
-            console.warn('Chrome runtime not available - running in non-extension context');
+            console.warn('[WebWireContentHost] Chrome runtime not available - running in non-extension context');
         }
         
-        // Set up panel communication
+        // Set up panel communication (DOM/window events)
         this.setupPanelCommunication();
-        console.log('Panel communication set up');
+        console.log('[WebWireContentHost] Panel communication set up');
         
-        // Listen for injection requests
-        this.listenForInjectionRequests();
-        console.log('Injection listeners set up');
+        // Set up keyboard shortcuts and injection listeners
+        this.setupUIListeners();
+        console.log('[WebWireContentHost] UI listeners set up');
         
-        // Load settings from background and initialize AI/MCP
+        // Load settings and initialize ChatService
         try {
             await this.loadSettingsFromBackground();
-            console.log('Settings loaded from background successfully');
+            console.log('[WebWireContentHost] Settings loaded successfully');
+
+            // TODO we need to have these to contiune
             
-            // Initialize AI client and MCP connector with loaded settings
-            await this.initializeWithSettings(this.currentSettings);
+            // Initialize the ChatService
+            await this.chatService.initialize(aiClient, mcpConnector, stateService);
+            console.log('[WebWireContentHost] ChatService initialized');
+            
+            // Send settings to ChatService
+            this.eventBus.emit('chat:update-settings', { settings: this.currentSettings });
             
         } catch (error) {
-            console.error('Settings loading failed, but content script will continue:', error);
+            console.error('[WebWireContentHost] Settings loading failed:', error);
         }
         
-        // Auto-inject if configured OR if panel was previously visible (from background state)
+        // Handle auto-inject and panel restoration
         try {
             const shouldInject = await this.shouldAutoInject();
-            
-            // Get panel visibility state from background worker
             const backgroundState = await this.getBackgroundState();
             const shouldShowPanel = backgroundState?.ui?.panelVisible || false;
             
-            console.log('[WebWireContent] Panel state from background:', {
+            console.log('[WebWireContentHost] Panel state from background:', {
                 shouldInject,
                 shouldShowPanel,
                 backgroundState: backgroundState?.ui
@@ -99,508 +106,171 @@ class WebWireContentScript {
                 console.log(shouldInject ? 'Auto-inject enabled, injecting panel...' : 'Panel was previously visible, restoring...');
                 await this.injectPanel();
                 
-                // If panel should be visible (not just auto-inject), show it
                 if (shouldShowPanel) {
                     console.log('Showing panel based on background state');
-                    // Small delay to ensure panel is fully initialized
                     setTimeout(() => {
-                        this.panel.show(); // Use direct show() to avoid recursive state saving
+                        this.chatService.showPanel();
                     }, 100);
                 }
             }
         } catch (error) {
-            console.error('Auto-inject/restore failed:', error);
+            console.error('[WebWireContentHost] Auto-inject/restore failed:', error);
         }
         
-        console.log('WebWire content script initialization complete - ready for messages');
+        console.log('[WebWireContentHost] Initialization complete');
     }
 
+    /**
+     * Handle outbound dispatch requests from ChatService
+     */
+    async handleOutboundDispatch(payload) {
+        console.log('[WebWireContentHost] Handling outbound dispatch:', payload);
+        
+        const { target, event, data } = payload;
+        
+        try {
+            if (target === 'background') {
+                await this.handleBackgroundDispatch(event, data);
+            } else if (target === 'host') {
+                await this.handleHostDispatch(event, data);
+            } else {
+                console.warn('[WebWireContentHost] Unknown dispatch target:', target);
+            }
+        } catch (error) {
+            console.error('[WebWireContentHost] Error handling outbound dispatch:', error);
+        }
+    }
+
+    /**
+     * Handle dispatches to the background script
+     */
+    async handleBackgroundDispatch(event, data) {
+        switch (event) {
+            case 'threads:get-or-create':
+                const threadResponse = await chrome.runtime.sendMessage({
+                    action: BACKGROUND_ACTIONS.GET_OR_CREATE_CURRENT_THREAD,
+                    options: data
+                });
+
+                if (threadResponse.success) {
+                    const { threadId, metadata, messages } = threadResponse.thread;
+                    this.currentThreadId = threadId;
+                    
+                    // Send conversation history back to ChatService
+                    this.eventBus.emit('chat:conversation-loaded', {
+                        conversation: {
+                            threadId,
+                            metadata,
+                            messages
+                        }
+                    });
+                } else {
+                    console.error('[WebWireContentHost] Failed to get thread:', threadResponse.error);
+                }
+                break;
+
+            case 'threads:save-message':
+                const saveResponse = await chrome.runtime.sendMessage({
+                    action: BACKGROUND_ACTIONS.SAVE_THREAD_MESSAGE,
+                    threadId: this.currentThreadId,
+                    userMessage: data.userMessage,
+                    assistantMessage: data.assistantMessage,
+                    options: data.options
+                });
+
+                if (!saveResponse.success) {
+                    console.warn('[WebWireContentHost] Failed to save conversation:', saveResponse.error);
+                }
+                break;
+
+            case 'ui:save-panel-visibility':
+                const visibilityResponse = await chrome.runtime.sendMessage({
+                    action: BACKGROUND_ACTIONS.SAVE_PANEL_VISIBILITY,
+                    visible: data.visible
+                });
+
+                if (!visibilityResponse.success) {
+                    console.warn('[WebWireContentHost] Failed to save panel visibility:', visibilityResponse.error);
+                }
+                break;
+
+            default:
+                console.warn('[WebWireContentHost] Unknown background event:', event);
+        }
+    }
+
+    /**
+     * Handle dispatches to the host itself
+     */
+    async handleHostDispatch(event, data) {
+        switch (event) {
+            case 'ui:inject-panel':
+                await this.injectPanel();
+                break;
+
+            default:
+                console.warn('[WebWireContentHost] Unknown host event:', event);
+        }
+    }
+
+    /**
+     * Load settings from background script
+     */
     async loadSettingsFromBackground() {
         try {
             const response = await chrome.runtime.sendMessage({
                 action: BACKGROUND_ACTIONS.GET_WEBWIRE_SETTINGS
             });
 
-            console.log('[WebWireContent] Settings from background:', response);
+            console.log('[WebWireContentHost] Settings from background:', response);
             
             if (!response) {
-                console.error('[WebWireContent] No response from background script');
+                console.error('[WebWireContentHost] No response from background script');
                 this.currentSettings = {};
                 return;
             }
             
             if (response.success) {
                 this.currentSettings = response.settings || {};
-                console.log('[WebWireContent] Successfully loaded settings:', this.currentSettings);
+                console.log('[WebWireContentHost] Successfully loaded settings:', this.currentSettings);
             } else {
-                console.error('[WebWireContent] Background script returned error:', response.error);
+                console.error('[WebWireContentHost] Background script returned error:', response.error);
                 this.currentSettings = {};
             }
         } catch (error) {
-            console.error('Failed to load settings from background:', error);
+            console.error('[WebWireContentHost] Failed to load settings from background:', error);
             this.currentSettings = {};
         }
     }
 
-    async initializeWithSettings(settings) {
-        console.log('[WebWireContent] Initializing AI client and MCP connector with settings:', settings);
-        
-        try {
-            // Initialize AI client if we have valid settings
-            if (settings.ai?.models?.chat?.model && settings.ai?.models?.chat?.provider) {
-                await this.reinitializeAIClient(settings);
-            }
-            
-            // Initialize MCP connector if we have a server URL
-            if (settings.mcp?.serverUrl) {
-                await this.reinitializeMCPConnector(settings);
-            }
-            
-            console.log('[WebWireContent] Initialization with settings complete');
-            
-            // Update connection status after initialization
-            this.updateConnectionStatus();
-        } catch (error) {
-            console.error('[WebWireContent] Error during initialization with settings:', error);
-            this.updateConnectionStatus();
-        }
-    }
-
-    async connectToMCP(url) {
-        try {
-            this.mcpConnector = new MCPConnector(url);
-            await this.mcpConnector.initialize();
-            console.log('[WebWireContentScript] Connected to MCP server');
-        } catch (error) {
-            console.error('[WebWireContentScript] Failed to connect to MCP:', error);
-        }
-    }
-
+    /**
+     * Setup Chrome extension communication
+     */
     setupExtensionCommunication() {
-        // Listen for messages from background script
         chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
             return this.handleBackgroundMessage(message, sender, sendResponse);
         });
     }
 
+    /**
+     * Setup panel communication (window/DOM events)
+     */
     setupPanelCommunication() {
-        // Listen for messages from the panel
         window.addEventListener('message', (event) => {
             if (event.source !== window) return;
             
             if (event.data.type === PANEL_MESSAGE_TYPES.WEBWIRE_PANEL_MESSAGE) {
                 this.handlePanelMessage(event.data);
             } else if (event.data.type === PANEL_MESSAGE_TYPES.WEBWIRE_PANEL_READY) {
-                // Panel has loaded, send current state
-                this.sendInitialState();
+                this.sendInitialStateToPanel();
             }
         });
     }
 
-    async handlePanelMessage(message) {
-        const { action, data } = message;
-
-        try {
-            switch (action) {
-                case PANEL_ACTIONS.SEND_CHAT_MESSAGE:
-                    await this.handleChatMessage(data.message);
-                    break;
-                    
-                case PANEL_ACTIONS.ANALYZE_PAGE_CONTENT:
-                    const analysisRequest = pageUtils.buildAnalysisRequest();
-                    await this.handleChatMessage(analysisRequest);
-                    break;
-                    
-                case PANEL_ACTIONS.CONNECT_MCP:
-                    await this.connectToMCP(data.url);
-                    break;
-                    
-                case PANEL_ACTIONS.DISCONNECT_MCP:
-                    if (this.mcpConnector) {
-                        this.mcpConnector.disconnect();
-                        this.mcpConnector = null;
-                    }
-                    break;
-                    
-                case PANEL_ACTIONS.GET_PAGE_CONTENT:
-                    const content = pageUtils.getCurrentPageContent();
-                    this.sendToPanel({ 
-                        type: PANEL_MESSAGE_TYPES.PAGE_CONTENT_RESPONSE, 
-                        content 
-                    });
-                    break;
-                    
-                case PANEL_ACTIONS.GET_STATE:
-                    // Get current thread and settings from background
-                    try {
-                        const threadResponse = await chrome.runtime.sendMessage({
-                            action: BACKGROUND_ACTIONS.GET_ACTIVE_THREAD
-                        });
-                        const currentThread = threadResponse.success ? threadResponse.thread : null;
-                        
-                        this.sendToPanel({
-                            type: PANEL_MESSAGE_TYPES.STATE_RESPONSE,
-                            state: {
-                                currentThread: currentThread,
-                                settings: this.currentSettings,
-                                mcpConnected: this.mcpConnector ? true : false,
-                                aiClientConfigured: this.aiClient ? true : false
-                            }
-                        });
-                    } catch (error) {
-                        this.sendToPanel({
-                            type: PANEL_MESSAGE_TYPES.STATE_RESPONSE,
-                            state: {
-                                currentThread: null,
-                                settings: {},
-                                mcpConnected: false,
-                                aiClientConfigured: false
-                            }
-                        });
-                    }
-                    break;
-                    
-                case PANEL_ACTIONS.SAVE_SETTINGS:
-                    try {
-                        const response = await chrome.runtime.sendMessage({
-                            action: BACKGROUND_ACTIONS.SAVE_WEBWIRE_SETTINGS,
-                            settings: data.settings
-                        });
-                        this.sendToPanel({
-                            type: PANEL_MESSAGE_TYPES.SAVE_SETTINGS_RESPONSE,
-                            success: response.success
-                        });
-                    } catch (error) {
-                        this.sendToPanel({
-                            type: PANEL_MESSAGE_TYPES.SAVE_SETTINGS_RESPONSE,
-                            success: false
-                        });
-                    }
-                    break;
-                    
-                default:
-                    console.warn('Unknown panel message action:', action);
-            }
-        } catch (error) {
-            console.error('Error handling panel message:', error);
-            this.sendToPanel({
-                type: PANEL_MESSAGE_TYPES.ERROR,
-                error: error.message
-            });
-        }
-    }
-
-    async handleChatMessage(userMessage) {
-        console.log('[WebWireContent] Starting to handle chat message:', userMessage);
-        
-        if (!this.aiClient) {
-            console.log('[WebWireContent] No AI client configured, sending error to panel');
-            this.sendToPanel({
-                type: PANEL_MESSAGE_TYPES.ERROR,
-                error: 'AI client not configured'
-            });
-            return;
-        }
-
-        try {
-            // Add user message to panel
-            console.log('[WebWireContent] Sending user message to panel');
-            this.sendToPanel({
-                type: PANEL_MESSAGE_TYPES.CHAT_MESSAGE,
-                message: { role: MESSAGE_ROLES.USER, content: userMessage }
-            });
-
-            // Get or create current thread from background
-            const threadResponse = await chrome.runtime.sendMessage({
-                action: BACKGROUND_ACTIONS.GET_OR_CREATE_CURRENT_THREAD,
-                options: {
-                    title: `Page: ${document.title}`,
-                    url: window.location.href
-                }
-            });
-
-            if (!threadResponse.success) {
-                throw new Error('Failed to get conversation thread: ' + threadResponse.error);
-            }
-
-            const { threadId, metadata, messages } = threadResponse.thread;
-            this.currentThreadId = threadId;
-
-            // Create system prompt with tools if MCP is connected
-            let systemPrompt = "You are a helpful assistant analyzing web pages and helping users.";
-            let tools = [];
-            
-            if (this.mcpConnector) {
-                // Get MCP tools from local connector
-                try {
-                    tools = await this.mcpConnector.getTools();
-                    if (tools && tools.length > 0) {
-                        systemPrompt = ToolFormatter.generateSystemPrompt(tools);
-                    }
-                } catch (error) {
-                    console.warn('Failed to get MCP tools:', error);
-                }
-            }
-
-            // Prepare messages for API (with page context) vs storage (without context)
-            // Always enhance the first user message in the conversation with page context for API
-            
-            // Add current user message to conversation history
-            const newUserMessage = {
-                role: MESSAGE_ROLES.USER,
-                content: userMessage,
-                timestamp: Date.now()
-            };
-            const allMessages = [...messages, newUserMessage];
-            
-            // Create enhanced version for API - enhance the first user message with page context
-            const messagesForAPI = [...allMessages];
-            const firstUserIndex = messagesForAPI.findIndex(msg => msg.role === MESSAGE_ROLES.USER);
-            if (firstUserIndex !== -1) {
-                const firstUserMessage = messagesForAPI[firstUserIndex];
-                
-                // Only enhance if it's not already a page analysis request
-                const isAnalysisRequest = firstUserMessage.content.startsWith('Please analyze this webpage:');
-                
-                if (!isAnalysisRequest) {
-                    messagesForAPI[firstUserIndex] = {
-                        ...firstUserMessage,
-                        content: pageUtils.enhanceMessageWithContext(firstUserMessage.content)
-                    };
-                    console.log('[WebWireContent] Enhanced first user message with page context for API');
-                } else {
-                    console.log('[WebWireContent] Skipped enhancement for page analysis request (already includes context)');
-                }
-            }
-
-            // Create thinking message and get handle
-            console.log('[WebWireContent] Creating thinking message');
-            const thinkingMessage = this.addThinkingMessage('Thinking...');
-            let streamingText = '';
-
-            // Set up exclusive stream handler for this request
-            const unsubscribeStream = this.eventBus.onExclusive(EVENTS.AI.STREAM_CHUNK, (data) => {
-                streamingText += data.chunk;
-                this.handleStreamingChunk(data.chunk, thinkingMessage);
-            });
-
-            let response = null;
-            try {
-                console.log('[WebWireContent] Generating AI response...');
-                // Generate AI response using enhanced messages (with page context) for API
-                // Note: We pass empty userMessage since it's already in messagesForAPI
-                response = await this.aiClient.generateTurn('', messagesForAPI, { 
-                    systemPrompt,
-                    maxHistory: 10 
-                });
-
-                if (!response) {
-                    throw new Error('No response received from AI client');
-                }
-                console.log('[WebWireContent] AI response received:', response);
-            } finally {
-                // Clean up stream handler
-                unsubscribeStream();
-            }
-
-            // Parse for tool calls if MCP is connected
-            let toolResults = [];
-            let toolCalls = [];
-            let parseErrors = [];
-            
-            if (this.mcpConnector && tools.length > 0) {
-                const parseResult = this.toolParser.parseResponse(response);
-                if (parseResult.success && parseResult.toolCalls.length > 0) {
-                    toolCalls = parseResult.toolCalls;
-                    toolResults = await this.executeToolCalls(parseResult.toolCalls);
-                } else if (parseResult.errors && parseResult.errors.length > 0) {
-                    parseErrors = parseResult.errors;
-                }
-            }
-
-            // Get current timestamp for consistent storage
-            const timestamp = Date.now();
-
-            // Prepare messages for storage (using original unenhanced content)
-            const userMsg = { 
-                role: MESSAGE_ROLES.USER, 
-                content: userMessage, // Original user message without page context
-                timestamp,
-                url: window.location.href,
-                title: document.title
-            };
-            
-            const assistantMsg = { 
-                role: MESSAGE_ROLES.ASSISTANT, 
-                content: response,
-                timestamp: timestamp + 1,
-                toolResults,
-                toolCalls,
-                parseErrors,
-                url: window.location.href,
-                title: document.title
-            };
-
-            // Store conversation in background with complete storeMessage parameters
-            const saveResponse = await chrome.runtime.sendMessage({
-                action: BACKGROUND_ACTIONS.SAVE_THREAD_MESSAGE,
-                threadId: threadId,
-                userMessage: userMsg,
-                assistantMessage: assistantMsg,
-                options: {
-                    userName: this.currentSettings?.aim?.userName || MESSAGE_ROLES.USER,
-                    personaName: this.currentSettings?.aim?.personaName || MESSAGE_ROLES.ASSISTANT,
-                    mood: this.currentSettings?.aim?.mood || null,
-                    location: window.location.href,
-                    timestamp,
-                    toolResults,
-                    toolCalls,
-                    parseErrors,
-                    url: window.location.href,
-                    title: document.title
-                }
-            });
-
-            if (!saveResponse.success) {
-                console.warn('Failed to save conversation to background:', saveResponse.error);
-            }
-
-            // Finalize the thinking message with the complete response
-            console.log('[WebWireContent] Finalizing thinking message with complete response');
-            this.finalizeStreamingMessage(thinkingMessage, response);
-
-        } catch (error) {
-            console.error('Error handling chat message:', error);
-            this.sendToPanel({
-                type: PANEL_MESSAGE_TYPES.ERROR,
-                error: error.message
-            });
-        }
-    }
-
-    async executeToolCalls(toolCalls) {
-        const results = [];
-        
-        for (const toolCall of toolCalls) {
-            try {
-                this.sendToPanel({
-                    type: PANEL_MESSAGE_TYPES.TOOL_EXECUTION_START,
-                    toolName: toolCall.name
-                });
-
-                const result = await this.mcpConnector.executeTool(
-                    toolCall.name, 
-                    toolCall.parameters
-                );
-
-                results.push({
-                    toolName: toolCall.name,
-                    parameters: toolCall.parameters,
-                    result,
-                    success: result.success,
-                    executionTime: result.executionTime
-                });
-
-                this.sendToPanel({
-                    type: PANEL_MESSAGE_TYPES.TOOL_EXECUTION_COMPLETE,
-                    toolName: toolCall.name,
-                    result
-                });
-
-            } catch (error) {
-                console.error(`Tool ${toolCall.name} execution failed:`, error);
-                results.push({
-                    toolName: toolCall.name,
-                    parameters: toolCall.parameters,
-                    success: false,
-                    error: error.message
-                });
-
-                this.sendToPanel({
-                    type: PANEL_MESSAGE_TYPES.TOOL_EXECUTION_ERROR,
-                    toolName: toolCall.name,
-                    error: error.message
-                });
-            }
-        }
-
-        return results;
-    }
-
-    sendToPanel(message) {
-        // Direct method calls instead of window messaging since panel is in same context
-        console.log('[WebWireContent] Calling panel method directly:', message);
-        
-        switch (message.type) {
-            case PANEL_MESSAGE_TYPES.CHAT_MESSAGE:
-                this.panel.displayMessage(message.message);
-                break;
-                
-            case PANEL_MESSAGE_TYPES.CHAT_THINKING_START:
-                this.panel.displayThinkingMessage(message.message);
-                break;
-                
-            case PANEL_MESSAGE_TYPES.CHAT_STREAMING_CHUNK:
-                this.panel.updateStreamingMessage(message.messageId, message.fullContent);
-                break;
-                
-            case PANEL_MESSAGE_TYPES.CHAT_THINKING_COMPLETE:
-                if (message.finalContent) {
-                    // Finalize the thinking message with final content
-                    this.panel.finalizeThinkingMessage(message.messageId, message.finalContent);
-                } else {
-                    // Just remove the thinking message
-                    this.panel.removeThinkingMessage(message.messageId);
-                }
-                break;
-                
-            case PANEL_MESSAGE_TYPES.CONVERSATION_UPDATED:
-                this.panel.displayConversation(message.conversation);
-                break;
-                
-            case PANEL_MESSAGE_TYPES.CONNECTION_STATUS_UPDATE:
-                this.panel.updateConnectionStatus(message.status, message.aiConnected, message.mcpConnected);
-                break;
-                
-            case PANEL_MESSAGE_TYPES.INITIAL_STATE:
-                this.panel.handleInitialState(message.state);
-                break;
-                
-            case PANEL_MESSAGE_TYPES.ERROR:
-                this.panel.displayError(message.error);
-                break;
-                
-            default:
-                console.warn('[WebWireContent] Unknown panel message type:', message.type);
-        }
-    }
-
-    updateConnectionStatus() {
-        const aiConnected = this.aiClient ? true : false;
-        const mcpConnected = this.mcpConnector ? true : false;
-        
-        let status;
-        
-        if (aiConnected && mcpConnected) {
-            status = 'AI + MCP Ready';
-        } else if (aiConnected) {
-            status = 'AI Ready';
-        } else if (mcpConnected) {
-            status = 'MCP Connected';
-        } else {
-            status = 'Configuring...';
-        }
-        
-        // Send status update to panel
-        this.sendToPanel({
-            type: PANEL_MESSAGE_TYPES.CONNECTION_STATUS_UPDATE,
-            aiConnected,
-            mcpConnected,
-            status
-        });
-    }
-
-    listenForInjectionRequests() {
+    /**
+     * Setup UI listeners (keyboard shortcuts, etc.)
+     */
+    setupUIListeners() {
         // Listen for extension icon clicks or other injection triggers
         document.addEventListener('webwire-inject', () => {
             this.injectPanel();
@@ -613,287 +283,81 @@ class WebWireContentScript {
                 event.shiftKey === KEYBOARD_SHORTCUTS.TOGGLE_PANEL.shiftKey && 
                 event.key === KEYBOARD_SHORTCUTS.TOGGLE_PANEL.key) {
                 event.preventDefault();
-                this.togglePanel();
+                this.chatService.togglePanel();
             }
         });
     }
 
-    async shouldAutoInject() {
-        try {
-            // Check if auto-inject is enabled in settings
-            return this.currentSettings?.ui?.autoInject || false;
-        } catch (error) {
-            console.warn('Could not check auto-inject setting:', error);
-            return false;
-        }
-    }
-
-    async injectPanel() {
-        if (this.panel.isReady()) {
-            this.panel.show();
-            return;
-        }
-
-        try {
-            console.log('[WebWireContent] Injecting WebWire panel...');
-            
-            // Initialize the panel
-            await this.panel.initialize();
-            
-            // Send initial state directly to panel methods
-            await this.sendInitialStateDirectly();
-            
-            console.log('WebWire panel injected successfully');
-            
-        } catch (error) {
-            console.error('Failed to inject WebWire panel:', error);
-            this.showError('Failed to load WebWire panel');
-        }
-    }
-
-    async sendInitialStateDirectly() {
-        try {
-            // Get current thread from background if available
-            let currentThread = null;
-            try {
-                const threadResponse = await chrome.runtime.sendMessage({
-                    action: BACKGROUND_ACTIONS.GET_ACTIVE_THREAD
-                });
-                if (threadResponse.success) {
-                    currentThread = threadResponse.thread;
-                }
-            } catch (error) {
-                console.warn('Could not get active thread:', error);
-            }
-            
-            const state = {
-                currentThread: currentThread,
-                mcpConnected: this.mcpConnector ? true : false,
-                aiClientConfigured: this.aiClient ? true : false,
-                settings: this.currentSettings,
-                panelInjected: this.panel.isReady(),
-                frameworkReady: true
-            };
-            
-            // Call panel methods directly
-            this.panel.handleInitialState(state);
-            
-            console.log('[WebWireContent] Initial state sent directly to panel');
-        } catch (error) {
-            console.error('Failed to send initial state directly:', error);
-            const fallbackState = {
-                currentThread: null,
-                mcpConnected: false,
-                aiClientConfigured: false,
-                settings: {},
-                panelInjected: this.panel.isReady(),
-                frameworkReady: false
-            };
-            this.panel.handleInitialState(fallbackState);
-        }
-    }
-
-    async showPanel() {
-        this.panel.show();
-        // Persist panel visibility state in background
-        await this.savePanelVisibilityState(true);
-    }
-
-    async hidePanel() {
-        this.panel.hide();
-        // Persist panel visibility state in background
-        await this.savePanelVisibilityState(false);
-    }
-
     /**
-     * Save panel visibility state to background worker
-     * @param {boolean} visible - Whether the panel is visible
+     * Handle messages from the panel UI
      */
-    async savePanelVisibilityState(visible) {
+    async handlePanelMessage(message) {
+        const { action, data } = message;
+
         try {
-            console.log(`[WebWireContent] Saving panel visibility state to background: ${visible}`);
-            
-            const response = await chrome.runtime.sendMessage({
-                action: BACKGROUND_ACTIONS.SAVE_PANEL_VISIBILITY,
-                visible: visible
-            });
-
-            if (response && response.success) {
-                console.log(`[WebWireContent] Panel visibility state saved to background: ${visible}`);
-            } else {
-                console.warn('[WebWireContent] Failed to save panel visibility state:', response?.error);
-            }
-        } catch (error) {
-            console.error('[WebWireContent] Error saving panel visibility state:', error);
-        }
-    }
-
-    /**
-     * Get current state from background worker
-     */
-    async getBackgroundState() {
-        try {
-            const response = await chrome.runtime.sendMessage({
-                action: BACKGROUND_ACTIONS.GET_WEBWIRE_STATE
-            });
-
-            if (response && response.success) {
-                return response.state;
-            } else {
-                console.warn('[WebWireContent] Failed to get background state:', response?.error);
-                return null;
-            }
-        } catch (error) {
-            console.error('[WebWireContent] Error getting background state:', error);
-            return null;
-        }
-    }
-
-    async togglePanel() {
-        if (!this.panel.isReady()) {
-            await this.injectPanel();
-        } else {
-            // Use our persistent show/hide methods instead of panel.toggle()
-            if (this.panel.isVisible) {
-                await this.hidePanel();
-            } else {
-                await this.showPanel();
-            }
-        }
-    }
-
-    async handleSettingsChanged(data) {
-        console.log('[WebWireContent] Settings changed notification received:', data);
-        
-        try {
-            const newSettings = data.settings || {};
-            
-            // Update local settings cache
-            this.currentSettings = newSettings;
-            
-            // Reinitialize AI client if AI settings changed
-            if (newSettings.ai && (newSettings.ai.models || newSettings.ai.providers)) {
-                await this.reinitializeAIClient(newSettings);
-            }
-            
-            // Reinitialize MCP connector if MCP settings changed
-            if (newSettings.mcp && newSettings.mcp.serverUrl) {
-                await this.reinitializeMCPConnector(newSettings);
-            }
-            
-            // Update connection status (this calls panel directly)
-            this.updateConnectionStatus();
-            
-            console.log('[WebWireContent] Settings change processed successfully');
-            
-        } catch (error) {
-            console.error('[WebWireContent] Error handling settings change:', error);
-        }
-    }
-
-    handleConversationUpdate(data) {
-        console.log('[WebWireContent] Conversation update notification received:', data);
-        
-        try {
-            const { conversation } = data;
-            
-            if (conversation) {
-                // Update our local thread state
-                if (conversation.isActive) {
-                    this.currentThreadId = conversation.threadId;
-                    console.log('[WebWireContent] Updated active thread ID:', this.currentThreadId);
-                }
-                
-                // Update panel UI directly
-                if (this.panel && this.panel.isReady()) {
-                    this.panel.displayConversation({
-                        ...conversation,
-                        isCurrentThread: conversation.threadId === this.currentThreadId
-                    });
-                }
-                
-                console.log('[WebWireContent] Updated local state and panel UI');
-            }
-            
-        } catch (error) {
-            console.error('[WebWireContent] Error handling conversation update:', error);
-        }
-    }
-
-    async reinitializeAIClient(settings) {
-        try {
-            const model = settings.ai?.models?.chat?.model;
-            const provider = settings.ai?.models?.chat?.provider;
-            const providerSettings = settings.ai?.providers[provider] || {};
-
-            // Only reinitialize if we have valid AI settings
-            if (model && provider) {
-                console.log('[WebWireContent] Reinitializing AI client with new settings', {
-                    model,
-                    provider,
-                    ...providerSettings
-                });
-                
-                // Create new AI client with updated settings
-                this.aiClient = AIClientFactory.createClient(
-                    this.eventBus,
-                    {
-                        provider,
-                        model,
-                        ...providerSettings
+            switch (action) {
+                case PANEL_ACTIONS.SEND_CHAT_MESSAGE:
+                    // Delegate to ChatService
+                    this.eventBus.emit('chat:send-message', { message: data.message });
+                    break;
+                    
+                case PANEL_ACTIONS.ANALYZE_PAGE_CONTENT:
+                    // Delegate to ChatService
+                    this.eventBus.emit('chat:analyze-page', {});
+                    break;
+                    
+                case PANEL_ACTIONS.CONNECT_MCP:
+                    // Update settings and notify ChatService
+                    this.currentSettings.mcp = { ...this.currentSettings.mcp, serverUrl: data.url };
+                    this.eventBus.emit('chat:update-settings', { settings: this.currentSettings });
+                    break;
+                    
+                case PANEL_ACTIONS.DISCONNECT_MCP:
+                    // Update settings and notify ChatService
+                    this.currentSettings.mcp = { ...this.currentSettings.mcp, serverUrl: '' };
+                    this.eventBus.emit('chat:update-settings', { settings: this.currentSettings });
+                    break;
+                    
+                case PANEL_ACTIONS.GET_PAGE_CONTENT:
+                    // This is a host responsibility
+                    const content = pageUtils.getCurrentPageContent();
+                    // Send response directly to panel (if needed)
+                    break;
+                    
+                case PANEL_ACTIONS.GET_STATE:
+                    // Build state and send to ChatService
+                    await this.sendInitialStateToPanel();
+                    break;
+                    
+                case PANEL_ACTIONS.SAVE_SETTINGS:
+                    try {
+                        const response = await chrome.runtime.sendMessage({
+                            action: BACKGROUND_ACTIONS.SAVE_WEBWIRE_SETTINGS,
+                            settings: data.settings
+                        });
+                        // Update local settings and notify ChatService
+                        if (response.success) {
+                            this.currentSettings = data.settings;
+                            this.eventBus.emit('chat:update-settings', { settings: this.currentSettings });
+                        }
+                    } catch (error) {
+                        console.error('[WebWireContentHost] Failed to save settings:', error);
                     }
-                );
-                
-                console.log('[WebWireContent] AI client reinitialized successfully');
-            } else {
-                console.log('[WebWireContent] AI settings incomplete, clearing AI client');
-                this.aiClient = null;
+                    break;
+                    
+                default:
+                    console.warn('[WebWireContentHost] Unknown panel message action:', action);
             }
-            
-            // Update connection status after AI client change
-            this.updateConnectionStatus();
         } catch (error) {
-            console.error('[WebWireContent] Failed to reinitialize AI client:', error);
-            this.aiClient = null;
-            this.updateConnectionStatus();
+            console.error('[WebWireContentHost] Error handling panel message:', error);
         }
     }
 
-    async reinitializeMCPConnector(settings) {
-        try {
-            const newMcpUrl = settings.mcp?.serverUrl;
-            const currentMcpUrl = this.mcpConnector?.url;
-            
-            // Only reconnect if URL changed
-            if (newMcpUrl && newMcpUrl !== currentMcpUrl) {
-                console.log('[WebWireContent] MCP server URL changed, reconnecting...');
-                
-                // Disconnect existing connector
-                if (this.mcpConnector) {
-                    this.mcpConnector.disconnect();
-                    this.mcpConnector = null;
-                }
-                
-                // Connect to new server
-                await this.connectToMCP(newMcpUrl);
-                
-                console.log('[WebWireContent] MCP connector reinitialized successfully');
-            } else if (!newMcpUrl && this.mcpConnector) {
-                console.log('[WebWireContent] MCP server URL cleared, disconnecting...');
-                this.mcpConnector.disconnect();
-                this.mcpConnector = null;
-            }
-            
-            // Update connection status after MCP connector change
-            this.updateConnectionStatus();
-        } catch (error) {
-            console.error('[WebWireContent] Failed to reinitialize MCP connector:', error);
-            this.updateConnectionStatus();
-        }
-    }
-
+    /**
+     * Handle messages from background script
+     */
     handleBackgroundMessage(message, sender, sendResponse) {
-        console.log('Content script received message:', message.action);
+        console.log('[WebWireContentHost] Received background message:', message.action);
         
         try {
             switch (message.action) {
@@ -904,14 +368,14 @@ class WebWireContentScript {
                     return true;
                     
                 case BACKGROUND_HANDLERS.TOGGLE_WEBWIRE_PANEL:
-                    this.togglePanel();
+                    this.chatService.togglePanel();
                     sendResponse({ success: true });
                     return false;
                     
                 case BACKGROUND_HANDLERS.CAPTURE_PAGE_CONTENT:
                     sendResponse({
                         success: true,
-                        data: this.getPageContent()
+                        data: pageUtils.getCurrentPageContent()
                     });
                     return false;
                     
@@ -920,13 +384,13 @@ class WebWireContentScript {
                         sendResponse({
                             success: true,
                             state: {
-                                panelInjected: this.panel.isReady(),
-                                mcpConnected: this.mcpConnector ? true : false,
-                                aiClientConfigured: this.aiClient ? true : false
+                                panelInjected: this.chatService.isReady(),
+                                mcpConnected: false, // ChatService would need to expose this
+                                aiClientConfigured: false // ChatService would need to expose this
                             }
                         });
                     } catch (error) {
-                        console.error('Error getting WebWire state:', error);
+                        console.error('[WebWireContentHost] Error getting state:', error);
                         sendResponse({
                             success: true,
                             state: {
@@ -939,118 +403,137 @@ class WebWireContentScript {
                     return false;
                     
                 case BACKGROUND_HANDLERS.SETTINGS_CHANGED:
-                    // Settings have been updated - notify panel and update local cache
-                    this.handleSettingsChanged(message.data);
+                    // Settings have been updated - notify ChatService
+                    this.currentSettings = message.data.settings || {};
+                    this.eventBus.emit('chat:update-settings', { settings: this.currentSettings });
                     sendResponse({ success: true });
                     return false;
                     
                 case BACKGROUND_HANDLERS.CONVERSATION_UPDATED:
-                    // Conversation has been updated - notify panel
-                    this.handleConversationUpdate(message.data);
+                    // Conversation has been updated - notify ChatService
+                    this.eventBus.emit('chat:conversation-loaded', { conversation: message.data.conversation });
                     sendResponse({ success: true });
                     return false;
                     
                 case BACKGROUND_HANDLERS.PING:
-                    // Health check endpoint
                     sendResponse({ success: true, status: 'ready' });
                     return false;
                     
                 default:
-                    console.warn('Unknown WebWire message action:', message.action);
+                    console.warn('[WebWireContentHost] Unknown background message action:', message.action);
                     sendResponse({ success: false, error: 'Unknown action' });
                     return false;
             }
         } catch (error) {
-            console.error('Error handling background message:', error);
+            console.error('[WebWireContentHost] Error handling background message:', error);
             sendResponse({ success: false, error: error.message });
             return false;
         }
     }
 
     /**
-     * Add a thinking message and return a handle for streaming updates
-     * @param {string} message - Initial message content
-     * @returns {Object} Message handle with ID for updates
+     * Check if auto-inject is enabled
      */
-    addThinkingMessage(message) {
-        const messageId = `thinking-${++this.streamingState.messageCounter}`;
-        
-        // Send thinking message start to panel
-        this.sendToPanel({
-            type: PANEL_MESSAGE_TYPES.CHAT_THINKING_START,
-            message: {
-                id: messageId,
-                content: message,
-                role: MESSAGE_ROLES.ASSISTANT
-            }
-        });
-        
-        return { id: messageId };
-    }
-    
-    /**
-     * Handle streaming chunks for a specific message
-     * @param {string} chunk - Text chunk to append
-     * @param {Object} messageHandle - Message handle from addThinkingMessage
-     */
-    handleStreamingChunk(chunk, messageHandle) {
-        if (!this.streamingState.isActive) {
-            // Start new streaming
-            this.streamingState.isActive = true;
-            this.streamingState.streamingText = '';
-            this.streamingState.currentMessage = messageHandle;
+    async shouldAutoInject() {
+        try {
+            return this.currentSettings?.ui?.autoInject || false;
+        } catch (error) {
+            console.warn('[WebWireContentHost] Could not check auto-inject setting:', error);
+            return false;
         }
-        
-        // Append chunk to streaming text
-        this.streamingState.streamingText += chunk;
-        
-        // Send chunk update to panel
-        this.sendToPanel({
-            type: PANEL_MESSAGE_TYPES.CHAT_STREAMING_CHUNK,
-            messageId: messageHandle.id,
-            chunk: chunk,
-            fullContent: this.streamingState.streamingText
-        });
-    }
-    
-    /**
-     * Finalize streaming and clean up the thinking message
-     * @param {Object} messageHandle - Message handle to finalize
-     */
-    finalizeStreamingMessage(messageHandle, finalContent) {
-        this.streamingState.isActive = false;
-        this.streamingState.currentMessage = null;
-        this.streamingState.streamingText = '';
-        
-        // Send finalization to panel
-        this.sendToPanel({
-            type: PANEL_MESSAGE_TYPES.CHAT_THINKING_COMPLETE,
-            messageId: messageHandle.id,
-            finalContent: finalContent // Pass the final content
-        });
     }
 
     /**
-     * Show error notification in the panel
-     * @param {string} message - Error message to display
+     * Get state from background script
      */
-    showError(message) {
-        console.error('WebWire Error:', message);
+    async getBackgroundState() {
+        try {
+            const response = await chrome.runtime.sendMessage({
+                action: BACKGROUND_ACTIONS.GET_WEBWIRE_STATE
+            });
+
+            if (response && response.success) {
+                return response.state;
+            } else {
+                console.warn('[WebWireContentHost] Failed to get background state:', response?.error);
+                return null;
+            }
+        } catch (error) {
+            console.error('[WebWireContentHost] Error getting background state:', error);
+            return null;
+        }
+    }
+
+    /**
+     * Inject the panel
+     */
+    async injectPanel() {
+        console.log('[WebWireContentHost] Injecting panel...');
         
-        // Delegate to panel for DOM manipulation
-        if (this.panel && this.panel.isReady()) {
-            this.panel.showErrorNotification(message);
-        } else {
-            // Fallback for when panel is not ready
-            console.error('WebWire panel not ready, cannot show error notification:', message);
+        try {
+            // The ChatService handles its own panel initialization
+            if (!this.chatService.isReady()) {
+                await this.chatService.initialize();
+            }
+            
+            await this.sendInitialStateToPanel();
+            
+            console.log('[WebWireContentHost] Panel injected successfully');
+        } catch (error) {
+            console.error('[WebWireContentHost] Failed to inject panel:', error);
+        }
+    }
+
+    /**
+     * Send initial state to ChatService/panel
+     */
+    async sendInitialStateToPanel() {
+        try {
+            // Get current thread from background if available
+            let currentThread = null;
+            try {
+                const threadResponse = await chrome.runtime.sendMessage({
+                    action: BACKGROUND_ACTIONS.GET_ACTIVE_THREAD
+                });
+                if (threadResponse.success) {
+                    currentThread = threadResponse.thread;
+                }
+            } catch (error) {
+                console.warn('[WebWireContentHost] Could not get active thread:', error);
+            }
+            
+            const state = {
+                currentThread: currentThread,
+                mcpConnected: false, // Would need to get from ChatService
+                aiClientConfigured: false, // Would need to get from ChatService
+                settings: this.currentSettings,
+                panelInjected: this.chatService.isReady(),
+                frameworkReady: true
+            };
+            
+            // Send to ChatService
+            await this.chatService.sendInitialState(state);
+            
+            console.log('[WebWireContentHost] Initial state sent to ChatService');
+        } catch (error) {
+            console.error('[WebWireContentHost] Failed to send initial state:', error);
+            const fallbackState = {
+                currentThread: null,
+                mcpConnected: false,
+                aiClientConfigured: false,
+                settings: {},
+                panelInjected: this.chatService.isReady(),
+                frameworkReady: false
+            };
+            await this.chatService.sendInitialState(fallbackState);
         }
     }
 }
 
 // Global instance
-let webwireContentScript = null;
+let webwireContentHost = null;
 
-// Wait for the DOM to be fully loaded
+// Wait for DOM to be ready
 if (document.readyState === DOM_READY_STATES.LOADING) {
     document.addEventListener('DOMContentLoaded', initialize);
 } else {
@@ -1058,25 +541,24 @@ if (document.readyState === DOM_READY_STATES.LOADING) {
 }
 
 /**
- * Initialize the WebWire content script
+ * Initialize the WebWire content host
  */
 async function initialize() {
-    console.log('WebWire content script initializing...');
+    console.log('[WebWireContentHost] Initializing...');
     
     try {
-        // Setup debug methods on the class prototype
-        setupDebugMethods(WebWireContentScript);
+        // Setup debug methods (will need to adapt for new architecture)
+        setupDebugMethods(WebWireContentHost);
         
-        // Create instance
-        webwireContentScript = new WebWireContentScript();
+        // Create and initialize the host
+        webwireContentHost = new WebWireContentHost();
+        await webwireContentHost.initialize();
         
-        // Initialize properly with async support
-        await webwireContentScript.initialize();
-        
-        console.log('WebWire content script initialized successfully');
+        console.log('[WebWireContentHost] Initialized successfully');
     } catch (error) {
-        console.error('Failed to initialize WebWire content script:', error);
+        console.error('[WebWireContentHost] Failed to initialize:', error);
     } finally {
-        setupGlobalDebugAccess(webwireContentScript);
+        // Setup global debug access
+        setupGlobalDebugAccess(webwireContentHost);
     }
 }

@@ -24,11 +24,10 @@ export class MCPConnector {
     /**
      * Create an MCP Connector instance
      * @param {string} mcpServerUrl - The base URL of the MCP server
-     * @param {Object} stateService - State service instance for managing connection state
      */
-    constructor(mcpServerUrl, stateService) {
+    constructor(mcpServerUrl) {
       this.mcpServerUrl = mcpServerUrl;
-      this.stateService = stateService;
+      this.stateService = null;
       this.sessionId = generateUUID(); // Generate a unique session ID for this connection
       this.eventSource = null;
       this.requestId = 0;
@@ -43,11 +42,17 @@ export class MCPConnector {
     /**
      * Initialize connection to MCP server and perform full setup
      * Establishes SSE connection, performs handshake, and fetches available tools
+     * @param {Object} stateService - State service instance for managing connection state
      * @returns {Promise<Array>} Promise resolving to array of available tools
      * @throws {Error} If initialization fails at any step
      */
-    async initialize() {
-      // Initialize state
+    async initialize(stateService) {
+      this.stateService = stateService;
+
+      if (!stateService) {
+        throw new Error('State service not provided');
+      }
+
       this.stateService.mcp.setMcpServerUrl(this.mcpServerUrl);
       this.stateService.mcp.setMcpConnection({ sessionId: this.sessionId });
 

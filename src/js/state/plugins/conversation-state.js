@@ -187,17 +187,27 @@ export class ConversationStatePlugin {
      * @returns {string|null} Active conversation ID or null
      */
     getActiveConversationId() {
-        const currentUser = this.stateService.state.settings.aim.userName;
-        const currentPersona = this.stateService.state.settings.aim.personaName;
+        const currentUser = this.stateService.state.settings?.aim?.userName;
+        const currentPersona = this.stateService.state.settings?.aim?.personaName;
         
-        if (!currentUser || !currentPersona) return null;
+        console.log('[ConversationState] getActiveConversationId - currentUser:', currentUser, 'currentPersona:', currentPersona);
+        
+        if (!currentUser || !currentPersona) {
+            console.log('[ConversationState] No user or persona set, returning null');
+            return null;
+        }
 
         // Get conversations for current persona, filter by user, and find active ones
-        const conversations = this.getConversationsFor(currentPersona)
+        const allConversationsForPersona = this.getConversationsFor(currentPersona);
+        console.log('[ConversationState] Found', allConversationsForPersona.length, 'conversations for persona:', currentPersona);
+        
+        const activeConversations = allConversationsForPersona
             .filter(conv => conv.userName === currentUser && conv.status === 'active')
             .sort((a, b) => (b.endTime || b.startTime) - (a.endTime || a.startTime));
 
-        return conversations.length > 0 ? conversations[0].id : null;
+        console.log('[ConversationState] Found', activeConversations.length, 'active conversations for user:', currentUser);
+        
+        return activeConversations.length > 0 ? activeConversations[0].id : null;
     }
 
     /**
@@ -235,34 +245,68 @@ export class ConversationStatePlugin {
      * @returns {string} The conversation ID
      */
     getOrCreateCurrentConversation(options = {}) {
+        console.log('[ConversationState] getOrCreateCurrentConversation called with options:', options);
+        
         // Try to get existing active conversation
         let conversationId = this.getActiveConversationId();
+        console.log('[ConversationState] Active conversation ID:', conversationId);
         
         if (!conversationId) {
-            // Create new conversation for current user/persona
-            const currentUser = this.stateService.state.settings.aim.userName;
-            const currentPersona = this.stateService.state.settings.aim.personaName;
+            // No active conversation found, look for newest conversation (regardless of user/persona)
+            const allConversations = Object.values(this.stateService.state.conversation.metadata);
+            console.log('[ConversationState] Total conversations in storage:', allConversations.length);
             
-            conversationId = this.createThreadId(currentUser, currentPersona);
-            
-            // Initialize conversation with first (empty) message to set up metadata
-            this.storeMessage(
-                conversationId,
-                { role: 'system', content: '' }, // Placeholder to initialize
-                null,
-                {
-                    userName: currentUser,
-                    personaName: currentPersona,
-                    title: options.title || `${currentPersona} Conversation`,
-                    ...options
-                }
-            );
+            if (allConversations.length > 0) {
+                console.log('[ConversationState] All conversations:', allConversations.map(conv => ({
+                    id: conv.id,
+                    userName: conv.userName, 
+                    personaName: conv.personaName,
+                    status: conv.status,
+                    startTime: conv.startTime
+                })));
+                
+                // Sort all conversations by newest first (endTime or startTime)
+                const sortedConversations = allConversations.sort((a, b) => {
+                    const timeA = a.endTime || a.startTime || 0;
+                    const timeB = b.endTime || b.startTime || 0;
+                    return timeB - timeA;
+                });
+                
+                // Reactivate the newest conversation
+                conversationId = sortedConversations[0].id;
+                this.setActiveConversation(conversationId);
+                console.log(`[ConversationState] Reactivated newest conversation: ${conversationId}`);
+            } else {
+                // No conversations exist, create new one
+                const currentUser = this.stateService.state.settings?.aim?.userName || 'User';
+                const currentPersona = this.stateService.state.settings?.aim?.personaName || 'WebWire Assistant';
+                
+                conversationId = this.createThreadId(currentUser, currentPersona);
+                
+                console.log(`[ConversationState] Creating first conversation with ID: ${conversationId}`);
+                
+                // Initialize conversation with first (empty) message to set up metadata
+                this.storeMessage(
+                    conversationId,
+                    { role: 'system', content: '' }, // Placeholder to initialize
+                    null,
+                    {
+                        userName: currentUser,
+                        personaName: currentPersona,
+                        title: options.title || `${currentPersona} Conversation`,
+                        ...options
+                    }
+                );
 
-            // Remove the placeholder system message
-            this.stateService.state.conversation.history[conversationId] = [];
-            
-            // Set as active
-            this.setActiveConversation(conversationId);
+                // Remove the placeholder system message
+                this.stateService.state.conversation.history[conversationId] = [];
+                
+                // Set as active
+                this.setActiveConversation(conversationId);
+                console.log(`[ConversationState] Created new conversation: ${conversationId}`);
+            }
+        } else {
+            console.log(`[ConversationState] Using existing active conversation: ${conversationId}`);
         }
 
         return conversationId;

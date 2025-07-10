@@ -1,6 +1,7 @@
 import { initializeContext } from '../js/context/context-init.js';
 import { OptionsPanel } from './panel.js';
 import { createInitialState } from '../js/state/state-container.js';
+import { EventBus } from '../js/core/event-bus.js';
 
 /**
  * Options Page Script
@@ -10,6 +11,7 @@ import { createInitialState } from '../js/state/state-container.js';
 class OptionsApp {
     constructor() {
         this.panel = new OptionsPanel();
+        this.eventBus = new EventBus();
         this.storage = null;
         this.stateService = null;
         this.dispatcher = null;
@@ -17,7 +19,7 @@ class OptionsApp {
     }
 
     async initialize() {
-        const { dispatcher, stateService, storage } = await initializeContext();
+        const { dispatcher, stateService, storage } = await initializeContext(this.eventBus);
         this.dispatcher = dispatcher;
         this.stateService = stateService;
         this.storage = storage;

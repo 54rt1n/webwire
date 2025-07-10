@@ -1,31 +1,50 @@
 /**
  * StashButton - A reusable component for adding/removing items from the MCP stash
- * Handles URI prefixing and stash state management
+ * Uses EventBus to communicate with MCP system for content fetching and storage
  */
 export class StashButton {
-    constructor(stateService) {
+    constructor(eventBus, stateService) {
+        this.eventBus = eventBus;
         this.stateService = stateService;
         this.button = null;
         this.currentUri = null;
+        this.currentSource = null;
         this.onToggle = null; // Optional callback when stash state changes
+        
+        // Listen for stash updates
+        this.setupEventListeners();
+    }
+
+    /**
+     * Setup event listeners for stash updates
+     */
+    setupEventListeners() {
+        // Listen for stash updates to refresh button state
+        this.eventBus.on('stash:updated', (data) => {
+            if (data.uri === this.currentUri) {
+                this._updateButton();
+            }
+        });
     }
 
     /**
      * Create a stash button element
      * @param {string} uri - The URI to stash (without prefix)
-     * @param {string} type - The type of URI ('fs', 'kb', 'list')
+     * @param {string} source - The source type ('fs', 'kb', 'list')
      * @param {Object} options - Button options
      * @param {string} options.size - Button size ('sm', 'icon', etc.)
      * @param {Function} options.onToggle - Callback when stash state changes
      * @returns {HTMLElement} The button element
      */
-    create(uri, type, { size = 'icon', onToggle = null } = {}) {
-        this.currentUri = this._formatUri(uri, type);
+    create(uri, source, { size = 'icon', onToggle = null } = {}) {
+        this.currentUri = this._formatUri(uri, source);
+        this.currentSource = source;
         this.onToggle = onToggle;
         
         this.button = document.createElement('button');
         this.button.className = `btn btn-${size} stash-button`;
         this.button.setAttribute('data-uri', this.currentUri);
+        this.button.setAttribute('data-source', this.currentSource);
         
         this._updateButton();
         this._attachEventListener();
@@ -36,31 +55,33 @@ export class StashButton {
     /**
      * Update an existing button's URI and state
      * @param {string} uri - The new URI to stash
-     * @param {string} type - The type of URI ('fs', 'kb', 'list')
+     * @param {string} source - The source type ('fs', 'kb', 'list')
      */
-    updateUri(uri, type) {
+    updateUri(uri, source) {
         if (!this.button) return;
         
-        this.currentUri = this._formatUri(uri, type);
+        this.currentUri = this._formatUri(uri, source);
+        this.currentSource = source;
         this.button.setAttribute('data-uri', this.currentUri);
+        this.button.setAttribute('data-source', this.currentSource);
         this._updateButton();
     }
 
     /**
      * Format URI with appropriate prefix
      * @param {string} uri - The URI to format
-     * @param {string} type - The type of URI ('fs', 'kb', 'list')
+     * @param {string} source - The source type ('fs', 'kb', 'list')
      * @returns {string} Formatted URI with prefix
      * @private
      */
-    _formatUri(uri, type) {
+    _formatUri(uri, source) {
         // If URI already has a proper scheme, use it as-is
         if (uri.includes('://')) {
             return uri;
         }
         
         // Add appropriate prefix
-        switch (type) {
+        switch (source) {
             case 'fs':
                 return `fs://${uri}`;
             case 'kb':
@@ -85,8 +106,7 @@ export class StashButton {
     _isInStash() {
         if (!this.currentUri || !this.stateService.stash) return false;
         
-        const stashItems = this.stateService.stash.getAll('mcp');
-        return stashItems.includes(this.currentUri);
+        return this.stateService.stash.has(this.currentUri);
     }
 
     /**
@@ -157,50 +177,42 @@ export class StashButton {
      * @private
      */
     _toggleStash() {
-        if (!this.currentUri || !this.stateService.stash) return;
+        if (!this.currentUri || !this.currentSource) return;
         
         const isStashed = this._isInStash();
         
         if (isStashed) {
-            // Remove from stash
-            const stashItems = this.stateService.stash.getAll('mcp');
-            const index = stashItems.indexOf(this.currentUri);
-            if (index !== -1) {
-                this.stateService.stash.remove(index, 'mcp');
-                console.log(`[StashButton] Removed from stash: ${this.currentUri}`);
-            }
+            // Emit remove event
+            console.log(`[StashButton] Requesting remove from stash: ${this.currentUri}`);
+            this.eventBus.emit('stash:remove', {
+                uri: this.currentUri,
+                source: this.currentSource
+            });
         } else {
-            // Add to stash
-            this.stateService.stash.append(this.currentUri, 'mcp');
-            console.log(`[StashButton] Added to stash: ${this.currentUri}`);
+            // Emit add event
+            console.log(`[StashButton] Requesting add to stash: ${this.currentUri} (${this.currentSource})`);
+            this.eventBus.emit('stash:add', {
+                uri: this.currentUri,
+                source: this.currentSource
+            });
         }
-        
-        // Update button appearance
-        this._updateButton();
         
         // Call onToggle callback if provided
         if (this.onToggle) {
             this.onToggle(this.currentUri, !isStashed);
         }
-        
-        // Save stash state
-        this.stateService.stash.save().catch(err => {
-            console.error('[StashButton] Failed to save stash:', err);
-        });
     }
 
     /**
-     * Get all stashed URIs of a specific type
-     * @param {string} type - The type to filter by ('fs', 'kb', 'list')
-     * @returns {Array<string>} Array of stashed URIs of the specified type
+     * Get all stashed URIs of a specific source type
+     * @param {string} source - The source type to filter by ('fs', 'kb', 'list')
+     * @returns {Array<string>} Array of stashed URIs of the specified source type
      */
-    getStashedByType(type) {
+    getStashedBySource(source) {
         if (!this.stateService.stash) return [];
         
-        const stashItems = this.stateService.stash.getAll('mcp');
-        const prefix = `${type}://`;
-        
-        return stashItems.filter(item => item.startsWith(prefix));
+        const prefix = `${source}://`;
+        return this.stateService.stash.filterURIs(new RegExp(`^${prefix}`));
     }
 
     /**
@@ -209,35 +221,39 @@ export class StashButton {
      */
     getAllStashed() {
         if (!this.stateService.stash) return [];
-        return this.stateService.stash.getAll('mcp');
+        return this.stateService.stash.getAllURIs();
     }
 
     /**
-     * Clear all stashed items
+     * Clear all stashed items (emits clear event)
      */
     clearAll() {
-        if (!this.stateService.stash) return;
-        
-        this.stateService.stash.clear('mcp');
+        console.log('[StashButton] Requesting clear all stashed items');
+        this.eventBus.emit('stash:clear-all');
         this._updateButton();
-        
-        console.log('[StashButton] Cleared all stashed items');
-        
-        // Save stash state
-        this.stateService.stash.save().catch(err => {
-            console.error('[StashButton] Failed to save stash:', err);
-        });
+    }
+
+    /**
+     * Destroy the button and clean up event listeners
+     */
+    destroy() {
+        if (this.button) {
+            this.button.remove();
+            this.button = null;
+        }
+        // EventBus automatically handles cleanup of listeners
     }
 }
 
 /**
- * Factory function to create stash buttons with a shared state service
+ * Factory function to create stash buttons with shared event bus and state service
+ * @param {Object} eventBus - The event bus instance
  * @param {Object} stateService - The state service instance
  * @returns {Function} Function that creates StashButton instances
  */
-export function createStashButtonFactory(stateService) {
-    return (uri, type, options = {}) => {
-        const button = new StashButton(stateService);
-        return button.create(uri, type, options);
+export function createStashButtonFactory(eventBus, stateService) {
+    return (uri, source, options = {}) => {
+        const button = new StashButton(eventBus, stateService);
+        return button.create(uri, source, options);
     };
 } 

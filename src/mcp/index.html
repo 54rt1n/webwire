@@ -4,8 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>WebWire - MCP Control Panel</title>
-    <!-- We'll bundle global.scss and style.css into this single file -->
-    <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <div class="mcp-dashboard">
@@ -19,6 +17,9 @@
                     <span id="server-url-display">No server configured</span>
                 </div>
                 <button id="reconnect-btn" class="btn btn-sm">Reconnect</button>
+                <button id="toggle-chat-btn" class="btn btn-sm" title="Toggle Chat Assistant">
+                    🤖 Chat
+                </button>
             </div>
         </header>
 
@@ -118,6 +119,5 @@
             </div>
         </section>
     </div>
-    <script src="./index.js" type="module"></script>
 </body>
 </html>

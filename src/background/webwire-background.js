@@ -1,5 +1,6 @@
 import { EVENT_TYPES, EVENT_CONTEXT } from '../js/core/events.js';
 import { initializeContext } from '../js/context/context-init.js';
+import { EventBus } from '../js/core/event-bus.js';
 
 /**
  * WebWire Extension Background Script
@@ -11,6 +12,7 @@ import { initializeContext } from '../js/context/context-init.js';
 class WebWireBackground {
     constructor() {
         this.activeTabs = new Map();
+        this.eventBus = new EventBus();
         this.extensionSettings = {};
         this.dispatcher = null;
         this.errorBoundary = null;
@@ -21,7 +23,7 @@ class WebWireBackground {
     async initialize() {
         console.log('WebWire background script initializing...');
 
-        const { dispatcher, errorBoundary, stateService, storage } = await initializeContext(EVENT_CONTEXT.BACKGROUND);
+        const { dispatcher, errorBoundary, stateService, storage } = await initializeContext(this.eventBus, EVENT_CONTEXT.BACKGROUND);
         this.dispatcher = dispatcher;
         this.errorBoundary = errorBoundary;
         this.stateService = stateService;

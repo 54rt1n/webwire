@@ -1,22 +1,21 @@
 import { EVENTS } from '../../core/events.js';
 
 /**
- * Plugin for handling stash state - a generic multilevel-index key value store
+ * Plugin for handling stash state - URI-based content store with MCP integration
+ * 
+ * Stores content fetched from MCP tools using URI as key:
+ * stash = {
+ *   "kb://document-uri": "document content",
+ *   "fs://path/to/file": "file content",
+ *   ...
+ * }
  */
 export class StashStatePlugin {
     constructor(stateService) {
         this.stateService = stateService;
         this.eventBus = stateService.eventBus;
         this.stashAdapter = stateService.storage.stash;
-    }
-
-    /**
-     * Generate a key path from variable arguments
-     * @param {...string} keyParts - Variable key parts to create a path
-     * @returns {string} The joined key path
-     */
-    _createKeyPath(...keyParts) {
-        return keyParts.filter(part => part !== undefined && part !== null).join('.');
+        this.mcpConnector = null; // Will be set when MCP is available
     }
 
     /**
@@ -29,160 +28,182 @@ export class StashStatePlugin {
     }
 
     /**
-     * Check if a key path exists in the stash
-     * @param {...string} key - Variable key parts
-     * @returns {boolean} True if the key path exists
+     * Set MCP connector for fetching content
+     * @param {Object} mcpConnector - MCP connector instance
      */
-    check(...key) {
+    setMCPConnector(mcpConnector) {
+        this.mcpConnector = mcpConnector;
+        console.log('[StateService::StashState] MCP connector set');
+    }
+
+    /**
+     * Check if a URI exists in the stash
+     * @param {string} uri - URI to check
+     * @returns {boolean} True if the URI exists
+     */
+    has(uri) {
         this._ensureStashExists();
-        const keyPath = this._createKeyPath(...key);
-        const exists = keyPath in this.stateService.state.stash;
-        console.log(`[StateService::StashState] Check key '${keyPath}': ${exists}`);
+        const exists = uri in this.stateService.state.stash;
+        console.log(`[StateService::StashState] Check URI '${uri}': ${exists}`);
         return exists;
     }
 
     /**
-     * Get all values at a key path
-     * @param {...string} key - Variable key parts
-     * @returns {Array} Array of all values at the key path, or empty array if not found
+     * Get content for a URI
+     * @param {string} uri - URI to retrieve content for
+     * @returns {string|null} Content string, or null if not found
      */
-    getAll(...key) {
+    get(uri) {
         this._ensureStashExists();
-        const keyPath = this._createKeyPath(...key);
-        const values = this.stateService.state.stash[keyPath] || [];
-        return [...values]; // Return a copy to prevent external mutation
+        const content = this.stateService.state.stash[uri] || null;
+        console.log(`[StateService::StashState] Get content for '${uri}':`, content ? `${content.length} chars` : 'not found');
+        return content;
     }
 
     /**
-     * Get value at specific index in a key path
-     * @param {number} index - Index to retrieve
-     * @param {...string} key - Variable key parts
-     * @returns {any} Value at the specified index, or undefined if not found
+     * Set content for a URI
+     * @param {string} uri - URI to store content for
+     * @param {string} content - Content to store
      */
-    get(index, ...key) {
+    set(uri, content) {
         this._ensureStashExists();
-        const keyPath = this._createKeyPath(...key);
-        const values = this.stateService.state.stash[keyPath] || [];
-        const value = values[index];
-        console.log(`[StateService::StashState] Get index ${index} from '${keyPath}':`, value);
-        return value;
-    }
-
-    /**
-     * Append a value to the end of a key path array
-     * @param {any} value - Value to append
-     * @param {...string} key - Variable key parts
-     * @returns {number} New length of the array
-     */
-    append(value, ...key) {
-        this._ensureStashExists();
-        const keyPath = this._createKeyPath(...key);
-        
-        if (!this.stateService.state.stash[keyPath]) {
-            this.stateService.state.stash[keyPath] = [];
-        }
-        
-        const newLength = this.stateService.state.stash[keyPath].push(value);
-        console.log(`[StateService::StashState] Appended to '${keyPath}': ${newLength} items total`);
+        this.stateService.state.stash[uri] = content;
+        console.log(`[StateService::StashState] Set content for '${uri}': ${content.length} chars`);
         
         this.eventBus.emit(EVENTS.STASH?.UPDATED || 'stash:updated', { 
-            keyPath, 
-            operation: 'append', 
-            value, 
-            length: newLength 
+            uri, 
+            operation: 'set', 
+            contentLength: content.length 
         });
-        
-        return newLength;
     }
 
     /**
-     * Insert a value at a specific index in a key path array
-     * @param {any} value - Value to insert
-     * @param {number} index - Index to insert at
-     * @param {...string} key - Variable key parts
-     * @returns {number} New length of the array
+     * Delete content for a URI
+     * @param {string} uri - URI to delete
+     * @returns {boolean} True if the URI existed and was deleted
      */
-    insert(value, index, ...key) {
+    delete(uri) {
         this._ensureStashExists();
-        const keyPath = this._createKeyPath(...key);
+        const existed = uri in this.stateService.state.stash;
         
-        if (!this.stateService.state.stash[keyPath]) {
-            this.stateService.state.stash[keyPath] = [];
+        if (existed) {
+            delete this.stateService.state.stash[uri];
+            console.log(`[StateService::StashState] Deleted content for '${uri}'`);
+            
+            this.eventBus.emit(EVENTS.STASH?.UPDATED || 'stash:updated', { 
+                uri, 
+                operation: 'delete'
+            });
+        } else {
+            console.log(`[StateService::StashState] URI '${uri}' does not exist, nothing to delete`);
         }
         
-        this.stateService.state.stash[keyPath].splice(index, 0, value);
-        const newLength = this.stateService.state.stash[keyPath].length;
-        console.log(`[StateService::StashState] Inserted at index ${index} in '${keyPath}': ${newLength} items total`);
-        
-        this.eventBus.emit(EVENTS.STASH?.UPDATED || 'stash:updated', { 
-            keyPath, 
-            operation: 'insert', 
-            value, 
-            index, 
-            length: newLength 
-        });
-        
-        return newLength;
+        return existed;
     }
 
     /**
-     * Get the first value in a key path array
-     * @param {...string} key - Variable key parts
-     * @returns {any} First value, or undefined if array is empty or doesn't exist
+     * Fetch and store content from MCP for a Knowledge Base URI
+     * @param {string} uri - KB URI (e.g., "kb://document-path")
+     * @param {Object} options - Options for fetching
+     * @param {boolean} options.includeIndex - Include document metadata
+     * @param {boolean} options.forceRefresh - Force fetch even if already cached
+     * @returns {Promise<string|null>} The fetched content, or null on error
      */
-    first(...key) {
-        this._ensureStashExists();
-        const keyPath = this._createKeyPath(...key);
-        const values = this.stateService.state.stash[keyPath] || [];
-        const value = values[0];
-        console.log(`[StateService::StashState] First from '${keyPath}':`, value);
-        return value;
-    }
-
-    /**
-     * Get the last value in a key path array
-     * @param {...string} key - Variable key parts
-     * @returns {any} Last value, or undefined if array is empty or doesn't exist
-     */
-    last(...key) {
-        this._ensureStashExists();
-        const keyPath = this._createKeyPath(...key);
-        const values = this.stateService.state.stash[keyPath] || [];
-        const value = values[values.length - 1];
-        console.log(`[StateService::StashState] Last from '${keyPath}':`, value);
-        return value;
-    }
-
-    /**
-     * Remove value at specific index from a key path array
-     * @param {number} index - Index to remove
-     * @param {...string} key - Variable key parts
-     * @returns {any} The removed value, or undefined if index was out of bounds
-     */
-    remove(index, ...key) {
-        this._ensureStashExists();
-        const keyPath = this._createKeyPath(...key);
-        
-        if (!this.stateService.state.stash[keyPath]) {
-            console.log(`[StateService::StashState] Cannot remove from non-existent key '${keyPath}'`);
-            return undefined;
+    async fetchKbContent(uri, { includeIndex = true, forceRefresh = false } = {}) {
+        if (!this.mcpConnector) {
+            console.error('[StateService::StashState] No MCP connector available for KB fetch');
+            return null;
         }
-        
-        const removed = this.stateService.state.stash[keyPath].splice(index, 1);
-        const removedValue = removed.length > 0 ? removed[0] : undefined;
-        const newLength = this.stateService.state.stash[keyPath].length;
-        
-        console.log(`[StateService::StashState] Removed index ${index} from '${keyPath}': ${newLength} items remaining`);
-        
-        this.eventBus.emit(EVENTS.STASH?.UPDATED || 'stash:updated', { 
-            keyPath, 
-            operation: 'remove', 
-            removedValue, 
-            index, 
-            length: newLength 
-        });
-        
-        return removedValue;
+
+        // Return cached content if available and not forcing refresh
+        if (!forceRefresh && this.has(uri)) {
+            console.log(`[StateService::StashState] Returning cached content for KB URI '${uri}'`);
+            return this.get(uri);
+        }
+
+        try {
+            console.log(`[StateService::StashState] Fetching KB content for '${uri}'`);
+            const result = await this.mcpConnector.executeTool('kb_read', {
+                uri: uri,
+                include_content: true,
+                include_index: includeIndex
+            });
+
+            if (result.success && result.content) {
+                const content = result.content;
+                this.set(uri, content);
+                console.log(`[StateService::StashState] Fetched and cached KB content: ${content.length} chars`);
+                return content;
+            } else {
+                console.warn(`[StateService::StashState] Failed to fetch KB content for '${uri}':`, result.error);
+                return null;
+            }
+        } catch (error) {
+            console.error(`[StateService::StashState] Error fetching KB content for '${uri}':`, error);
+            return null;
+        }
+    }
+
+    /**
+     * Fetch and store content from MCP for a filesystem path
+     * @param {string} path - File path (will be stored as "fs://{path}")
+     * @param {Object} options - Options for fetching
+     * @param {string} options.encoding - File encoding (default: utf-8)
+     * @param {boolean} options.forceRefresh - Force fetch even if already cached
+     * @returns {Promise<string|null>} The fetched content, or null on error
+     */
+    async fetchFsContent(path, { encoding = 'utf-8', forceRefresh = false } = {}) {
+        if (!this.mcpConnector) {
+            console.error('[StateService::StashState] No MCP connector available for FS fetch');
+            return null;
+        }
+
+        const uri = `fs://${path}`;
+
+        // Return cached content if available and not forcing refresh
+        if (!forceRefresh && this.has(uri)) {
+            console.log(`[StateService::StashState] Returning cached content for FS path '${path}'`);
+            return this.get(uri);
+        }
+
+        try {
+            console.log(`[StateService::StashState] Fetching FS content for '${path}'`);
+            const result = await this.mcpConnector.executeTool('fs_read', {
+                path: path,
+                encoding: encoding
+            });
+
+            if (result.success && result.content) {
+                const content = result.content;
+                this.set(uri, content);
+                console.log(`[StateService::StashState] Fetched and cached FS content: ${content.length} chars`);
+                return content;
+            } else {
+                console.warn(`[StateService::StashState] Failed to fetch FS content for '${path}':`, result.error);
+                return null;
+            }
+        } catch (error) {
+            console.error(`[StateService::StashState] Error fetching FS content for '${path}':`, error);
+            return null;
+        }
+    }
+
+    /**
+     * Fetch content for any URI (auto-detects type)
+     * @param {string} uri - URI to fetch (kb://, fs://, or file path)
+     * @param {Object} options - Options for fetching
+     * @returns {Promise<string|null>} The fetched content, or null on error
+     */
+    async fetch(uri, options = {}) {
+        if (uri.startsWith('kb://')) {
+            return this.fetchKbContent(uri, options);
+        } else if (uri.startsWith('fs://')) {
+            const path = uri.substring(5); // Remove 'fs://' prefix
+            return this.fetchFsContent(path, options);
+        } else {
+            // Assume it's a file path
+            return this.fetchFsContent(uri, options);
+        }
     }
 
     /**
@@ -217,86 +238,98 @@ export class StashStatePlugin {
     }
 
     /**
-     * Clear all values at a specific key path
-     * @param {...string} key - Variable key parts
-     * @returns {boolean} True if the key existed and was cleared, false otherwise
-     */
-    clear(...key) {
-        this._ensureStashExists();
-        const keyPath = this._createKeyPath(...key);
-        const existed = keyPath in this.stateService.state.stash;
-        
-        if (existed) {
-            delete this.stateService.state.stash[keyPath];
-            console.log(`[StateService::StashState] Cleared key '${keyPath}'`);
-            
-            this.eventBus.emit(EVENTS.STASH?.CLEARED || 'stash:cleared', { 
-                keyPath, 
-                operation: 'clear' 
-            });
-        } else {
-            console.log(`[StateService::StashState] Key '${keyPath}' does not exist, nothing to clear`);
-        }
-        
-        return existed;
-    }
-
-    /**
      * Clear all stash data
      */
     clearAll() {
-        const keyCount = this.stateService.state.stash ? Object.keys(this.stateService.state.stash).length : 0;
+        const uriCount = this.stateService.state.stash ? Object.keys(this.stateService.state.stash).length : 0;
         this.stateService.state.stash = {};
-        console.log(`[StateService::StashState] Cleared all stash data: ${keyCount} keys removed`);
+        console.log(`[StateService::StashState] Cleared all stash data: ${uriCount} URIs removed`);
         
         this.eventBus.emit(EVENTS.STASH?.CLEARED_ALL || 'stash:cleared_all', { 
             operation: 'clear_all',
-            keysRemoved: keyCount
+            urisRemoved: uriCount
         });
     }
 
     /**
-     * Get all key paths in the stash
-     * @returns {Array<string>} Array of all key paths
+     * Get all URIs in the stash
+     * @returns {Array<string>} Array of all URIs
      */
-    getAllKeys() {
+    getAllURIs() {
         this._ensureStashExists();
-        const keys = Object.keys(this.stateService.state.stash);
-        console.log(`[StateService::StashState] All keys: ${keys.length} keys`);
-        return [...keys]; // Return a copy
+        const uris = Object.keys(this.stateService.state.stash);
+        console.log(`[StateService::StashState] All URIs: ${uris.length} URIs`);
+        return [...uris]; // Return a copy
     }
 
     /**
-     * Get the total number of items across all key paths
-     * @returns {number} Total item count
+     * Get all entries (URI-content pairs)
+     * @returns {Array<{uri: string, content: string, contentLength: number}>} Array of all entries
      */
-    getTotalItemCount() {
+    getAllEntries() {
         this._ensureStashExists();
-        const total = Object.values(this.stateService.state.stash)
-            .reduce((sum, arr) => sum + (Array.isArray(arr) ? arr.length : 0), 0);
-        console.log(`[StateService::StashState] Total items across all keys: ${total}`);
-        return total;
+        const entries = Object.entries(this.stateService.state.stash).map(([uri, content]) => ({
+            uri,
+            content,
+            contentLength: content ? content.length : 0
+        }));
+        console.log(`[StateService::StashState] All entries: ${entries.length} entries`);
+        return entries;
+    }
+
+    /**
+     * Filter URIs by pattern
+     * @param {string|RegExp} pattern - Pattern to match URIs against
+     * @returns {Array<string>} Array of matching URIs
+     */
+    filterURIs(pattern) {
+        this._ensureStashExists();
+        const allURIs = this.getAllURIs();
+        const regex = pattern instanceof RegExp ? pattern : new RegExp(pattern);
+        const matching = allURIs.filter(uri => regex.test(uri));
+        console.log(`[StateService::StashState] Filtered URIs by pattern '${pattern}': ${matching.length} matches`);
+        return matching;
     }
 
     /**
      * Get stash statistics
-     * @returns {Object} Statistics object with key count, total items, etc.
+     * @returns {Object} Statistics object with URI count, total content size, etc.
      */
     getStats() {
         this._ensureStashExists();
-        const keys = Object.keys(this.stateService.state.stash);
-        const keyCount = keys.length;
-        const totalItems = this.getTotalItemCount();
-        const keyStats = keys.map(key => ({
-            key,
-            itemCount: Array.isArray(this.stateService.state.stash[key]) ? this.stateService.state.stash[key].length : 0
-        }));
+        const uris = Object.keys(this.stateService.state.stash);
+        const uriCount = uris.length;
+        
+        let totalContentSize = 0;
+        const uriStats = uris.map(uri => {
+            const content = this.stateService.state.stash[uri];
+            const contentLength = content ? content.length : 0;
+            totalContentSize += contentLength;
+            
+            return {
+                uri,
+                contentLength,
+                type: uri.startsWith('kb://') ? 'knowledge_base' : 
+                      uri.startsWith('fs://') ? 'filesystem' : 'unknown'
+            };
+        });
+
+        // Group by type
+        const typeStats = uriStats.reduce((acc, stat) => {
+            if (!acc[stat.type]) {
+                acc[stat.type] = { count: 0, totalSize: 0 };
+            }
+            acc[stat.type].count++;
+            acc[stat.type].totalSize += stat.contentLength;
+            return acc;
+        }, {});
 
         const stats = {
-            keyCount,
-            totalItems,
-            keyStats,
-            isEmpty: keyCount === 0
+            uriCount,
+            totalContentSize,
+            typeStats,
+            uriStats,
+            isEmpty: uriCount === 0
         };
 
         console.log('[StateService::StashState] Stats:', stats);

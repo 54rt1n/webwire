@@ -70,15 +70,16 @@ export class WebWirePanel {
                             <span class="conversation-id">Ready for conversation</span>
                         </div>
                         <div class="header-actions">
-                            <button class="btn-icon" id="analyze-page" title="Analyze Page">
+                            <button class="btn-icon" id="replay-turn" title="Replay Last Turn">
                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/>
-                                    <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>
+                                    <path d="M1 4v6h6"/>
+                                    <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/>
                                 </svg>
                             </button>
-                            <button class="btn-icon" id="mcp-status" title="MCP Status">
+                            <button class="btn-icon" id="new-conversation" title="New Conversation">
                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+                                    <line x1="12" y1="5" x2="12" y2="19"/>
+                                    <line x1="5" y1="12" x2="19" y2="12"/>
                                 </svg>
                             </button>
                             <button class="btn-icon" id="close-panel" title="Close">
@@ -145,9 +146,9 @@ export class WebWirePanel {
             panel: this.container.querySelector('.webwire-panel'),
             fab: this.container.querySelector('.webwire-fab'),
             closeBtn: this.container.querySelector('#close-panel'),
-            analyzeBtn: this.container.querySelector('#analyze-page'),
+            replayTurnBtn: this.container.querySelector('#replay-turn'),
             analyzePageBtn: this.container.querySelector('#analyze-page-btn'),
-            mcpStatusBtn: this.container.querySelector('#mcp-status'),
+            newConversationBtn: this.container.querySelector('#new-conversation'),
             chatContent: this.container.querySelector('.chat-content'),
             chatInput: this.container.querySelector('.chat-input'),
             sendBtn: this.container.querySelector('.send-button'),
@@ -204,8 +205,14 @@ export class WebWirePanel {
             this.handlePageAnalysisRequest();
         });
 
-        this.elements.analyzeBtn?.addEventListener('click', () => {
-            this.handlePageAnalysisRequest();
+        // New conversation button
+        this.elements.newConversationBtn?.addEventListener('click', () => {
+            this.handleNewConversationRequest();
+        });
+
+        // Replay last turn button
+        this.elements.replayTurnBtn?.addEventListener('click', () => {
+            this.handleReplayLastTurn();
         });
     }
 
@@ -301,6 +308,66 @@ export class WebWirePanel {
     }
 
     /**
+     * Handle new conversation request
+     */
+    handleNewConversationRequest() {
+        console.log('[WebWirePanel] New conversation requested');
+        
+        // Clear current messages and show welcome
+        this.clearMessages();
+        
+        // Reset conversation ID display
+        this.updateConversationIdDisplay(null);
+        
+        // Request new conversation from host
+        window.postMessage({
+            type: 'WEBWIRE_PANEL_MESSAGE',
+            action: 'START_NEW_CONVERSATION',
+            data: {}
+        }, '*');
+    }
+
+    /**
+     * Handle replay last turn request
+     */
+    handleReplayLastTurn() {
+        console.log('[WebWirePanel] Replay last turn requested');
+        
+        // Find the last user message from the visible chat
+        const userMessages = this.elements.chatContent.querySelectorAll('.chat-message.user');
+        
+        if (userMessages.length === 0) {
+            console.log('[WebWirePanel] No user messages found to replay');
+            this.displayError('No previous messages to replay');
+            return;
+        }
+        
+        // Get the last user message
+        const lastUserMessage = userMessages[userMessages.length - 1];
+        const messageContentEl = lastUserMessage.querySelector('.message-content');
+        
+        if (!messageContentEl) {
+            console.log('[WebWirePanel] Could not find message content to replay');
+            this.displayError('Could not find message content to replay');
+            return;
+        }
+        
+        // Extract the text content (strip HTML)
+        const messageText = messageContentEl.textContent || messageContentEl.innerText || '';
+        
+        if (!messageText.trim()) {
+            console.log('[WebWirePanel] Last message is empty');
+            this.displayError('Last message is empty');
+            return;
+        }
+        
+        console.log('[WebWirePanel] Replaying message:', messageText);
+        
+        // Send the message again using the same mechanism as new messages
+        this.handleSendMessage(messageText);
+    }
+
+    /**
      * Display a chat message
      */
     displayMessage(message) {
@@ -376,8 +443,6 @@ export class WebWirePanel {
      * Update a streaming message with new content
      */
     updateStreamingMessage(messageId, content) {
-        console.log('[WebWirePanel] updateStreamingMessage called:', messageId, content);
-        
         const messageEl = this.container.querySelector(`#message-${messageId}`);
         if (!messageEl) {
             console.log('[WebWirePanel] Message element not found:', messageId);
@@ -480,8 +545,30 @@ export class WebWirePanel {
         }
 
         // Update conversation ID display
-        if (this.elements.conversationId && conversation.threadId) {
-            this.elements.conversationId.textContent = `Thread: ${conversation.threadId.split('-').pop()}`;
+        this.updateConversationIdDisplay(conversation.threadId);
+    }
+
+    /**
+     * Update the conversation ID display in the header
+     */
+    updateConversationIdDisplay(threadId) {
+        console.log('[WebWirePanel] updateConversationIdDisplay called with:', threadId);
+        
+        if (!this.elements.conversationId) {
+            console.warn('[WebWirePanel] No conversationId element found');
+            return;
+        }
+
+        if (threadId) {
+            // Show a shortened version of the thread ID
+            const shortId = threadId.split('-').slice(-2).join('-'); // Last 2 parts
+            this.elements.conversationId.textContent = `Thread: ${shortId}`;
+            this.elements.conversationId.title = `Full ID: ${threadId}`; // Full ID on hover
+            console.log('[WebWirePanel] Updated conversation ID display to:', `Thread: ${shortId}`);
+        } else {
+            this.elements.conversationId.textContent = 'Ready for conversation';
+            this.elements.conversationId.title = '';
+            console.log('[WebWirePanel] Reset conversation ID display to "Ready for conversation"');
         }
     }
 

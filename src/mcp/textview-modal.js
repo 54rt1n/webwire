@@ -7,11 +7,12 @@ import { StashButton } from './stash-button.js';
  * Creates and manages its own DOM elements and lifecycle.
  */
 export class TextViewModal {
-    constructor(stateService = null) {
+    constructor() {
+        this.eventBus = null;
         this.modal = null;
         this.isOpen = false;
         this.onClose = null;
-        this.stateService = stateService;
+        this.stateService = null;
         this.stashButton = null;
         this.currentFilePath = null;
     }
@@ -195,7 +196,7 @@ export class TextViewModal {
         if (!stashContainer) return;
         
         // Create stash button
-        this.stashButton = new StashButton(this.stateService);
+        this.stashButton = new StashButton(this.eventBus, this.stateService);
         const button = this.stashButton.create(this.currentFilePath, 'fs', {
             size: 'icon',
             onToggle: async (stashedUri, isStashed) => {
@@ -215,7 +216,8 @@ export class TextViewModal {
      * @param {Object} stateService - The state service instance
      * @param {Function} saveStashFn - Function to call when stash needs to be saved
      */
-    setStateService(stateService, saveStashFn = null) {
+    setStateService(eventBus, stateService, saveStashFn = null) {
+        this.eventBus = eventBus;
         this.stateService = stateService;
         this.saveStashFn = saveStashFn;
     }
@@ -228,6 +230,3 @@ export class TextViewModal {
         return this.isOpen;
     }
 }
-
-// Export a singleton instance for convenience
-export const textViewModal = new TextViewModal(); 

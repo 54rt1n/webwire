@@ -2,54 +2,56 @@
  * WebWire Content Script Debug Methods
  * 
  * Debug utilities and testing methods for the WebWire content script.
- * These are separated from the main index.js to keep it clean and focused.
+ * Updated for the new ChatService architecture.
  */
 
 import { pageUtils } from './page-utils.js';
 
 // Export functions for testing and debugging
-let webwireContentScript = null;
+let webwireContentHost = null;
 
 export function setWebWireInstance(instance) {
-    webwireContentScript = instance;
+    webwireContentHost = instance;
 }
 
 export function getWebWireInstance() {
-    return webwireContentScript;
+    return webwireContentHost;
 }
 
 export function isWebWireReady() {
-    return webwireContentScript && (webwireContentScript.aiClient || webwireContentScript.mcpConnector);
+    return webwireContentHost && webwireContentHost.chatService && webwireContentHost.chatService.isReady();
 }
 
 /**
  * Setup debug methods on the WebWire class prototype
- * @param {Function} WebWireContentScript - The main content script class
+ * @param {Function} WebWireContentHost - The main content host class
  */
-export function setupDebugMethods(WebWireContentScript) {
+export function setupDebugMethods(WebWireContentHost) {
     // Add debug methods to the WebWire class prototype for window access
     if (typeof window !== 'undefined') {
         
         /**
          * Get current debug state
          */
-        WebWireContentScript.prototype.debug = function() {
+        WebWireContentHost.prototype.debug = function() {
             return {
-                panelInjected: this.panel.isReady(),
-                mcpConnected: this.mcpConnector ? true : false,
-                aiClientConfigured: this.aiClient ? true : false,
+                panelInjected: this.chatService.isReady(),
+                mcpConnected: this.chatService.mcpConnector ? true : false,
+                aiClientConfigured: this.chatService.aiClient ? true : false,
                 currentThreadId: this.currentThreadId,
                 frameworkReady: true,
-                streamingActive: this.streamingState.isActive,
-                currentContent: this.streamingState.currentContent,
-                currentSettings: this.currentSettings
+                streamingActive: this.chatService.streamingState.isActive,
+                currentContent: this.chatService.streamingState.currentContent,
+                currentSettings: this.currentSettings,
+                eventBusReady: this.eventBus ? true : false,
+                totalEventListeners: this.eventBus ? this.eventBus.getTotalListeners() : 0
             };
         };
 
         /**
          * Force inject the panel
          */
-        WebWireContentScript.prototype.forceInject = function() {
+        WebWireContentHost.prototype.forceInject = function() {
             console.log('Force injecting WebWire panel...');
             return this.injectPanel();
         };
@@ -57,15 +59,15 @@ export function setupDebugMethods(WebWireContentScript) {
         /**
          * Force toggle the panel
          */
-        WebWireContentScript.prototype.forceToggle = function() {
+        WebWireContentHost.prototype.forceToggle = function() {
             console.log('Force toggling WebWire panel...');
-            this.togglePanel();
+            this.chatService.togglePanel();
         };
 
         /**
          * Get current page information
          */
-        WebWireContentScript.prototype.getPageInfo = function() {
+        WebWireContentHost.prototype.getPageInfo = function() {
             console.log('Getting page content...');
             return pageUtils.getCurrentPageContent();
         };
@@ -73,7 +75,7 @@ export function setupDebugMethods(WebWireContentScript) {
         /**
          * Debug message enhancement functionality
          */
-        WebWireContentScript.prototype.debugMessageEnhancement = function(testMessage = 'Test message') {
+        WebWireContentHost.prototype.debugMessageEnhancement = function(testMessage = 'Test message') {
             console.log('=== WebWire Message Enhancement Debug ===');
             const original = testMessage;
             const enhanced = pageUtils.enhanceMessageWithContext(testMessage);
@@ -92,22 +94,22 @@ export function setupDebugMethods(WebWireContentScript) {
         /**
          * Debug panel persistence functionality
          */
-        WebWireContentScript.prototype.debugPanelPersistence = function() {
+        WebWireContentHost.prototype.debugPanelPersistence = function() {
             console.log('=== WebWire Panel Persistence Debug ===');
-            console.log('Current panel visible state:', this.panel.isVisible);
+            console.log('Current panel visible state:', this.chatService.panel.isVisible);
             
             const testActions = {
                 showPanel: () => {
                     console.log('Testing: Show panel (will persist state to background)');
-                    return this.showPanel();
+                    return this.chatService.showPanel();
                 },
                 hidePanel: () => {
                     console.log('Testing: Hide panel (will persist state to background)');
-                    return this.hidePanel();
+                    return this.chatService.hidePanel();
                 },
                 togglePanel: () => {
                     console.log('Testing: Toggle panel (will persist state to background)');
-                    return this.togglePanel();
+                    return this.chatService.togglePanel();
                 },
                 checkBackgroundState: async () => {
                     console.log('Testing: Check background state');
@@ -122,10 +124,10 @@ export function setupDebugMethods(WebWireContentScript) {
                     const shouldShow = state?.ui?.panelVisible || false;
                     console.log('Should show panel:', shouldShow);
                     if (shouldShow) {
-                        this.panel.show();
+                        this.chatService.showPanel();
                         console.log('Panel restored to visible state');
                     } else {
-                        this.panel.hide();
+                        this.chatService.hidePanel();
                         console.log('Panel restored to hidden state');
                     }
                     return shouldShow;
@@ -139,19 +141,86 @@ export function setupDebugMethods(WebWireContentScript) {
             return testActions;
         };
 
-        console.log('[WebWire Debug] Debug methods attached to WebWireContentScript prototype');
+        /**
+         * Debug event system functionality
+         */
+        WebWireContentHost.prototype.debugEventSystem = function() {
+            console.log('=== WebWire Event System Debug ===');
+            
+            const eventBusStats = {
+                totalListeners: this.eventBus.getTotalListeners(),
+                eventNames: this.eventBus.getEventNames(),
+                listenerCounts: {}
+            };
+            
+            // Get listener counts for each event
+            for (const eventName of eventBusStats.eventNames) {
+                eventBusStats.listenerCounts[eventName] = this.eventBus.listenerCount(eventName);
+            }
+            
+            console.log('Event Bus Statistics:', eventBusStats);
+            
+            const testActions = {
+                sendTestMessage: (message = 'Test message from debug') => {
+                    console.log('Testing: Send test message to ChatService');
+                    this.eventBus.emit('chat:send-message', { message });
+                },
+                triggerPageAnalysis: () => {
+                    console.log('Testing: Trigger page analysis');
+                    this.eventBus.emit('chat:analyze-page', {});
+                },
+                testSettingsUpdate: (testSettings = { test: true }) => {
+                    console.log('Testing: Settings update event');
+                    this.eventBus.emit('chat:update-settings', { settings: testSettings });
+                },
+                listAllEvents: () => {
+                    console.log('All registered events:', this.eventBus.getEventNames());
+                    return this.eventBus.getEventNames();
+                }
+            };
+            
+            console.log('Available test actions:', Object.keys(testActions));
+            console.log('Usage: webwire.debugEventSystem().sendTestMessage("Hello!")');
+            
+            return testActions;
+        };
+
+        /**
+         * Debug ChatService functionality
+         */
+        WebWireContentHost.prototype.debugChatService = function() {
+            console.log('=== WebWire ChatService Debug ===');
+            
+            const chatServiceState = {
+                isReady: this.chatService.isReady(),
+                hasAIClient: this.chatService.aiClient ? true : false,
+                hasMCPConnector: this.chatService.mcpConnector ? true : false,
+                currentSettings: this.chatService.currentSettings,
+                streamingState: this.chatService.streamingState
+            };
+            
+            console.log('ChatService State:', chatServiceState);
+            
+            return {
+                chatService: this.chatService,
+                state: chatServiceState,
+                panel: this.chatService.panel
+            };
+        };
+
+        console.log('[WebWire Debug] Debug methods attached to WebWireContentHost prototype');
     }
 }
 
 /**
  * Setup global debug access on the window object
- * @param {Object} instance - The WebWire content script instance
+ * @param {Object} instance - The WebWire content host instance
  */
 export function setupGlobalDebugAccess(instance) {
     if (typeof window !== 'undefined') {
-        window.webwireContentScript = instance;
+        window.webwireContentHost = instance;
         window.webwire = instance; // Shorter alias
-        console.log('WebWire hooked to window.webwireContentScript and window.webwire');
+        console.log('WebWire hooked to window.webwireContentHost and window.webwire');
         
         // Store instance for debug functions
         setWebWireInstance(instance);

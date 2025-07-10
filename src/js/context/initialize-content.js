@@ -31,9 +31,9 @@ export async function initializeContent(dispatcher) {
   const mcpUrl = stateService.state.settings?.mcp?.serverUrl;
   const autoConnect = stateService.state.settings?.mcp?.autoConnect;
   if (mcpUrl && autoConnect) {
-    mcpConnector = new MCPConnector(mcpUrl, stateService);
+    mcpConnector = new MCPConnector(mcpUrl);
     try {
-      await mcpConnector.initialize();
+      await mcpConnector.initialize(stateService);
     } catch (error) {
       console.warn('[Content] MCP auto-connect failed:', error);
     }

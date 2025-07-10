@@ -7,7 +7,8 @@ import { MCPConnector } from '../mcp/mcp-connector.js';
  * MCPConnector (data/business logic) and the MCPControlPanel (UI/view logic).
  */
 export class WebWireClientCore {
-    constructor() {
+    constructor(eventBus) {
+        this.eventBus = eventBus;
         this.stateService = null;
         this.mcpConnector = null;
         this.aiClient = null;
@@ -28,12 +29,14 @@ export class WebWireClientCore {
             aiClient,
             chatState,
             sendToContent
-        } = await initializeContext();
+        } = await initializeContext(this.eventBus);
         this.stateService = stateService;
         this.storage = storage;
         this.aiClient = aiClient;
         this.chatState = chatState;
         this.sendToContent = sendToContent;
+
+        console.log('[WebWireClientCore] StateService:', this.stateService, 'storage:', this.storage, 'aiClient:', this.aiClient, 'chatState:', this.chatState, 'sendToContent:', this.sendToContent);
 
         await this.stateService.settings.loadSettings();
         await this.stateService.disk.loadFromStorage();
@@ -48,8 +51,8 @@ export class WebWireClientCore {
         console.log(`[WebWireClientCore] Attempting to connect to: ${this.serverUrl}`);
 
         try {
-            this.mcpConnector = new MCPConnector(this.serverUrl, this.stateService);
-            await this.mcpConnector.initialize();
+            this.mcpConnector = new MCPConnector(this.serverUrl);
+            await this.mcpConnector.initialize(this.stateService);
 
             console.log('[WebWireClientCore] Connection successful.');
 

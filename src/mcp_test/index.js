@@ -5,6 +5,7 @@ import MCPConnector from '../js/mcp/mcp-connector.js';
 import { ToolParser } from '../js/mcp/tool-parser.js';
 import { ToolFormatter } from '../js/mcp/tool-formatter.js';
 import { AIClientFactory } from '../js/ai/ai-client-factory.js';
+import { EventBus } from '../js/core/event-bus.js';
 
 /**
  * MCP Test Application - Main business logic for testing MCP server connections.
@@ -25,6 +26,7 @@ import { AIClientFactory } from '../js/ai/ai-client-factory.js';
 class MCPTestApp {
     constructor() {
         this.panel = new MCPTestPanel();
+        this.eventBus = new EventBus();
         this.storage = null;
         this.stateService = null;
         this.dispatcher = null;
@@ -42,7 +44,7 @@ class MCPTestApp {
         
         try {
 
-            const { dispatcher, stateService, storage } = await initializeContext();
+            const { dispatcher, stateService, storage } = await initializeContext(this.eventBus);
             this.dispatcher = dispatcher;
             this.stateService = stateService;
             this.storage = storage;

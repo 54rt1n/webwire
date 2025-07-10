@@ -6,16 +6,15 @@ import { initializePanel } from './initialize-panel.js';
 import { EventDispatcher } from '../core/event-dispatcher.js';
 import { EVENT_CONTEXT } from '../core/events.js';
 import { EventErrorBoundary } from '../core/error-boundary.js';
-import { EventBus } from '../core/event-bus.js';
 
-export async function initializeContext(context = null) {
+export async function initializeContext(eventBus, context = null) {
   if (context === null) {
     context = detectContext();
   }
-  const eventBus = new EventBus();
-  
   const dispatcher = new EventDispatcher(context, eventBus);
   const errorBoundary = new EventErrorBoundary(dispatcher);
+
+  console.log('[ContextInit] Context:', context);
   
   // Context-specific setup
   let results = {};
@@ -68,13 +67,15 @@ export async function initializeContext(context = null) {
 
 function detectContext() {
   if (typeof chrome !== 'undefined' && chrome.runtime?.getBackgroundPage) {
+    return EVENT_CONTEXT.PANEL;
+    console.log('[ContextInit] Detected background context', chrome.runtime);
     return EVENT_CONTEXT.BACKGROUND;
   }
   if (typeof chrome !== 'undefined' && chrome.tabs) {
     return EVENT_CONTEXT.POPUP;
   }
   if (window.location.href.includes('chrome-extension://')) {
-    return EVENT_CONTEXT.POPUP;
+    return EVENT_CONTEXT.PANEL;
   }
   if (window.parent !== window) {
     return EVENT_CONTEXT.PANEL;

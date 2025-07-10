@@ -1,8 +1,7 @@
 import '../shared/global.scss';
 import './style.css';
-import { textViewModal } from './textview-modal.js';
+import { TextViewModal } from './textview-modal.js';
 import { GraphDraw } from './graph-draw.js';
-import { documentModal } from './document-modal.js';
 import { StashButton } from './stash-button.js';
 import { EVENTS } from '../js/core/events.js';
 
@@ -13,14 +12,16 @@ import { EVENTS } from '../js/core/events.js';
  * receives data and renders it to the DOM.
  */
 export class MCPControlPanel {
-    constructor() {
+    constructor(eventBus) {
         this._cacheDOMElements();
+        this.eventBus = eventBus;
         this.selectedList = null;
         this.selectedFile = null; // Track currently selected file
         this.selectedKbNode = null; // Track currently selected KB node
         this.selectedListItem = null; // Track currently selected list item
         this.graphDraw = null;      // Graph visualization instance
         this.stateService = null;   // State service for stash functionality
+        this.textViewModal = new TextViewModal(this.eventBus, this.stateService);
     }
 
     /**
@@ -43,6 +44,7 @@ export class MCPControlPanel {
 
         // Buttons
         this.reconnectBtn = document.getElementById('reconnect-btn');
+        this.toggleChatBtn = document.getElementById('toggle-chat-btn');
         this.refreshHealthBtn = document.getElementById('refresh-health-btn');
         this.refreshFsBtn = document.getElementById('refresh-fs-btn');
         this.openFileBtn = document.getElementById('open-file-btn');
@@ -73,6 +75,7 @@ export class MCPControlPanel {
     initialize(handlers) {
         this._storeHandlers(handlers); // Add this line
         this.reconnectBtn.addEventListener('click', handlers.onReconnect);
+        this.toggleChatBtn.addEventListener('click', handlers.onToggleChat);
         this.refreshHealthBtn.addEventListener('click', handlers.onRefreshHealth);
         this.refreshFsBtn.addEventListener('click', handlers.onRefreshFs);
         this.openFileBtn.addEventListener('click', () => {
@@ -578,7 +581,7 @@ export class MCPControlPanel {
         this.stateService = stateService;
         this.saveStashFn = saveStashFn;
         // Also set for the textview modal
-        textViewModal.setStateService(stateService, saveStashFn);
+        this.textViewModal.setStateService(this.eventBus, stateService, saveStashFn);
         
         // Initialize stash buttons for dashboard
         this._initializeStashButtons();
@@ -680,7 +683,7 @@ export class MCPControlPanel {
         container.innerHTML = '';
         
         // Create new stash button
-        this.fileStashButton = new StashButton(this.stateService);
+        this.fileStashButton = new StashButton(this.eventBus, this.stateService);
         const button = this.fileStashButton.create(filePath, 'fs', {
             size: 'icon',
             onToggle: async (stashedUri, isStashed) => {
@@ -727,7 +730,7 @@ export class MCPControlPanel {
         container.innerHTML = '';
         
         // Create new stash button
-        this.kbStashButton = new StashButton(this.stateService);
+        this.kbStashButton = new StashButton(this.eventBus, this.stateService);
         const button = this.kbStashButton.create(uri, 'kb', {
             size: 'icon',
             onToggle: async (stashedUri, isStashed) => {
@@ -766,7 +769,7 @@ export class MCPControlPanel {
         if (!this.stateService || !this.stateService.stash) return false;
         
         const fullUri = `fs://${filePath}`;
-        const stashItems = this.stateService.stash.getAll('mcp');
+        const stashItems = this.stateService.stash.getAllURIs('mcp');
         return stashItems.includes(fullUri);
     }
 
@@ -781,7 +784,7 @@ export class MCPControlPanel {
         
         // KB URIs already have kb:// prefix, so use as-is
         const fullUri = uri.startsWith('kb://') ? uri : `kb://${uri}`;
-        const stashItems = this.stateService.stash.getAll('mcp');
+        const stashItems = this.stateService.stash.getAllURIs('mcp');
         return stashItems.includes(fullUri);
     }
 
@@ -797,7 +800,7 @@ export class MCPControlPanel {
         // Convert listName:itemIndex to list://listName/itemIndex
         const [listName, itemIndex] = itemUri.split(':');
         const fullUri = `list://${listName}/${itemIndex}`;
-        const stashItems = this.stateService.stash.getAll('mcp');
+        const stashItems = this.stateService.stash.getAllURIs('mcp');
         return stashItems.includes(fullUri);
     }
 
@@ -844,7 +847,7 @@ export class MCPControlPanel {
         container.innerHTML = '';
         
         // Create new stash button
-        this.listStashButton = new StashButton(this.stateService);
+        this.listStashButton = new StashButton(this.eventBus, this.stateService);
         const button = this.listStashButton.create(itemUri, 'list', {
             size: 'icon',
             onToggle: async (stashedUri, isStashed) => {

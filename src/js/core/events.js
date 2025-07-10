@@ -72,6 +72,9 @@ export const EVENTS = {
         CHANGED: 'ui:changed'
     },
     STASH: {
+        ADD: 'stash:add',
+        REMOVE: 'stash:remove',
+        CLEAR_ALL: 'stash:clear-all',
         UPDATED: 'stash:updated',
         CLEARED: 'stash:cleared',
         CLEARED_ALL: 'stash:cleared_all',

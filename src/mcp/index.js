@@ -1,16 +1,28 @@
 import { MCPControlPanel } from './panel.js';
 import { WebWireClientCore } from '../js/client/webwire-client-core.js';
 import { documentModal } from './document-modal.js';
+import { ChatService } from '../chat/chat-service.js';
+import { EventBus } from '../js/core/event-bus.js';
+import '../chat/chat.css'; // Import chat panel styles
 
 /**
  * MCPControlPanelApp
  * The main controller for the MCP Control Panel. This class wires together the
  * MCPConnector (data/business logic) and the MCPControlPanel (UI/view logic).
+ * Now also includes WebWire ChatService integration.
  */
 class MCPControlPanelApp {
     constructor() {
-        this.core = new WebWireClientCore();    
-        this.panel = new MCPControlPanel();
+        // Add ChatService integration
+        this.eventBus = new EventBus();
+        this.core = new WebWireClientCore(this.eventBus);    
+        this.panel = new MCPControlPanel(this.eventBus);
+        
+        this.chatService = new ChatService(this.eventBus);
+        
+        // Setup chat service event handling
+        this.setupChatServiceEvents();
+        this.setupPanelMessageBridge();
     }
 
     /**
@@ -27,9 +39,38 @@ class MCPControlPanelApp {
             await this.loadStash();
             documentModal.setStateService(this.core.stateService);
             this.panel.setStateService(this.core.stateService, this.saveStash.bind(this));
+            
+            // Set MCP connector for stash service if available
+            if (this.core.mcpConnector && this.core.stateService.stash) {
+                this.core.stateService.stash.setMCPConnector(this.core.mcpConnector);
+                console.log('[MCPApp] MCP connector connected to stash service');
+            }
         }
 
-        // 3. Setup UI event handlers
+        // 3. Initialize ChatService
+        console.log('[MCPApp] Initializing ChatService...');
+        await this.chatService.initialize(this.core.aiClient, this.core.mcpConnector, this.core.stateService);
+        
+        // 4. Update ChatService with current settings if available
+        if (this.core.stateService && this.core.stateService.settings) {
+            const settings = this.core.stateService.settings.getSettings();
+            if (settings) {
+                this.chatService.handleSettingsUpdate({ settings });
+            }
+        }
+        
+        // 5. Show the chat panel by default (for debugging)
+        console.log('[MCPApp] Showing chat panel...');
+        setTimeout(() => {
+            if (this.chatService.isReady()) {
+                this.chatService.showPanel();
+                console.log('[MCPApp] Chat panel should now be visible');
+            } else {
+                console.warn('[MCPApp] ChatService not ready when trying to show panel');
+            }
+        }, 1000); // Give it a moment to fully initialize
+        
+        // 6. Setup UI event handlers
         const handlers = {
             onReconnect: this.connect.bind(this),
             onRefreshHealth: this.fetchHealthCheck.bind(this),
@@ -39,11 +80,132 @@ class MCPControlPanelApp {
             onRefreshLists: this.fetchLists.bind(this),
             onSelectList: this.fetchListContent.bind(this),
             onOpenKbDocument: this.openKbDocument.bind(this),
+            onToggleChat: this.toggleChat.bind(this),
         };
         this.panel.initialize(handlers);
 
-        // 4. Attempt to auto-connect
+        // 6. Attempt to auto-connect
         await this.connect();
+        
+        console.log('[MCPApp] Initialization complete');
+    }
+
+    /**
+     * Setup message bridge between WebWirePanel (window.postMessage) and ChatService (event bus)
+     */
+    setupPanelMessageBridge() {
+        console.log('[MCPApp] Setting up panel message bridge...');
+        
+        // Listen for window messages from the WebWirePanel
+        window.addEventListener('message', (event) => {
+            // Only handle our panel messages
+            if (event.data && event.data.type === 'WEBWIRE_PANEL_MESSAGE') {
+                console.log('[MCPApp] Received panel message:', event.data);
+                
+                const { action, data } = event.data;
+                
+                switch (action) {
+                    case 'SEND_CHAT_MESSAGE':
+                        console.log('[MCPApp] Bridging chat message to event bus:', data);
+                        this.eventBus.emit('chat:send-message', { message: data.message });
+                        break;
+                        
+                    case 'ANALYZE_PAGE_CONTENT':
+                        console.log('[MCPApp] Bridging page analysis to event bus');
+                        this.eventBus.emit('chat:analyze-page', {});
+                        break;
+                        
+                    case 'START_NEW_CONVERSATION':
+                        console.log('[MCPApp] Starting new conversation');
+                        this.startNewConversation();
+                        break;
+                        
+                    case 'CONNECT_MCP':
+                        console.log('[MCPApp] MCP connect requested from panel');
+                        this.connect();
+                        break;
+                        
+                    case 'DISCONNECT_MCP':
+                        console.log('[MCPApp] MCP disconnect requested from panel');
+                        // Add disconnect logic if needed
+                        break;
+                        
+                    default:
+                        console.log('[MCPApp] Unhandled panel action:', action, data);
+                }
+            }
+        });
+        
+        console.log('[MCPApp] Panel message bridge set up');
+    }
+
+    /**
+     * Setup stash event handlers for MCP integration
+     */
+    setupStashEventHandlers() {
+        // Handle stash add requests
+        this.eventBus.on('stash:add', async (data) => {
+            console.log('[MCPApp] Handling stash add request:', data);
+            await this.handleStashAdd(data);
+        });
+
+        // Handle stash remove requests
+        this.eventBus.on('stash:remove', (data) => {
+            console.log('[MCPApp] Handling stash remove request:', data);
+            this.handleStashRemove(data);
+        });
+
+        // Handle stash clear all requests
+        this.eventBus.on('stash:clear-all', () => {
+            console.log('[MCPApp] Handling stash clear all request');
+            this.handleStashClearAll();
+        });
+    }
+
+    /**
+     * Setup event handling between ChatService and MCP components
+     */
+    setupChatServiceEvents() {
+        // Handle outbound requests from ChatService
+        this.eventBus.on('dispatch:outbound', async (payload) => {
+            console.log('[MCPApp] Handling outbound dispatch:', payload);
+            
+            const { target, event, data } = payload;
+            
+            if (target === 'background') {
+                // For now, we'll handle some events locally since we're in a standalone app
+                // In a full Chrome extension, these would go to the background script
+                switch (event) {
+                    case 'threads:get-or-create':
+                        await this.handleGetOrCreateThread(data);
+                        break;
+                    case 'threads:save-message':
+                        await this.handleSaveMessage(data);
+                        break;
+                    case 'ui:save-panel-visibility':
+                        console.log('[MCPApp] Panel visibility (would go to background):', data);
+                        break;
+                }
+            } else if (target === 'host') {
+                switch (event) {
+                    case 'ui:inject-panel':
+                        // Panel should already be injected, just show it
+                        this.chatService.showPanel();
+                        break;
+                }
+            }
+        });
+        
+        // Pass MCP connection status to ChatService
+        this.eventBus.on('mcp:connection-changed', (status) => {
+            this.chatService.handleMCPStatusUpdate({
+                isConnected: status.connected,
+                tools: status.tools || []
+            });
+        });
+
+        // Handle stash events
+        this.setupStashEventHandlers();
     }
 
     /**
@@ -54,9 +216,42 @@ class MCPControlPanelApp {
         const success = await this.core.connect();
         if (success) {
             this.panel.renderConnectionStatus('connected', this.core.serverUrl);
+            
+            // Share MCP connector with ChatService and StashService
+            if (this.core.mcpConnector) {
+                this.chatService.mcpConnector = this.core.mcpConnector;
+                console.log('[MCPApp] Shared MCP connector with ChatService after connection');
+                
+                // Also set MCP connector for stash service
+                if (this.core.stateService && this.core.stateService.stash) {
+                    this.core.stateService.stash.setMCPConnector(this.core.mcpConnector);
+                    console.log('[MCPApp] MCP connector connected to stash service after connection');
+                }
+                
+                try {
+                    const tools = await this.core.stateService.mcp.getMcpTools();
+                    this.eventBus.emit('mcp:connection-changed', {
+                        connected: true,
+                        tools: tools || []
+                    });
+                } catch (error) {
+                    console.warn('[MCPApp] Failed to get MCP tools:', error);
+                    this.eventBus.emit('mcp:connection-changed', {
+                        connected: true,
+                        tools: []
+                    });
+                }
+            }
+            
             this.fetchAllData();
         } else {
             this.panel.renderConnectionStatus('disconnected', `Failed: ${error.message}`);
+            
+            // Notify ChatService about MCP disconnection
+            this.eventBus.emit('mcp:connection-changed', {
+                connected: false,
+                tools: []
+            });
         }
     }
 
@@ -263,6 +458,164 @@ class MCPControlPanelApp {
     }
 
     /**
+     * Toggle the chat panel visibility
+     */
+    toggleChat() {
+        console.log('[MCPApp] Toggling chat panel...');
+        if (this.chatService && this.chatService.isReady()) {
+            this.chatService.togglePanel();
+        } else {
+            console.warn('[MCPApp] ChatService not ready for toggle');
+        }
+    }
+
+    /**
+     * Start a new conversation
+     */
+    async startNewConversation() {
+        console.log('[MCPApp] Starting new conversation...');
+        
+        if (!this.core.stateService || !this.core.stateService.conversation) {
+            console.error('[MCPApp] No conversation state service available');
+            return;
+        }
+
+        try {
+            // Create a new conversation (force new, don't reuse existing)
+            const currentUser = this.core.stateService.state.settings?.aim?.userName || 'User';
+            const currentPersona = this.core.stateService.state.settings?.aim?.personaName || 'WebWire Assistant';
+            
+            const newConversationId = this.core.stateService.conversation.createThreadId(currentUser, currentPersona);
+            
+            // Initialize the new conversation
+            this.core.stateService.conversation.storeMessage(
+                newConversationId,
+                { role: 'system', content: '' }, // Placeholder to initialize
+                null,
+                {
+                    userName: currentUser,
+                    personaName: currentPersona,
+                    title: `Page: ${document.title}`,
+                    url: window.location.href,
+                    location: window.location.href
+                }
+            );
+
+            // Remove the placeholder system message
+            this.core.stateService.state.conversation.history[newConversationId] = [];
+            
+            // Set as active (deactivates previous conversations)
+            this.core.stateService.conversation.setActiveConversation(newConversationId);
+            
+            console.log('[MCPApp] Created new conversation:', newConversationId);
+            
+            // Notify ChatService about the new conversation
+            this.eventBus.emit('chat:conversation-loaded', {
+                conversation: {
+                    threadId: newConversationId,
+                    messages: []
+                }
+            });
+
+        } catch (error) {
+            console.error('[MCPApp] Failed to start new conversation:', error);
+        }
+    }
+
+    /**
+     * Handle get or create thread request from ChatService
+     */
+    async handleGetOrCreateThread(data) {
+        console.log('[MCPApp] Getting or creating thread:', data);
+        
+        if (!this.core.stateService || !this.core.stateService.conversation) {
+            console.error('[MCPApp] No conversation state service available');
+            return;
+        }
+
+        try {
+            // Get or create conversation using the conversation state plugin
+            const conversationId = this.core.stateService.conversation.getOrCreateCurrentConversation({
+                title: data.title || `Page: ${data.url || 'Unknown'}`,
+                url: data.url,
+                location: data.url
+            });
+
+            console.log('[MCPApp] Thread ID:', conversationId);
+
+            // Get existing conversation messages
+            const messages = this.core.stateService.conversation.getConversationMessages(conversationId);
+            
+            // Send conversation to ChatService
+            console.log('[MCPApp] Emitting chat:conversation-loaded event with threadId:', conversationId);
+            this.eventBus.emit('chat:conversation-loaded', {
+                conversation: {
+                    threadId: conversationId,
+                    messages: messages
+                }
+            });
+
+        } catch (error) {
+            console.error('[MCPApp] Failed to get or create thread:', error);
+        }
+    }
+
+    /**
+     * Handle save message request from ChatService
+     */
+    async handleSaveMessage(data) {
+        console.log('[MCPApp] Saving message:', data);
+        
+        if (!this.core.stateService || !this.core.stateService.conversation) {
+            console.error('[MCPApp] No conversation state service available');
+            return;
+        }
+
+        try {
+            const { userMessage, assistantMessage, options } = data;
+            
+            // Get current active conversation ID
+            let conversationId = this.core.stateService.conversation.getActiveConversationId();
+            
+            // If no active conversation, create one
+            if (!conversationId) {
+                conversationId = this.core.stateService.conversation.getOrCreateCurrentConversation({
+                    title: options.title || `Page: ${options.url || 'Unknown'}`,
+                    url: options.url,
+                    location: options.location
+                });
+            }
+
+            // Store the message pair
+            this.core.stateService.conversation.storeMessage(
+                conversationId,
+                userMessage,
+                assistantMessage,
+                {
+                    userName: options.userName || 'User',
+                    personaName: options.personaName || 'WebWire Assistant',
+                    mood: options.mood,
+                    location: options.location,
+                    timestamp: options.timestamp || Date.now(),
+                    toolResults: options.toolResults || [],
+                    toolCalls: options.toolCalls || [],
+                    parseErrors: options.parseErrors || []
+                }
+            );
+
+            console.log(`[MCPApp] Message saved to conversation ${conversationId}`);
+
+            // Update ChatService with the conversation ID
+            this.eventBus.emit('chat:conversation-updated', {
+                conversationId: conversationId
+            });
+
+        } catch (error) {
+            console.error('[MCPApp] Failed to save message:', error);
+        }
+    }
+
+    /**
      * Load stash data from storage
      */
     async loadStash() {
@@ -274,6 +627,111 @@ class MCPControlPanelApp {
         } catch (error) {
             console.error('[MCPApp] Failed to load stash data:', error);
         }
+    }
+
+    /**
+     * Handle stash add request by fetching content and storing it
+     * @param {Object} data - { uri, source }
+     */
+    async handleStashAdd(data) {
+        if (!this.core.stateService || !this.core.stateService.stash) {
+            console.error('[MCPApp] No stash service available');
+            return;
+        }
+
+        const { uri, source } = data;
+
+        try {
+            let content = null;
+
+            switch (source) {
+                case 'kb':
+                    content = await this.core.stateService.stash.fetchKbContent(uri);
+                    break;
+                case 'fs':
+                    // Extract path from fs://path format
+                    const path = uri.startsWith('fs://') ? uri.substring(5) : uri;
+                    content = await this.core.stateService.stash.fetchFsContent(path);
+                    break;
+                case 'list':
+                    // For lists, extract content from the already-displayed panel data
+                    const listPath = uri.startsWith('list://') ? uri.substring(7) : uri;
+                    const [listName, itemIndex] = listPath.includes('/') ? 
+                        listPath.split('/') : 
+                        listPath.split(':');
+                    
+                    if (itemIndex !== undefined) {
+                        // Extract from DOM - panel already has the data displayed
+                        const listItemElement = this.panel.listContentView.querySelector(`[data-item-uri="${listName}:${itemIndex}"]`);
+                        if (listItemElement) {
+                            const statusElement = listItemElement.querySelector('.item-status');
+                            const textElement = listItemElement.querySelector('.item-text');
+                            
+                            if (statusElement && textElement) {
+                                const status = statusElement.textContent.trim();
+                                const text = textElement.textContent.trim();
+                                content = `[${status}] ${text}`;
+                                this.core.stateService.stash.set(uri, content);
+                            }
+                        }
+                    } else {
+                        // For entire list, use list title from panel
+                        const listTitle = this.panel.listContentTitle.textContent;
+                        const itemCount = this.panel.listContentView.querySelectorAll('.list-item').length;
+                        content = `List: ${listTitle} (${itemCount} items)`;
+                        this.core.stateService.stash.set(uri, content);
+                    }
+                    break;
+                default:
+                    console.warn('[MCPApp] Unknown stash source:', source);
+                    return;
+            }
+
+            if (content !== null) {
+                console.log(`[MCPApp] Successfully stashed ${uri} (${content.length} chars)`);
+                await this.saveStash();
+            } else {
+                console.warn(`[MCPApp] Failed to fetch content for ${uri}`);
+            }
+
+        } catch (error) {
+            console.error(`[MCPApp] Error stashing ${uri}:`, error);
+        }
+    }
+
+    /**
+     * Handle stash remove request
+     * @param {Object} data - { uri, source }
+     */
+    handleStashRemove(data) {
+        if (!this.core.stateService || !this.core.stateService.stash) {
+            console.error('[MCPApp] No stash service available');
+            return;
+        }
+
+        const { uri } = data;
+        const removed = this.core.stateService.stash.delete(uri);
+        
+        if (removed) {
+            console.log(`[MCPApp] Removed ${uri} from stash`);
+            this.saveStash();
+        } else {
+            console.log(`[MCPApp] ${uri} was not in stash`);
+        }
+    }
+
+    /**
+     * Handle stash clear all request
+     */
+    handleStashClearAll() {
+        if (!this.core.stateService || !this.core.stateService.stash) {
+            console.error('[MCPApp] No stash service available');
+            return;
+        }
+
+        this.core.stateService.stash.clearAll();
+        console.log('[MCPApp] Cleared all stash content');
+        this.saveStash();
     }
 
     /**
