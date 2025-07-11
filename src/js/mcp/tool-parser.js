@@ -1,3 +1,5 @@
+import { generateToolCallId } from '../utils/id-generator.js';
+
 /**
  * Parser for extracting MCP tool calls from AI responses with JSON code blocks.
  * Handles multiple tool calls, error recovery, fuzzy matching, and validation
@@ -80,6 +82,7 @@ export class ToolParser {
      */
     parseResponse(response) {
         const result = {
+            callId: generateToolCallId(),
             success: false,
             toolCalls: [],
             errors: [],
@@ -146,9 +149,7 @@ export class ToolParser {
             }
 
             try {
-                console.log('[ToolParser] Parsing JSON code block:', jsonString);
                 const preprocessed = this.preprocessJsonString(jsonString);
-                console.log('[ToolParser] Preprocessed JSON:', preprocessed);
                 const parsed = JSON.parse(preprocessed);
                 console.log('[ToolParser] Parsed tool call:', parsed);
                 const validation = this.validateToolCall(parsed);

@@ -1,4 +1,5 @@
 import { EVENTS } from '../js/core/events.js';
+import { generateMessageId } from '../js/utils/id-generator.js';
 
 /**
  * WebWire Panel - Manages the chat panel UI and interactions
@@ -391,8 +392,8 @@ export class WebWirePanel {
         const messageEl = document.createElement('div');
         messageEl.className = `chat-message ${message.role}`;
         
-        if (message.id) {
-            messageEl.id = `message-${message.id}`;
+        if (message.messageId) {
+            messageEl.id = message.messageId;
         }
 
         // For error messages, don't escape HTML since they contain intentional formatting
@@ -427,7 +428,7 @@ export class WebWirePanel {
 
         const messageEl = document.createElement('div');
         messageEl.className = 'chat-message thinking';
-        messageEl.id = `message-${message.id}`;
+        messageEl.id = message.messageId;
 
         const time = new Date().toLocaleTimeString([], {
             hour: '2-digit', 
@@ -453,7 +454,7 @@ export class WebWirePanel {
      * Update a streaming message with new content
      */
     updateStreamingMessage(messageId, content) {
-        const messageEl = this.container.querySelector(`#message-${messageId}`);
+        const messageEl = this.container.querySelector(`#${messageId}`);
         if (!messageEl) {
             console.log('[WebWirePanel] Message element not found:', messageId);
             return;
@@ -474,10 +475,10 @@ export class WebWirePanel {
     /**
      * Convert thinking message to final assistant message
      */
-    finalizeThinkingMessage(messageId, finalContent) {
-        console.log('[WebWirePanel] finalizeThinkingMessage called:', messageId, finalContent);
+    finalizeThinkingMessage(messageId, finalContent, toolMessages = []) {
+        console.log('[WebWirePanel] finalizeThinkingMessage called:', messageId, finalContent, toolMessages);
         
-        const messageEl = this.container.querySelector(`#message-${messageId}`);
+        const messageEl = this.container.querySelector(`#${messageId}`);
         if (!messageEl) {
             console.log('[WebWirePanel] Message element not found for finalization:', messageId);
             return;
@@ -488,7 +489,69 @@ export class WebWirePanel {
         
         const messageContent = messageEl.querySelector('.message-content');
         if (messageContent) {
-            const formattedContent = this.formatMessageContent(finalContent);
+            let formattedContent = this.formatMessageContent(finalContent);
+            if (toolMessages.length > 0) {
+                formattedContent += '<div class="tool-messages">';
+                for (const toolDisplayMessage of toolMessages) {
+                    const { display, ...toolMessage } = toolDisplayMessage;
+                    let toolMessageEl = document.createElement('div');
+                    toolMessageEl.id = toolMessage.callId;
+                    switch (display) {
+                        case 'success':
+                            toolMessageEl.className = 'tool-message success';
+                            toolMessageEl.innerHTML = `
+                                <div class="tool-name">${toolMessage.name}</div>
+                                <div class="tool-result">${toolMessage.result}</div>
+                            `;
+                            break;
+                        case 'error':
+                            toolMessageEl.className = 'tool-message error';
+                            toolMessageEl.innerHTML = `
+                                <div class="tool-name">${toolMessage.name}</div>
+                                <div class="tool-error">${toolMessage.error}</div>
+                            `;
+                            break;
+                        case 'pending':
+                        default:
+                            toolMessageEl.className = 'tool-message pending';
+                            // Pending is special because it gets two check, X buttons floating right we have to bind to the event bus
+                            toolMessageEl.innerHTML = `
+                                <div class="tool-name">${toolMessage.name}</div>
+                                <div class="tool-pending">
+                                    <button class="tool-execute-btn"> ✅ Execute</button>
+                                    <button class="tool-cancel-btn"> ❌ Cancel</button>
+                                </div>
+                            `;
+                            // Bind to the event bus, but we need to know the call id because we have multiple
+                            // tool messages
+                            const queryPrefix = `#${toolMessageEl.id}`;
+                            const eventBus = this.eventBus;
+                            // We have to do a slight delay to make sure the element is rendered
+                            setTimeout(() => {
+                                const executeBtn = document.querySelector(`${queryPrefix} .tool-execute-btn`);
+                                if (executeBtn) {
+                                    executeBtn.addEventListener('click', () => {
+                                        eventBus.emit(EVENTS.CHAT.EXECUTE_TOOL, { ...toolMessage });
+                                    });
+                                } else {
+                                    console.warn('[WebWirePanel] Tool execute button not found for:', toolMessage.callId);
+                                }
+                                const cancelBtn = document.querySelector(`${queryPrefix} .tool-cancel-btn`);
+                                if (cancelBtn) {
+                                    cancelBtn.addEventListener('click', () => {
+                                        eventBus.emit(EVENTS.CHAT.CANCEL_TOOL, { ...toolMessage });
+                                    });
+                                } else {
+                                    console.warn('[WebWirePanel] Tool cancel button not found for:', toolMessage.callId);
+                                }
+                            }, 1);
+                            break;
+                    }
+                    console.log('[WebWirePanel] toolMessageEl', toolMessageEl);
+                    formattedContent += toolMessageEl.outerHTML;
+                }
+                formattedContent += '</div>';
+            }
             messageContent.innerHTML = formattedContent;
         }
         
@@ -501,13 +564,25 @@ export class WebWirePanel {
     removeThinkingMessage(messageId) {
         console.log('[WebWirePanel] removeThinkingMessage called:', messageId);
         
-        const messageEl = this.container.querySelector(`#message-${messageId}`);
+        const messageEl = this.container.querySelector(`#${messageId}`);
         if (messageEl) {
             messageEl.remove();
             console.log('[WebWirePanel] Thinking message removed');
         } else {
             console.log('[WebWirePanel] Thinking message not found for removal:', messageId);
         }
+    }
+
+    /**
+     * Get last chat message element
+     */
+    getLastChatMessageElement() {
+        const chatMessages = this.container.querySelectorAll('.chat-message');
+        if (chatMessages.length > 0) {
+            return chatMessages[chatMessages.length - 1];
+        }
+        console.log('[WebWirePanel] No chat messages found', chatMessages);
+        return null;
     }
 
     /**
@@ -553,6 +628,9 @@ export class WebWirePanel {
 
         for (const message of conversation.messages) {
             if (message.role !== 'system') {
+                if (!message.messageId) {
+                    message.messageId = generateMessageId();
+                }
                 this.displayMessage(message);
             }
         }
@@ -712,13 +790,6 @@ export class WebWirePanel {
         if (this.elements.chatContent) {
             this.elements.chatContent.scrollTop = this.elements.chatContent.scrollHeight;
         }
-    }
-
-    /**
-     * Generate unique message ID
-     */
-    generateMessageId() {
-        return `msg-${++this.messageCounter}-${Date.now()}`;
     }
 
     /**

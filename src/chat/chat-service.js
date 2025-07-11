@@ -5,6 +5,7 @@ import { ToolParser } from '../js/mcp/tool-parser.js';
 import { ToolFormatter } from '../js/mcp/tool-formatter.js';
 import { WebWirePanel } from './chat-panel.js';
 import { PageUtils } from './page-utils.js';
+import { generateMessageId } from '../js/utils/id-generator.js';
 
 /**
  * WebWire Chat Service - Platform-Agnostic Core
@@ -113,7 +114,6 @@ export class ChatService {
      */
     async parseToolsFromResponse(response, tools) {
         // Parse for tool calls if MCP is connected
-        let toolResults = [];
         let toolCalls = [];
         let parseErrors = [];
         
@@ -121,19 +121,18 @@ export class ChatService {
             const parseResult = this.toolParser.parseResponse(response);
             if (parseResult.success && parseResult.toolCalls.length > 0) {
                 toolCalls = parseResult.toolCalls;
-                toolResults = await this.executeToolCalls(parseResult.toolCalls);
             } else if (parseResult.errors && parseResult.errors.length > 0) {
                 parseErrors = parseResult.errors;
             }
         }
 
-        return { toolResults, toolCalls, parseErrors };
+        return { toolCalls, parseErrors };
     }
 
     /**
      * Handle user message event
      */
-    async handleUserMessage(payload) {
+    async handleUserMessage(payload, { autoExecuteTools = false } = {}) {
         console.log('[ChatService] Handling user message:', payload);
         
         const { message, silent = false } = payload;
@@ -149,6 +148,7 @@ export class ChatService {
         try {
             // Prepare messages for API with conversation history
             let userMessage = {
+                messageId: generateMessageId(),
                 role: MESSAGE_ROLES.USER,
                 content: message,
                 timestamp: Date.now()
@@ -241,9 +241,6 @@ export class ChatService {
                 response = await this.aiClient.generateTurn(userMessage.content, messagesForAPI, { 
                     systemPrompt: systemPrompts.join('\n\n'),
                     maxHistory: 100, 
-                    samplerConfig: {
-                        maxTokens: 100
-                    }
                 });
 
                 if (!response) {
@@ -254,10 +251,16 @@ export class ChatService {
                 unsubscribeStream();
             }
 
-            // Finalize the thinking message with the complete response
-            this.finalizeStreamingMessage(thinkingMessage, response);
-            
-            const { toolResults, toolCalls, parseErrors } = await this.parseToolsFromResponse(response, tools);
+            const { toolCalls, parseErrors } = await this.parseToolsFromResponse(response, tools);
+
+            let toolResults = null;
+            if (autoExecuteTools) {
+                toolResults = [];
+                for (const toolCall of toolCalls) {
+                    const result = await this.handleExecuteToolCall({ toolCall });
+                    toolResults.push(result);
+                }
+            }
             
             const location = typeof window !== 'undefined' ? window.location.href : undefined;
 
@@ -275,10 +278,13 @@ export class ChatService {
                 role: MESSAGE_ROLES.ASSISTANT, 
                 content: response,
                 timestamp: userMessage.timestamp + 1,
-                toolResults,
                 toolCalls,
+                toolResults,
                 parseErrors
             };
+
+            // Finalize the thinking message with the complete response
+            this.finalizeStreamingMessage(thinkingMessage, userMsg, assistantMsg);
 
             this.lastMessage = message;
 
@@ -295,9 +301,6 @@ export class ChatService {
                     location: location,
                     url: location,
                     title: document.title,
-                    toolResults,
-                    toolCalls,
-                    parseErrors,
                 }}, { target: EVENT_CONTEXT.BACKGROUND }
             );
 
@@ -323,8 +326,14 @@ export class ChatService {
         console.log('[ChatService] Handling reparse message:', payload);
         const tools = this.stateService.mcp.getMcpTools();
         const lastAssistantMessage = this.currentConversation.messages[this.currentConversation.messages.length - 1];
-        const { toolResults, toolCalls, parseErrors } = await this.parseToolsFromResponse(lastAssistantMessage.content, tools);
-        console.log('[ChatService] Reparsed message:', toolResults, toolCalls, parseErrors, lastAssistantMessage);
+        const { toolCalls, parseErrors } = await this.parseToolsFromResponse(lastAssistantMessage.content, tools);
+        console.log('[ChatService] Reparsed message:', toolCalls, parseErrors, lastAssistantMessage);
+        const lastChatMessageElement = this.panel.getLastChatMessageElement();
+        if (lastChatMessageElement) {
+            this.panel.finalizeThinkingMessage(lastChatMessageElement.id, lastAssistantMessage.content, toolCalls);
+        } else {
+            console.warn('[ChatService] No last chat message element to finalize');
+        }
     }
 
     /**
@@ -451,44 +460,45 @@ export class ChatService {
     }
 
     /**
-     * Execute tool calls using MCP connector
+     * Handle execute tool call event
      */
-    async executeToolCalls(toolCalls) {
-        const results = [];
-        
-        for (const toolCall of toolCalls) {
-            try {
-                // Tool execution notification would be sent to panel
-                // But since panel is in same context, we can call directly
-                console.log(`[ChatService] Executing tool: ${toolCall.name}`);
+    async handleExecuteToolCall(payload) {
+        console.log('[ChatService] Handling execute tool call:', payload);
+        const { toolCall } = payload;
+        const result = null;
+        try {
+            // Tool execution notification would be sent to panel
+            // But since panel is in same context, we can call directly
+            console.log(`[ChatService] Executing tool: ${toolCall.name}`);
 
-                const result = await this.mcpConnector.executeTool(
-                    toolCall.name, 
-                    toolCall.parameters
-                );
+            const toolResponse = await this.mcpConnector.executeTool(
+                toolCall.name, 
+                toolCall.parameters
+            );
 
-                results.push({
-                    toolName: toolCall.name,
-                    parameters: toolCall.parameters,
-                    result,
-                    success: result.success,
-                    executionTime: result.executionTime
-                });
+            result = {
+                callId: toolCall.callId,
+                name: toolCall.name,
+                parameters: toolCall.parameters,
+                result: toolResponse,
+                success: result.success,
+                executionTime: result.executionTime
+            };
 
-                console.log(`[ChatService] Tool ${toolCall.name} executed successfully`);
+            console.log(`[ChatService] Tool ${toolCall.name} executed successfully`);
 
-            } catch (error) {
-                console.error(`[ChatService] Tool ${toolCall.name} execution failed:`, error);
-                results.push({
-                    toolName: toolCall.name,
-                    parameters: toolCall.parameters,
-                    success: false,
-                    error: error.message
-                });
-            }
+        } catch (error) {
+            console.error(`[ChatService] Tool ${toolCall.name} execution failed:`, error);
+            result = {
+                callId: toolCall.callId,
+                name: toolCall.name,
+                parameters: toolCall.parameters,
+                success: false,
+                error: error.message
+            };
         }
 
-        return results;
+        return result;
     }
 
     /**
@@ -572,13 +582,34 @@ export class ChatService {
     /**
      * Finalize streaming and clean up the thinking message
      */
-    finalizeStreamingMessage(messageHandle, finalContent) {
+    finalizeStreamingMessage(messageHandle, { content, toolCalls, toolResults, parseErrors, ...assistantMsg } = {}) {
         this.streamingState.isActive = false;
-        this.streamingState.currentMessage = null;
+        //this.streamingState.currentMessage = null;
         this.streamingState.streamingText = '';
+
+        let toolMessages = [];
+        for (const toolCall of toolCalls) {
+            const toolResult = toolResults.find(result => result.callId === toolCall.callId);
+            if (toolResult) {
+                if (toolResult.success) {
+                    display = 'success';
+                } else {
+                    display = 'error';
+                }
+                toolMessages.push({
+                    ...toolResult,
+                    display: display
+                });
+            } else {
+                toolMessages.push({
+                    ...toolCall,
+                    display: 'pending'
+                });
+            }
+        }
         
         // Finalize in panel
-        this.panel.finalizeThinkingMessage(messageHandle.id, finalContent);
+        this.panel.finalizeThinkingMessage(messageHandle.id, assistantMsg.content, toolMessages);
     }
 
     /**

@@ -41,6 +41,8 @@ export const EVENTS = {
         UPDATE_MCP_STATUS: 'chat:update-mcp-status',
         UPDATE_SETTINGS: 'chat:update-settings',
         TOGGLE_PAGE_CONTENT: 'chat:toggle-page-content',
+        EXECUTE_TOOL: 'chat:execute-tool',
+        CANCEL_TOOL: 'chat:cancel-tool'
     },
     AIM: {
         THOUGHT_TOGGLED: 'aim:thought_toggled',

@@ -60,6 +60,26 @@ export function generateId(prefix = 'id') {
  * Generate a raw UUID without any prefix (alias for generateUUID for clarity)
  * @returns {string} Raw UUID string without prefix (e.g., "123e4567-e89b-12d3-a456-426614174000")
  */
-export function generateRawUUID() {
-    return generateUUID();
+export function generateRawUUID({dashes = true} = {}) {
+    const uuid = generateUUID();
+    if (dashes) {
+        return uuid;
+    }
+    return uuid.replace(/-/g, '');
 } 
+
+/**
+ * Generate a unique identifier for tool calls
+ * @returns {string} Tool call ID with 'tool-' prefix followed by a 9 digit alpha numeric string
+ */
+export function generateToolCallId() {
+    return 'tool-' + generateRawUUID({dashes: false}).slice(0, 9);
+}
+
+/**
+ * Generate a unique identifier for messages
+ * @returns {string} Message ID with 'message-' prefix followed by a 9 digit alpha numeric string
+ */
+export function generateMessageId() {
+    return 'message-' + generateRawUUID({dashes: false}).slice(0, 9);
+}
