@@ -354,7 +354,7 @@ class OptionsApp {
             await this.stateService.settings.setSettings(settings);
             console.log('[OptionsApp] 3. Settings set in state service');
             
-            await this.stateService.settings.saveSettings();
+            await this.stateService.settings.saveToStorage();
             console.log('[OptionsApp] 4. Settings saved to storage');
             
             console.log('[OptionsApp] 5. About to notify background script...');

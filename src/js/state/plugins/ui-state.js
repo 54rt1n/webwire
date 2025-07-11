@@ -22,7 +22,7 @@ export class UiStatePlugin {
     /**
      * Read UI state and set them in the state
      */
-    async loadUiState() {
+    async loadFromStorage() {
         const uiState = await this.uiAdapter.getAll();
         this.stateService.state.ui = uiState;
         console.log('[StateService::UiState] UI state read:', uiState);
@@ -32,7 +32,7 @@ export class UiStatePlugin {
     /**
      * Save UI state
      */
-    async saveUiState() {
+    async saveToStorage() {
         await this.uiAdapter.setAll(this.stateService.state.ui);
     }
 

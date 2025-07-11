@@ -20,7 +20,7 @@ import { UiStatePlugin } from './plugins/ui-state.js';
  * 
  * // Access plugin functionality
  * stateService.conversation.storeMessage(conversationId, userMsg, aiMsg);
- * stateService.settings.saveSettings();
+ * stateService.settings.saveToStorage();
  * stateService.mcp.setMcpConnected(true);
  * stateService.stash.append('item', 'key1', 'key2');
  * 

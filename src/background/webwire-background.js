@@ -67,10 +67,10 @@ class WebWireBackground {
             console.log('[WebWireBackground] State service available:', !!this.stateService);
             console.log('[WebWireBackground] Settings plugin available:', !!this.stateService?.settings);
             
-            await this.stateService.settings.loadSettings();
+            await this.stateService.settings.loadFromStorage();
             console.log('[WebWireBackground] Settings loaded, current state.settings:', this.stateService.state.settings);
             
-            await this.stateService.ui.loadUiState();
+            await this.stateService.ui.loadFromStorage();
             console.log('[WebWireBackground] UI state loaded, current state.ui:', this.stateService.state.ui);
             
             await this.stateService.disk.loadFromStorage();
@@ -88,7 +88,7 @@ class WebWireBackground {
             // Update state service and save
             if (state.settings) {
                 this.stateService.state.settings = { ...this.stateService.state.settings, ...state.settings };
-                await this.stateService.settings.saveSettings();
+                await this.stateService.settings.saveToStorage();
             }
             
             if (state.conversation) {
@@ -101,10 +101,10 @@ class WebWireBackground {
             
             if (state.ui) {
                 this.stateService.state.ui = { ...this.stateService.state.ui, ...state.ui };
-                await this.stateService.ui.saveUiState();
+                await this.stateService.ui.saveToStorage();
             }
             
-            await this.stateService.disk.saveState();
+            await this.stateService.disk.saveToStorage();
             return true;
         } catch (error) {
             console.error('Failed to save WebWire state:', error);
@@ -128,7 +128,7 @@ class WebWireBackground {
             this.stateService.state.ui.panelVisible = visible;
             
             // Save UI state
-            await this.stateService.ui.saveUiState();
+            await this.stateService.ui.saveToStorage();
             
             console.log(`[WebWireBackground] Panel visibility state saved successfully: ${visible}`);
             return true;
@@ -229,7 +229,7 @@ class WebWireBackground {
                 case 'SAVE_WEBWIRE_SETTINGS':
                     if (this.stateService?.state && this.stateService?.settings) {
                         this.stateService.state.settings = { ...this.stateService.state.settings, ...message.settings };
-                        this.stateService.settings.saveSettings()
+                        this.stateService.settings.saveToStorage()
                             .then(() => sendResponse({ success: true }))
                             .catch(error => sendResponse({ 
                                 success: false, 
@@ -575,7 +575,7 @@ class WebWireBackground {
             // Reload state service settings
             if (this.stateService) {
                 console.log('[WebWireBackground] Reloading settings from storage...');
-                await this.stateService.settings.loadSettings();
+                await this.stateService.settings.loadFromStorage();
                 console.log('[WebWireBackground] Settings reloaded from storage:', this.stateService.state.settings);
             } else {
                 console.error('[WebWireBackground] No state service available for settings reload!');
@@ -668,8 +668,8 @@ class WebWireBackground {
             
             console.log('[WebWireBackground] 🔄 WebWire state/settings changed, reloading state...');
             try {
-                await this.stateService.settings.loadSettings();
-                await this.stateService.ui.loadUiState();
+                await this.stateService.settings.loadFromStorage();
+                await this.stateService.ui.loadFromStorage();
                 await this.stateService.disk.loadFromStorage();
                 console.log('[WebWireBackground] ✅ WebWire state reloaded after storage change');
                 

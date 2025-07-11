@@ -763,7 +763,7 @@ class MCPTestApp {
             const autoConnect = this.panel.getAutoConnect();
             
             this.stateService.state.settings.mcp.autoConnect = autoConnect;
-            await this.stateService.settings.saveSettings();
+            await this.stateService.settings.saveToStorage();
             console.log('[MCPTestApp] Auto-connect saved:', autoConnect, this.stateService.state);
             console.log('[MCPTestApp] Auto-connect setting saved:', autoConnect);
         } catch (error) {
@@ -794,7 +794,7 @@ class MCPTestApp {
     async saveMcpUrl(url) {
         try {
             this.stateService.mcp.setMcpServerUrl(url);
-            await this.stateService.settings.saveSettings();
+            await this.stateService.settings.saveToStorage();
             console.log('[MCPTestApp] MCP URL saved to settings');
         } catch (error) {
             console.error('[MCPTestApp] Failed to save MCP URL:', error);

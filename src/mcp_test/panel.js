@@ -470,7 +470,7 @@ export class MCPTestPanel {
     async initializeCollapsibleSections() {
         // Load UI state from storage first
         if (this.stateService && this.stateService.ui) {
-            await this.stateService.ui.loadUiState();
+            await this.stateService.ui.loadFromStorage();
         }
         
         // Load collapsed state from storage
@@ -552,7 +552,7 @@ export class MCPTestPanel {
         
         // Save to storage
         if (this.stateService.ui) {
-            this.stateService.ui.saveUiState();
+            this.stateService.ui.saveToStorage();
         }
     }
 
@@ -687,7 +687,7 @@ export class MCPTestPanel {
         try {
             const message = this.getSystemMessage();
             this.stateService.mcp.setSystemMessage(message, { setSettings: true });
-            await this.stateService.settings.saveSettings();
+            await this.stateService.settings.saveToStorage();
             
             this.updateSystemMessageButtons();
             this.updateSystemMessageSummary();
