@@ -374,7 +374,7 @@ class MCPTestApp {
             this.currentStreamingMessage = null;
 
             // Save state
-            await this.stateService.disk.saveState();
+            await this.stateService.disk.saveToStorage();
 
         } catch (error) {
             console.error('[MCPTestApp] Failed to send chat message:', error);
@@ -441,7 +441,7 @@ class MCPTestApp {
             //this.panel.updateCardStatus(replayMessage, `✓ Replayed ${parseResult.toolCalls.length} tool call(s)`);
 
             // Save state
-            await this.stateService.disk.saveState();
+            await this.stateService.disk.saveToStorage();
 
             console.log(`[MCPTestApp] Replayed ${parseResult.toolCalls.length} tool calls from last assistant message`);
             
@@ -535,7 +535,7 @@ class MCPTestApp {
             );
 
             // Save state
-            await this.stateService.disk.saveState();
+            await this.stateService.disk.saveToStorage();
 
             // Clear streaming message
             this.currentStreamingMessage = null;

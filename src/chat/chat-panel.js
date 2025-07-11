@@ -622,6 +622,14 @@ export class WebWirePanel {
     }
 
     /**
+     * Update the conversation
+     */
+    updateConversation(conversation) {
+        this.clearMessages();
+        this.displayConversation(conversation);
+    }
+
+    /**
      * Update connection status
      */
     updateConnectionStatus(status, aiConnected = false, mcpConnected = false) {

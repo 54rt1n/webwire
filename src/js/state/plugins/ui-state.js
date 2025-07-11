@@ -65,4 +65,11 @@ export class UiStatePlugin {
     getIncludePageContent() {
         return this.stateService.state.settings.ui.includePageContent;
     }
+
+    /**
+     * Set include page content setting
+     */
+    setIncludePageContent(includePageContent) {
+        this.stateService.state.settings.ui.includePageContent = includePageContent;
+    }
 } 

@@ -344,7 +344,7 @@ class WebWireBackground {
                     );
                     
                     // Auto-save state and notify listeners
-                    this.stateService.disk.saveState()
+                    this.stateService.disk.saveToStorage()
                         .then(async () => {
                             // Notify all tabs about the conversation update with complete state
                             const completeConversationState = {
@@ -400,7 +400,7 @@ class WebWireBackground {
                 case 'DELETE_THREAD':
                     const deleted = this.stateService.conversation.clearConversationHistory(message.threadId);
                     if (deleted) {
-                        this.stateService.disk.saveState()
+                        this.stateService.disk.saveToStorage()
                             .then(() => sendResponse({ success: true }))
                             .catch(error => sendResponse({ 
                                 success: false, 

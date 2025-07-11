@@ -28,8 +28,8 @@ class MCPControlPanelApp {
         
         // Setup chat service event handling
         this.setupChatServiceEvents();
-        this.setupPanelMessageBridge();
         this.setupMCPListeners();
+        this.setupStashEventHandlers();
     }
 
     /**
@@ -98,11 +98,11 @@ class MCPControlPanelApp {
      */
     setupMCPListeners() {
         this.eventBus.on(EVENTS.MCP.CONNECTED, (payload) => {
-            console.log('[MCPApp] Handling MCP connected event:', payload);
+            console.log('[MCPApp] Handling MCP connected event:', this.core.mcpConnector);
             this.chatService.setMCPConnector(this.core.mcpConnector);
         });
         this.eventBus.on(EVENTS.MCP.DISCONNECTED, (payload) => {
-            console.log('[MCPApp] Handling MCP disconnected event:', payload);
+            console.log('[MCPApp] Handling MCP disconnected event:', this.core.mcpConnector);
             this.chatService.setMCPConnector(null);
         });
     }
@@ -163,44 +163,6 @@ class MCPControlPanelApp {
     setupStashEventHandlers() {
         // Handle stash add requests
         this.eventBus.onExclusive(EVENTS.STASH.ADD, this.handleStashAdd.bind(this));
-    }
-
-    /**
-     * Setup event handling between ChatService and MCP components
-     */
-    setupChatServiceEvents() {
-        // Handle outbound requests from ChatService
-        this.eventBus.onAsync(EVENTS.CHAT.SAVE_MESSAGE, this.handleSaveMessage.bind(this));
-        this.eventBus.onAsync(EVENTS.CHAT.GET_OR_CREATE_THREAD, this.handleGetOrCreateThread.bind(this));
-
-        this.eventBus.on('dispatch:outbound', async (payload) => {
-            console.log('[MCPApp] Handling outbound dispatch:', payload);
-            
-            const { target, event, data } = payload;
-            
-            if (target === 'background') {
-                // For now, we'll handle some events locally since we're in a standalone app
-                // In a full Chrome extension, these would go to the background script
-            } else if (target === 'host') {
-                switch (event) {
-                    case 'ui:inject-panel':
-                        // Panel should already be injected, just show it
-                        this.chatService.showPanel();
-                        break;
-                }
-            }
-        });
-        
-        // Pass MCP connection status to ChatService
-        this.eventBus.on('mcp:connection-changed', (status) => {
-            this.chatService.handleMCPStatusUpdate({
-                isConnected: status.connected,
-                tools: status.tools || []
-            });
-        });
-
-        // Handle stash events
-        this.setupStashEventHandlers();
     }
 
     /**
@@ -513,6 +475,18 @@ class MCPControlPanelApp {
     }
 
     /**
+     * Setup event handling between ChatService and MCP components
+     */
+    setupChatServiceEvents() {
+        // Handle outbound requests from ChatService
+        this.eventBus.onAsync(EVENTS.CHAT.SAVE_MESSAGE, this.handleSaveMessage.bind(this));
+        this.eventBus.onAsync(EVENTS.CHAT.GET_OR_CREATE_THREAD, this.handleGetOrCreateThread.bind(this));
+
+        this.eventBus.on(EVENTS.CHAT.TOGGLE_PAGE_CONTENT, this.handlePageContentToggle.bind(this));
+    }
+
+
+    /**
      * Handle get or create thread request from ChatService
      */
     async handleGetOrCreateThread(data) {
@@ -524,12 +498,10 @@ class MCPControlPanelApp {
         }
 
         try {
-            // Get or create conversation using the conversation state plugin
-            const conversationId = this.core.stateService.conversation.getOrCreateCurrentConversation({
-                title: data.title || `Page: ${data.url || 'Unknown'}`,
-                url: data.url,
-                location: data.url
-            });
+            const conversationId = this.core.stateService.conversation.getActiveConversationId();
+            if (!conversationId) {
+                conversationId = this.core.stateService.conversation.createNewConversation();
+            }
 
             console.log('[MCPApp] Thread ID:', conversationId);
 
@@ -538,7 +510,7 @@ class MCPControlPanelApp {
             
             // Send conversation to ChatService
             console.log('[MCPApp] Emitting chat:conversation-loaded event with threadId:', conversationId);
-            this.eventBus.emit('chat:conversation-loaded', {
+            this.eventBus.emit(EVENTS.CHAT.CONVERSATION_LOADED, {
                 conversation: {
                     threadId: conversationId,
                     messages: messages
@@ -595,7 +567,7 @@ class MCPControlPanelApp {
 
             console.log(`[MCPApp] Message saved to conversation ${conversationId}`);
 
-            await this.core.stateService.disk.saveState();
+            await this.core.stateService.disk.saveToStorage();
 
             // Update ChatService with the conversation ID
             this.eventBus.emit('chat:conversation-updated', {
@@ -605,6 +577,24 @@ class MCPControlPanelApp {
         } catch (error) {
             console.error('[MCPApp] Failed to save message:', error);
         }
+    }
+
+    /**
+     * Handle page content toggle request from ChatService
+     */
+    async handlePageContentToggle(data) {
+        console.log('[MCPApp] Handling page content toggle:', data);
+        // We need to get the includePageContent from the data
+        const { includePageContent } = data;
+        
+        // Update settings
+        this.core.stateService.ui.setIncludePageContent(includePageContent);
+        
+        // Persist to storage via background
+        await this.core.stateService.settings.saveToStorage();
+
+        // Update the chat service with the current state
+        this.chatService.setCurrentSettings(this.core.stateService.state.settings);
     }
 
     /**

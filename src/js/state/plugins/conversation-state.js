@@ -127,7 +127,7 @@ export class ConversationStatePlugin {
     /**
      * Updates conversation status and optional error information.
      * @param {string} conversationId
-     * @param {string} status - 'active', 'completed', 'saved', 'error'
+     * @param {string} status - 'active', 'completed', 'saved', 'error', 'deleted'
      * @param {object} errorInfo - { error?, errorCode?, errorType? }
      */
     updateConversationStatus(conversationId, status, errorInfo = {}) {
@@ -139,7 +139,7 @@ export class ConversationStatePlugin {
             state.metadata[conversationId].errorCode = errorInfo.errorCode;
             state.metadata[conversationId].errorType = errorInfo.errorType;
             
-            if (status === 'completed' || status === 'saved') {
+            if (status === 'completed' || status === 'saved' || status === 'deleted') {
                 const endTime = Date.now();
                 state.metadata[conversationId].endTime = endTime;
                 state.metadata[conversationId].duration = endTime - state.metadata[conversationId].startTime;
@@ -183,31 +183,18 @@ export class ConversationStatePlugin {
     }
 
     /**
-     * Get the current active conversation ID for the current user/persona
+     * Get the current active conversation ID
      * @returns {string|null} Active conversation ID or null
      */
     getActiveConversationId() {
-        const currentUser = this.stateService.state.settings?.aim?.userName;
-        const currentPersona = this.stateService.state.settings?.aim?.personaName;
+        const state = this.stateService.state.conversation;
         
-        console.log('[ConversationState] getActiveConversationId - currentUser:', currentUser, 'currentPersona:', currentPersona);
-        
-        if (!currentUser || !currentPersona) {
-            const state = this.stateService.state.conversation;
-            const userConvos = Object.values(state.metadata)
-                .sort((a, b) => b.timestamp - a.timestamp); // Sort newest first
-            return userConvos.length > 0 ? userConvos[0].id : null;
-        }
-
-        // Get conversations for current persona, filter by user, and find active ones
-        const allConversationsForPersona = this.getConversationsFor(currentPersona);
-        console.log('[ConversationState] Found', allConversationsForPersona.length, 'conversations for persona:', currentPersona);
-        
-        const activeConversations = allConversationsForPersona
-            .filter(conv => conv.userName === currentUser && conv.status === 'active')
+        // Get the newest conversation
+        const activeConversations = Object.values(state.metadata)
+            .filter(conv => conv.status === 'active')
             .sort((a, b) => (b.endTime || b.startTime) - (a.endTime || a.startTime));
 
-        console.log('[ConversationState] Found', activeConversations.length, 'active conversations for user:', currentUser);
+        console.log('[ConversationState] Found', activeConversations.length, 'active conversations');
         
         return activeConversations.length > 0 ? activeConversations[0].id : null;
     }
@@ -218,18 +205,14 @@ export class ConversationStatePlugin {
      */
     setActiveConversation(conversationId) {
         const targetMetadata = this.stateService.state.conversation.metadata[conversationId];
-        if (!targetMetadata) return;
-
-        const currentUser = targetMetadata.userName;
-        const currentPersona = targetMetadata.personaName;
+        if (!targetMetadata) {
+            throw new Error(`Conversation ${conversationId} not found`);
+        }
 
         // Mark other conversations for this user/persona as inactive
         Object.values(this.stateService.state.conversation.metadata).forEach(metadata => {
-            if (metadata.userName === currentUser && 
-                metadata.personaName === currentPersona && 
-                metadata.id !== conversationId &&
-                metadata.status === 'active') {
-                metadata.status = 'inactive';
+            if (metadata.status === 'active' && metadata.id !== conversationId) {
+                this.updateConversationStatus(metadata.id, 'completed');
             }
         });
 
@@ -241,75 +224,83 @@ export class ConversationStatePlugin {
     }
 
     /**
-     * Get or create a conversation for the current user/persona
+     * Get the current conversation
      * @param {Object} [options={}] - Options for conversation creation
      * @param {string} [options.title] - Conversation title
      * @returns {string} The conversation ID
      */
-    getOrCreateCurrentConversation(options = {}) {
-        console.log('[ConversationState] getOrCreateCurrentConversation called with options:', options);
+    getCurrentConversation(options = {}) {
+        console.log('[ConversationState] getCurrentConversation called with options:', options);
         
         // Try to get existing active conversation
         let conversationId = this.getActiveConversationId();
         console.log('[ConversationState] Active conversation ID:', conversationId);
-        
-        if (!conversationId) {
-            // No active conversation found, look for newest conversation (regardless of user/persona)
-            const allConversations = Object.values(this.stateService.state.conversation.metadata);
-            console.log('[ConversationState] Total conversations in storage:', allConversations.length);
-            
-            if (allConversations.length > 0) {
-                console.log('[ConversationState] All conversations:', allConversations.map(conv => ({
-                    id: conv.id,
-                    userName: conv.userName, 
-                    personaName: conv.personaName,
-                    status: conv.status,
-                    startTime: conv.startTime
-                })));
-                
-                // Sort all conversations by newest first (endTime or startTime)
-                const sortedConversations = allConversations.sort((a, b) => {
-                    const timeA = a.endTime || a.startTime || 0;
-                    const timeB = b.endTime || b.startTime || 0;
-                    return timeB - timeA;
-                });
-                
-                // Reactivate the newest conversation
-                conversationId = sortedConversations[0].id;
-                this.setActiveConversation(conversationId);
-                console.log(`[ConversationState] Reactivated newest conversation: ${conversationId}`);
-            } else {
-                // No conversations exist, create new one
-                const currentUser = this.stateService.state.settings?.aim?.userName || 'User';
-                const currentPersona = this.stateService.state.settings?.aim?.personaName || 'WebWire Assistant';
-                
-                conversationId = this.createThreadId(currentUser, currentPersona);
-                
-                console.log(`[ConversationState] Creating first conversation with ID: ${conversationId}`);
-                
-                // Initialize conversation with first (empty) message to set up metadata
-                this.storeMessage(
-                    conversationId,
-                    { role: 'system', content: '' }, // Placeholder to initialize
-                    null,
-                    {
-                        userName: currentUser,
-                        personaName: currentPersona,
-                        title: options.title || `${currentPersona} Conversation`,
-                        ...options
-                    }
-                );
 
-                // Remove the placeholder system message
-                this.stateService.state.conversation.history[conversationId] = [];
-                
-                // Set as active
-                this.setActiveConversation(conversationId);
-                console.log(`[ConversationState] Created new conversation: ${conversationId}`);
-            }
-        } else {
-            console.log(`[ConversationState] Using existing active conversation: ${conversationId}`);
+        if (conversationId) {
+            return conversationId;
         }
+        
+        // No active conversation found, look for newest conversation
+        const allConversations = Object.values(this.stateService.state.conversation.metadata);
+        console.log('[ConversationState] Total conversations in storage:', allConversations.length);
+        
+        if (allConversations.length > 0) {
+            console.log('[ConversationState] All conversations:', allConversations.map(conv => ({
+                id: conv.id,
+                userName: conv.userName, 
+                personaName: conv.personaName,
+                status: conv.status,
+                startTime: conv.startTime
+            })));
+            
+            // Sort all conversations by newest first (endTime or startTime)
+            const sortedConversations = allConversations.sort((a, b) => {
+                const timeA = a.endTime || a.startTime || 0;
+                const timeB = b.endTime || b.startTime || 0;
+                return timeB - timeA;
+            });
+            
+            // Reactivate the newest conversation
+            conversationId = sortedConversations[0].id;
+            this.setActiveConversation(conversationId);
+            console.log(`[ConversationState] Reactivated newest conversation: ${conversationId}`);
+            return conversationId;
+        }
+        
+        return null;
+    }
+
+    /**
+     * Create a new conversation
+     * @param {Object} [options={}] - Options for conversation creation
+     * @returns {string} The conversation ID
+     */
+    createNewConversation(options = {}) {
+        console.log('[ConversationState] createNewConversation called with options:', options);
+        
+        // No conversations exist, create new one
+        const currentUser = this.stateService.state.settings?.aim?.userName || 'User';
+        const currentPersona = this.stateService.state.settings?.aim?.personaName || 'WebWire Assistant';
+        
+        const conversationId = this.createThreadId(currentUser, currentPersona);
+        
+        const timestamp = Date.now();
+        // Initialize the conversation metadata as active in an empty conversation
+        this.stateService.state.conversation.history[conversationId] = [];
+        this.stateService.state.conversation.metadata[conversationId] = {
+            id: conversationId,
+            userName: currentUser,
+            personaName: currentPersona,
+            startTime: timestamp,
+            endTime: undefined,
+            duration: undefined,
+            status: 'active',
+            error: undefined,
+            errorCode: undefined,
+            errorType: undefined,
+        };
+
+        console.log(`[ConversationState] Created new conversation: ${conversationId}`);
 
         return conversationId;
     }
@@ -342,6 +333,4 @@ export class ConversationStatePlugin {
             return timeB - timeA;
         });
     }
-
-
 }

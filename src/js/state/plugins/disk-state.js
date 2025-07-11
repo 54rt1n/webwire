@@ -13,7 +13,7 @@ export class DiskStatePlugin {
     /**
      * Save current state
      */
-    async saveState() {
+    async saveToStorage() {
         try {
             const { mcp, aim, conversation, ...rest } = this.stateService.state;
             const saveData = serializeState({

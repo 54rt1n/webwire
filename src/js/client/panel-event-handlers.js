@@ -7,16 +7,21 @@ export class PanelEventHandlers {
         this.stateService = core.stateService;
     }
 
+    setupEventListeners() {
+        this.setupStashListeners();
+        this.setupSettingsListeners();
+        this.setupChatListeners();
+    }
+
     /**
      * Setup Event Listeners
      */
-    setupEventListeners() {
+    setupStashListeners() {
         this.eventBus.onAsync(EVENTS.STASH.ADD, this.handleStashAdd.bind(this));
         this.eventBus.onAsync(EVENTS.STASH.SAVE, this.handleSaveStash.bind(this));
         this.eventBus.onAsync(EVENTS.STASH.CLEAR, this.handleStashClearAll.bind(this));
         this.eventBus.onAsync(EVENTS.STASH.REMOVE, this.handleStashRemove.bind(this));
         this.eventBus.onAsync(EVENTS.STASH.LOAD, this.handleLoadStash.bind(this));
-        this.eventBus.onAsync(EVENTS.SETTINGS.CHANGE, this.handleSettingsChange.bind(this));
     }
 
     /**
@@ -126,6 +131,13 @@ export class PanelEventHandlers {
     }
 
     /**
+     * Setup settings listeners
+     */
+    setupSettingsListeners() {
+        this.eventBus.onAsync(EVENTS.SETTINGS.CHANGE, this.handleSettingsChange.bind(this));
+    }
+
+    /**
      * Handle settings change event
      */
     async handleSettingsChange(data) {
@@ -140,4 +152,34 @@ export class PanelEventHandlers {
             console.error('[MCPApp] Failed to save settings:', error);
         }
     }
+
+    /**
+     * Setup chat listeners
+     */
+    setupChatListeners() {
+        this.eventBus.on(EVENTS.CHAT.CREATE_NEW_THREAD, this.handleCreateNewThread.bind(this));
+    }
+
+    /**
+     * Handle create new thread event
+     */
+    async handleCreateNewThread(data) {
+        console.log('[MCPApp] Handling create new thread event:', data);
+        if (!this.stateService || !this.stateService.conversation || !this.stateService.disk) {
+            console.error('[MCPApp] State service or required plugins missing');
+            return;
+        }
+        const conversationId = this.stateService.conversation.createNewConversation();
+        // Save to disk
+        await this.stateService.disk.saveToStorage();
+        // Emit event to notify listeners (e.g., chat panel) of new thread
+        this.eventBus.emit(EVENTS.CHAT.CONVERSATION_LOADED, {
+            conversation: {
+                threadId: conversationId,
+                messages: [],
+                metadata: this.stateService.state.conversation.metadata[conversationId]
+            }
+        });
+    }
+
 }

@@ -74,11 +74,11 @@ export class MCPConnector {
         this.stateService.mcp.setMcpTools(tools);
         
         this.stateService.mcp.setMcpInitialized(true);
-        console.log(`MCP Connector initialized with ${tools.length} tools`);
+        console.log(`[MCPConnector] MCP Connector initialized with ${tools.length} tools`);
         
         return tools;
       } catch (error) {
-        console.error('Failed to initialize MCP connector:', error);
+        console.error('[MCPConnector] Failed to initialize MCP connector:', error);
         this.stateService.mcp.setMcpConnectionError(error.message);
         throw error;
       }

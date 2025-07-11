@@ -71,7 +71,6 @@ export class ChatService {
         
         // Listen for AI streaming events
         this.eventBus.on(EVENTS.AI.STREAM_CHUNK, this.handleStreamingChunk.bind(this));
-        this.eventBus.on(EVENTS.CHAT.TOGGLE_PAGE_CONTENT, this.handlePageContentToggle.bind(this));
         
         console.log('[ChatService] Event listeners set up');
     }
@@ -96,15 +95,11 @@ export class ChatService {
             
             // Load current conversation on startup
             console.log('[ChatService] Loading current conversation on startup...');
-            this.loadCurrentConversation();
 
             this.panel.setPageContentCheckboxState(this.stateService.ui.getIncludePageContent() || false);
 
-            // Request thread from host
-            await this.eventBus.emit(EVENTS.CHAT.GET_OR_CREATE_THREAD, {
-                ...this.pageUtils.getPageLocation()
-            }, { target: EVENT_CONTEXT.BACKGROUND });
-            
+            this.sendGetOrCreateThread();
+
             console.log('[ChatService] Initialization complete');
         } catch (error) {
             console.error('[ChatService] Initialization failed:', error);
@@ -383,6 +378,19 @@ export class ChatService {
             return;
         }
 
+        // Remove the last assistant message from the conversation if the assistant
+        // was the last message in the conversation
+        if (this.currentConversation && this.currentConversation.messages && this.currentConversation.messages.length > 0) {
+            const lastMessage = this.currentConversation.messages[this.currentConversation.messages.length - 1];
+            if (lastMessage.role === MESSAGE_ROLES.ASSISTANT) {
+                this.currentConversation.messages.pop();
+            }
+            // Update the panel
+            if (this.panel.isReady()) {
+                this.panel.updateConversation(this.currentConversation);
+            }
+        }
+
         // Re-send the message through the normal flow
         await this.handleUserMessage({ message: this.lastMessage.trim(), silent: true });
     }
@@ -397,6 +405,18 @@ export class ChatService {
         
         // Store the current conversation for context in AI requests
         this.currentConversation = conversation;
+
+        // Set the last message to the last user message in the conversation
+        if (conversation && conversation.messages && conversation.messages.length > 0) {
+            const lastUserMessage = conversation.messages.find(msg => msg.role === MESSAGE_ROLES.USER);
+            if (lastUserMessage) {
+                this.lastMessage = lastUserMessage.content;
+            } else {
+                this.lastMessage = null;
+            }
+        } else {
+            this.lastMessage = null;
+        }
         
         if (conversation && this.panel.isReady()) {
             console.log(`[ChatService] Displaying conversation with ID: ${conversation.threadId}`);
@@ -478,6 +498,7 @@ export class ChatService {
      */
     setMCPConnector(connector) {
         this.mcpConnector = connector;
+        this.updateConnectionStatus();
     }
 
     /**
@@ -538,25 +559,14 @@ export class ChatService {
     }
 
     /**
-     * Handle page content toggle event
+     * Set current settings
      */
-    async handlePageContentToggle(payload) {
-        console.log('[ChatService] Handling page content toggle:', payload);
-        
-        const { includePageContent } = payload;
-        
-        // Update settings
-        this.currentSettings.ui = this.currentSettings.ui || {};
-        this.currentSettings.ui.includePageContent = includePageContent;
-        
-        // Persist to storage via background
-        await this.eventBus.emit(EVENTS.SETTINGS.CHANGE, { 
-            settings: this.currentSettings 
-        }, { target: EVENT_CONTEXT.BACKGROUND });
+    setCurrentSettings(settings) {
+        this.currentSettings = settings;
         
         // Update panel checkbox state
         if (this.panel.isReady()) {
-            this.panel.updatePageContentSetting(includePageContent);
+            this.panel.updatePageContentSetting(this.currentSettings.ui.includePageContent);
         }
     }
 
@@ -623,7 +633,7 @@ export class ChatService {
     /**
      * Load current conversation on startup
      */
-    loadCurrentConversation() {
+    sendGetOrCreateThread() {
         console.log('[ChatService] Requesting current conversation from host...');
         
         // Request the current conversation from the host
