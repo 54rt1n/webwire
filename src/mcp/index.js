@@ -29,6 +29,7 @@ class MCPControlPanelApp {
         // Setup chat service event handling
         this.setupChatServiceEvents();
         this.setupPanelMessageBridge();
+        this.setupMCPListeners();
     }
 
     /**
@@ -90,6 +91,20 @@ class MCPControlPanelApp {
         await this.connect();
         
         console.log('[MCPApp] Initialization complete');
+    }
+
+    /**
+     * Setup event listeners for MCP events
+     */
+    setupMCPListeners() {
+        this.eventBus.on(EVENTS.MCP.CONNECTED, (payload) => {
+            console.log('[MCPApp] Handling MCP connected event:', payload);
+            this.chatService.setMCPConnector(this.core.mcpConnector);
+        });
+        this.eventBus.on(EVENTS.MCP.DISCONNECTED, (payload) => {
+            console.log('[MCPApp] Handling MCP disconnected event:', payload);
+            this.chatService.setMCPConnector(null);
+        });
     }
 
     /**

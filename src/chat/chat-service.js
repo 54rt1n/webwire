@@ -327,28 +327,7 @@ export class ChatService {
         
         const { settings } = payload;
         this.currentSettings = settings;
-
-        let changed = false;
-        try {
-            // Reinitialize AI client if AI settings changed
-            if (settings.ai && (settings.ai.models || settings.ai.providers)) {
-                //await this.reinitializeAIClient(settings);
-                changed = true;
-            }
-            
-            // Reinitialize MCP connector if MCP settings changed  
-            if (settings.mcp && settings.mcp.serverUrl) {
-                //await this.reinitializeMCPConnector(settings);
-                changed = true;
-            }
-            
-            // Update connection status
-            this.updateConnectionStatus();
-            
-            console.log('[ChatService] Settings update processed successfully');
-        } catch (error) {
-            console.error('[ChatService] Error handling settings update:', error);
-        }
+        console.log('[ChatService] Settings update processed successfully');
     }
 
     /**
@@ -495,82 +474,10 @@ export class ChatService {
     }
 
     /**
-     * Reinitialize AI client with new settings
+     * Set MCP connector
      */
-    async reinitializeAIClient(settings) {
-        try {
-            const model = settings.ai?.models?.chat?.model;
-            const provider = settings.ai?.models?.chat?.provider;
-            const providerSettings = settings.ai?.providers[provider] || {};
-
-            if (model && provider) {
-                console.log('[ChatService] Reinitializing AI client with new settings', {
-                    model,
-                    provider,
-                    ...providerSettings
-                });
-                
-                this.aiClient = AIClientFactory.createClient(
-                    this.eventBus,
-                    {
-                        provider,
-                        model,
-                        ...providerSettings
-                    }
-                );
-                
-                console.log('[ChatService] AI client reinitialized successfully');
-            } else {
-                console.log('[ChatService] AI settings incomplete, clearing AI client');
-                this.aiClient = null;
-            }
-        } catch (error) {
-            console.error('[ChatService] Failed to reinitialize AI client:', error);
-            this.aiClient = null;
-        }
-    }
-
-    /**
-     * Reinitialize MCP connector with new settings
-     */
-    async reinitializeMCPConnector(settings) {
-        try {
-            const newMcpUrl = settings.mcp?.serverUrl;
-            const currentMcpUrl = this.mcpConnector?.url;
-            
-            if (newMcpUrl && newMcpUrl !== currentMcpUrl) {
-                console.log('[ChatService] MCP server URL changed, reconnecting...');
-                
-                if (this.mcpConnector) {
-                    this.mcpConnector.disconnect();
-                    this.mcpConnector = null;
-                }
-                
-                await this.connectToMCP(newMcpUrl);
-                
-                console.log('[ChatService] MCP connector reinitialized successfully');
-            } else if (!newMcpUrl && this.mcpConnector) {
-                console.log('[ChatService] MCP server URL cleared, disconnecting...');
-                this.mcpConnector.disconnect();
-                this.mcpConnector = null;
-            }
-        } catch (error) {
-            console.error('[ChatService] Failed to reinitialize MCP connector:', error);
-        }
-    }
-
-    /**
-     * Connect to MCP server
-     */
-    async connectToMCP(url) {
-        try {
-            this.mcpConnector = new MCPConnector(url);
-            await this.mcpConnector.initialize(this.stateService);
-            console.log('[ChatService] Connected to MCP server');
-        } catch (error) {
-            console.error('[ChatService] Failed to connect to MCP:', error);
-            throw error;
-        }
+    setMCPConnector(connector) {
+        this.mcpConnector = connector;
     }
 
     /**

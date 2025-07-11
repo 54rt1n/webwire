@@ -61,7 +61,7 @@ export class MCPConnector {
       }
   
       try {
-        console.log('Initializing MCP Connector...');
+        console.log('[MCPConnector] Initializing MCP Connector...');
         
         // Connect to SSE endpoint
         await this.connectSSE();
@@ -121,7 +121,7 @@ export class MCPConnector {
     createEventSource() {
       const sseUrl = new URL(this.mcpServerUrl);
       sseUrl.searchParams.append('session_id', this.sessionId);
-      console.log(`Connecting to SSE endpoint: ${sseUrl}`);
+      console.log(`[MCPConnector] Connecting to SSE endpoint: ${sseUrl}`);
       return new EventSource(sseUrl);
     }
     
@@ -130,7 +130,7 @@ export class MCPConnector {
      * Updates connection state and logs successful connection
      */
     handleOpen() {
-      console.log('SSE connection established');
+      console.log('[MCPConnector] SSE connection established');
       this.stateService.mcp.setMcpConnected(true);
     }
     
@@ -159,7 +159,7 @@ export class MCPConnector {
           }
         }
       } catch (error) {
-        console.warn('Error parsing SSE message:', error);
+        console.warn('[MCPConnector] Error parsing SSE message:', error);
       }
     }
     
@@ -168,7 +168,7 @@ export class MCPConnector {
      * @param {Event} error - The error event from EventSource
      */
     handleError(error) {
-      console.error('SSE error:', error);
+      console.error('[MCPConnector] SSE error:', error);
       this.stateService.mcp.setMcpConnected(false);
 
       if (this.connectionTimeout) {
@@ -190,7 +190,7 @@ export class MCPConnector {
      * @param {MessageEvent} event - The endpoint event containing POST URL data
      */
     handleEndpoint(event) {
-      console.log('Received "endpoint" event with data:', event.data);
+      console.log('[MCPConnector] Received "endpoint" event with data:', event.data);
 
       if (this.connectionTimeout) {
         clearTimeout(this.connectionTimeout);
@@ -203,7 +203,7 @@ export class MCPConnector {
           const sessionData = JSON.parse(event.data);
           endpointPath = sessionData.postEndpoint;
         } catch (e) {
-          console.warn('Could not parse endpoint data as JSON, treating as a raw path.');
+          console.warn('[MCPConnector] Could not parse endpoint data as JSON, treating as a raw path.');
           if (typeof event.data === 'string') {
             endpointPath = event.data;
           }
@@ -215,17 +215,17 @@ export class MCPConnector {
           postEndpoint = new URL(endpointPath, serverOrigin).href;
         } else {
           postEndpoint = this.mcpServerUrl.replace('/sse', '/message');
-          console.warn(`Could not determine postEndpoint from data. Using fallback: ${postEndpoint}`);
+          console.warn(`[MCPConnector] Could not determine postEndpoint from data. Using fallback: ${postEndpoint}`);
         }
 
         this.stateService.mcp.setMcpConnection({ postEndpoint });
-        console.log(`MCP session established. POST endpoint: ${postEndpoint}`);
+        console.log(`[MCPConnector] MCP session established. POST endpoint: ${postEndpoint}`);
         
         if (this.resolveConnection) {
           this.resolveConnection();
         }
       } catch (error) {
-        console.error('Error handling endpoint event:', error);
+        console.error('[MCPConnector] Error handling endpoint event:', error);
         this.stateService.mcp.setMcpConnectionError(error.message);
         if (this.rejectConnection) {
           this.rejectConnection(error);
@@ -445,7 +445,7 @@ export class MCPConnector {
         // Close the connection
         this.eventSource.close();
         this.eventSource = null;
-        console.log('MCP connection closed and listeners removed.');
+        console.log('[MCPConnector] MCP connection closed and listeners removed.');
       }
       
       // Update state

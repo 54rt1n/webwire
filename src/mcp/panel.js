@@ -482,10 +482,6 @@ export class MCPControlPanel {
                 'data-item-uri': itemUri
             });
             
-            // Debug: Log the generated class names and check DOM
-            console.log(`[Lists] Generated classes: "${li.className}"`);
-            console.log(`[Lists] Element:`, li);
-            
             const status = this._createEl('span', { 
                 className: `item-status item-status-${normalizedStatus}`,
                 textContent: item.status || '—'

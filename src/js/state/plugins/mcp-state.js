@@ -114,11 +114,11 @@ export class MCPStatePlugin {
         if (isConnected && !wasConnected) {
             this.stateService.state.mcp.connection.lastConnected = Date.now();
             this.clearMcpConnectionError();
-            console.log('MCP connected');
+            console.log('[StateService::MCPState] MCP connected');
             this.eventBus.emit(EVENTS.MCP.CONNECTED, {}, { source: 'set-mcp-connected'});
         } else if (!isConnected && wasConnected) {
             this.stateService.state.mcp.connection.isInitialized = false;
-            console.log('MCP disconnected');
+            console.log('[StateService::MCPState] MCP disconnected');
             this.eventBus.emit(EVENTS.MCP.DISCONNECTED, {}, { source: 'set-mcp-disconnected'});
         }
     }
@@ -132,7 +132,7 @@ export class MCPStatePlugin {
         this.stateService.state.mcp.connection.isInitialized = isInitialized;
         
         if (isInitialized && !wasInitialized) {
-            console.log('MCP initialized');
+            console.log('[StateService::MCPState] MCP initialized');
             this.eventBus.emit(EVENTS.MCP.INITIALIZED, {}, { source: 'set-mcp-initialized'});
         }
     }
@@ -145,7 +145,7 @@ export class MCPStatePlugin {
      */
     setMcpTools(tools) {
         this.stateService.state.mcp.tools = tools || [];
-        console.log(`Updated MCP tools: ${this.stateService.state.mcp.tools.length} tools available`);
+        console.log(`[StateService::MCPState] Updated MCP tools: ${this.stateService.state.mcp.tools.length} tools available`);
         this.eventBus.emit(EVENTS.MCP.TOOLS_UPDATED, { 
             tools: this.stateService.state.mcp.tools,
             count: this.stateService.state.mcp.tools.length 
@@ -186,7 +186,7 @@ export class MCPStatePlugin {
             error: undefined,
         };
 
-        console.log(`Added pending MCP request ${requestId}: ${method}`);
+        console.log(`[StateService::MCPState] Added pending MCP request ${requestId}: ${method}`);
         this.eventBus.emit(EVENTS.MCP.REQUEST_STARTED, { requestId, method, params }, { source: 'add-mcp-pending-request'});
     }
 
@@ -201,7 +201,7 @@ export class MCPStatePlugin {
             request.status = 'completed';
             request.response = response;
             
-            console.log(`Completed MCP request ${requestId}`);
+            console.log(`[StateService::MCPState] Completed MCP request ${requestId}`);
             this.eventBus.emit(EVENTS.MCP.REQUEST_COMPLETED, { requestId, response }, { source: 'complete-mcp-request'});
         }
     }
@@ -217,7 +217,7 @@ export class MCPStatePlugin {
             request.status = 'failed';
             request.error = error;
             
-            console.error(`Failed MCP request ${requestId}: ${error}`);
+            console.error(`[StateService::MCPState] Failed MCP request ${requestId}: ${error}`);
             this.eventBus.emit(EVENTS.MCP.REQUEST_FAILED, { requestId, error }, { source: 'fail-mcp-request'});
         }
     }
@@ -232,7 +232,7 @@ export class MCPStatePlugin {
             request.status = 'timeout';
             request.error = 'Request timeout';
             
-            console.warn(`MCP request ${requestId} timed out`);
+            console.warn(`[StateService::MCPState] MCP request ${requestId} timed out`);
             this.eventBus.emit(EVENTS.MCP.REQUEST_TIMEOUT, { requestId }, { source: 'timeout-mcp-request'});
         }
     }
@@ -258,7 +258,7 @@ export class MCPStatePlugin {
      */
     clearMcpPendingRequests() {
         this.stateService.state.mcp.pendingRequests = {};
-        console.log('Cleared all pending MCP requests');
+        console.log('[StateService::MCPState] Cleared all pending MCP requests');
     }
 
     /**
