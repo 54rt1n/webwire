@@ -673,8 +673,9 @@ class WebWireBackground {
                 await this.stateService.disk.loadFromStorage();
                 console.log('[WebWireBackground] ✅ WebWire state reloaded after storage change');
                 
+                // TODO the tabs will need to be updated with the dispatcher
                 // Notify all active tabs about settings change
-                await this.notifyTabsOfSettingsChange();
+                //await this.notifyTabsOfSettingsChange();
                 
                 // Clean up the trigger key if it was used
                 if (hasTrigger) {

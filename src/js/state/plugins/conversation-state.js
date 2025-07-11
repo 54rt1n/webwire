@@ -193,8 +193,10 @@ export class ConversationStatePlugin {
         console.log('[ConversationState] getActiveConversationId - currentUser:', currentUser, 'currentPersona:', currentPersona);
         
         if (!currentUser || !currentPersona) {
-            console.log('[ConversationState] No user or persona set, returning null');
-            return null;
+            const state = this.stateService.state.conversation;
+            const userConvos = Object.values(state.metadata)
+                .sort((a, b) => b.timestamp - a.timestamp); // Sort newest first
+            return userConvos.length > 0 ? userConvos[0].id : null;
         }
 
         // Get conversations for current persona, filter by user, and find active ones

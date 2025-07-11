@@ -16,6 +16,7 @@ export class PanelEventHandlers {
         this.eventBus.onAsync(EVENTS.STASH.CLEAR, this.handleStashClearAll.bind(this));
         this.eventBus.onAsync(EVENTS.STASH.REMOVE, this.handleStashRemove.bind(this));
         this.eventBus.onAsync(EVENTS.STASH.LOAD, this.handleLoadStash.bind(this));
+        this.eventBus.onAsync(EVENTS.SETTINGS.CHANGE, this.handleSettingsChange.bind(this));
     }
 
     /**
@@ -121,6 +122,22 @@ export class PanelEventHandlers {
             this.eventBus.emit(EVENTS.STASH.UPDATED, { uri: 'all', loaded: true, saved: true, ...options });
         } catch (error) {
             console.error('[MCPApp] Failed to load stash data:', error);
+        }
+    }
+
+    /**
+     * Handle settings change event
+     */
+    async handleSettingsChange(data) {
+        if (!this.stateService || !this.stateService.settings) {
+            console.error('[MCPApp] No settings service available');
+            return;
+        }
+        try {
+            console.log('[MCPApp] Handling settings changed event:', data);
+            await this.stateService.settings.saveToStorage();
+        } catch (error) {
+            console.error('[MCPApp] Failed to save settings:', error);
         }
     }
 }

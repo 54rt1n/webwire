@@ -58,4 +58,11 @@ export class UiStatePlugin {
     getAutoInject() {
         return this.stateService.state.settings.ui.autoInject;
     }
+
+    /**
+     * Get include page content setting
+     */
+    getIncludePageContent() {
+        return this.stateService.state.settings.ui.includePageContent;
+    }
 } 

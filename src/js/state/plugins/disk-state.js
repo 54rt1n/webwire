@@ -26,10 +26,10 @@ export class DiskStatePlugin {
 
             await this.stateAdapter.save(saveData);
             this.stateService.state.session.lastSaved = Date.now();
-            console.log('[StateService::LoadStatePlugin] State saved', saveData);
+            console.log('[StateService::DiskState] State saved', saveData);
 
         } catch (error) {
-            console.error('[StateService::LoadStatePlugin] Save failed:', error);
+            console.error('[StateService::DiskState] Save failed:', error);
         }
     }
 
@@ -53,7 +53,7 @@ export class DiskStatePlugin {
     async loadFromStorage() {
         const savedState = await this.stateAdapter.load();
         if (!savedState) {
-            console.log('[StateService::LoadStatePlugin] No saved state found');
+            console.log('[StateService::DiskState] No saved state found');
             return false;
         }
 
@@ -66,13 +66,13 @@ export class DiskStatePlugin {
     async updateFromStorage() {
         const savedState = await this.stateAdapter.load();
         if (!savedState) {
-            console.log('[StateService::LoadStatePlugin] No saved state found for update');
+            console.log('[StateService::DiskState] No saved state found for update');
             return false;
         }
 
         try {
             if (!savedState) {
-                console.log('[StateService::LoadStatePlugin] No data to restore', savedState);
+                console.log('[StateService::DiskState] No data to restore', savedState);
                 throw new Error('No data to restore');
             }
             const stateToRestore = {
@@ -81,11 +81,11 @@ export class DiskStatePlugin {
                 conversation: savedState.conversation,
             };
 
-            console.log('[StateService::LoadStatePlugin] State to restore:', stateToRestore, savedState);
+            console.log('[StateService::DiskState] State to restore:', stateToRestore, savedState);
 
             return this.deserialize(stateToRestore);
         } catch (error) {
-            console.error('[StateService::LoadStatePlugin] Failed to update from storage:', error);
+            console.error('[StateService::DiskState] Failed to update from storage:', error);
             throw error;
         }
     }
@@ -107,10 +107,10 @@ export class DiskStatePlugin {
                 this.stateService.state, 
             );
             this.stateService.disk.updateLastActiveTime();
-            console.log('[StateService::LoadStatePlugin] State loaded from save data');
+            console.log('[StateService::DiskState] State loaded from save data');
             return true;
         } catch (error) {
-            console.error('[StateService::LoadStatePlugin] Failed to load from save:', error);
+            console.error('[StateService::DiskState] Failed to load from save:', error);
             return false;
         }
     }

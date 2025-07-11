@@ -98,6 +98,8 @@ export class ChatService {
             console.log('[ChatService] Loading current conversation on startup...');
             this.loadCurrentConversation();
 
+            this.panel.setPageContentCheckboxState(this.stateService.ui.getIncludePageContent() || false);
+
             // Request thread from host
             await this.eventBus.emit(EVENTS.CHAT.GET_OR_CREATE_THREAD, {
                 ...this.pageUtils.getPageLocation()
@@ -136,7 +138,7 @@ export class ChatService {
 
             // Display user message in panel
             if (!silent) {
-                this.panel.displayMessage(userMessage);
+                this.panel.displayMessage(userMessage, { autoScroll: true });
             }
 
             // Create system prompt with tools if MCP is connected
@@ -326,15 +328,18 @@ export class ChatService {
         const { settings } = payload;
         this.currentSettings = settings;
 
+        let changed = false;
         try {
             // Reinitialize AI client if AI settings changed
             if (settings.ai && (settings.ai.models || settings.ai.providers)) {
-                await this.reinitializeAIClient(settings);
+                //await this.reinitializeAIClient(settings);
+                changed = true;
             }
             
             // Reinitialize MCP connector if MCP settings changed  
             if (settings.mcp && settings.mcp.serverUrl) {
-                await this.reinitializeMCPConnector(settings);
+                //await this.reinitializeMCPConnector(settings);
+                changed = true;
             }
             
             // Update connection status
@@ -638,7 +643,7 @@ export class ChatService {
         this.currentSettings.ui.includePageContent = includePageContent;
         
         // Persist to storage via background
-        await this.eventBus.emit(EVENTS.CHAT.UPDATE_SETTINGS, { 
+        await this.eventBus.emit(EVENTS.SETTINGS.CHANGE, { 
             settings: this.currentSettings 
         }, { target: EVENT_CONTEXT.BACKGROUND });
         

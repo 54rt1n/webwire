@@ -10,6 +10,7 @@ export const EVENTS = {
         STREAM_RESUMED: 'ai:stream_resumed',
     },
     SETTINGS: {
+        CHANGE: 'settings:change',
         CHANGED: 'settings:changed',
         CLEARED: 'settings:cleared'
     },

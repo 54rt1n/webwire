@@ -7,6 +7,7 @@ import { EVENTS } from '../js/core/events.js';
 export class WebWirePanel {
     constructor(eventBus) {
         this.eventBus = eventBus;
+        this.currentSettings = null;
         this.container = null;
         this.isInjected = false;
         this.isVisible = false;
@@ -28,7 +29,7 @@ export class WebWirePanel {
      */
     async initialize() {
         if (this.isInjected) return;
-        
+
         console.log('[WebWirePanel] Initializing panel...');
         
         // Create container
@@ -57,8 +58,6 @@ export class WebWirePanel {
         this.container = document.createElement('div');
         this.container.id = 'webwire-container';
     }
-
-
 
     /**
      * Create HTML structure
@@ -99,7 +98,7 @@ export class WebWirePanel {
                     </div>
                     <div class="page-content-toggle">
                         <label class="toggle-label">
-                            <input type="checkbox" class="page-content-checkbox" checked>
+                            <input type="checkbox" class="page-content-checkbox">
                             <span class="toggle-text">Include page content</span>
                         </label>
                     </div>
@@ -287,6 +286,15 @@ export class WebWirePanel {
     }
 
     /**
+     * Set page content checkbox state
+     */
+    setPageContentCheckboxState(isChecked) {
+        if (this.elements.pageContentCheckbox) {
+            this.elements.pageContentCheckbox.checked = isChecked;
+        }
+    }
+
+    /**
      * Handle sending a message
      */
     handleSendMessage(predefinedMessage = null) {
@@ -342,7 +350,7 @@ export class WebWirePanel {
     /**
      * Display a chat message
      */
-    displayMessage(message) {
+    displayMessage(message, {autoScroll = false} = {}) {
         console.log('[WebWirePanel] displayMessage called with:', message);
         
         if (!message || !this.elements.chatContent) {
@@ -351,8 +359,8 @@ export class WebWirePanel {
         }
 
         // Remove welcome message if it exists
-        console.log('[WebWirePanel] displayMessage: removing welcome message');
         this.removeWelcomeMessage();
+        this.removeErrorMessages();
 
         const messageEl = document.createElement('div');
         messageEl.className = `chat-message ${message.role}`;
@@ -375,11 +383,11 @@ export class WebWirePanel {
             <div class="message-time">${time}</div>
         `;
 
-        console.log('[WebWirePanel] displayMessage: appending message element to chat content');
         this.elements.chatContent.appendChild(messageEl);
-        this.scrollToBottom();
+        if (autoScroll) {
+            this.scrollToBottom();
+        }
 
-        console.log('[WebWirePanel] displayMessage: message displayed successfully');
         return messageEl;
     }
 
@@ -389,6 +397,7 @@ export class WebWirePanel {
     displayThinkingMessage(message) {
         // Remove welcome message if it exists
         this.removeWelcomeMessage();
+        this.removeErrorMessages();
 
         const messageEl = document.createElement('div');
         messageEl.className = 'chat-message thinking';
