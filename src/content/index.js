@@ -11,8 +11,8 @@ import {
     KEYBOARD_SHORTCUTS,
     DOM_READY_STATES
 } from '../chat/chat-constants.js';
-import '../shared/global.scss';
-import '../chat/chat.css';
+//import '../shared/global.scss';
+//import '../chat/chat.css';
 
 /**
  * WebWire Content Script - Thin Host/Adapter
@@ -54,6 +54,7 @@ class WebWireContentHost {
      * Initialize the content host
      */
     async initialize() {
+        return;
         console.log('[WebWireContentHost] Starting initialization...');
         
         // Set up Chrome extension communication

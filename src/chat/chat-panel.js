@@ -128,12 +128,14 @@ export class WebWirePanel {
                             placeholder="Ask me anything about this page or use tools..."
                             rows="1"
                         ></textarea>
-                        <button class="send-button" disabled>
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <line x1="22" y1="2" x2="11" y2="13"/>
-                                <polygon points="22,2 15,22 11,13 2,9 22,2"/>
-                            </svg>
-                        </button>
+                        <div class="ww-input-actions">
+                            <button class="reparse-button" disabled title="Reparse">
+                                ®
+                            </button>
+                            <button class="send-button" disabled title="Send">
+                                📨
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -159,6 +161,7 @@ export class WebWirePanel {
             newConversationBtn: this.container.querySelector('#new-conversation'),
             chatContent: this.container.querySelector('.chat-content'),
             chatInput: this.container.querySelector('.chat-input'),
+            reparseBtn: this.container.querySelector('.reparse-button'),
             sendBtn: this.container.querySelector('.send-button'),
             statusIndicator: this.container.querySelector('.status-indicator'),
             statusText: this.container.querySelector('.status-text'),
@@ -227,6 +230,10 @@ export class WebWirePanel {
         this.elements.pageContentCheckbox?.addEventListener('change', (e) => {
             this.handlePageContentToggle(e.target.checked);
         });
+
+        this.elements.reparseBtn?.addEventListener('click', () => {
+            this.handleReparseRequest();
+        });
     }
 
     /**
@@ -272,6 +279,17 @@ export class WebWirePanel {
         const hasText = this.elements.chatInput?.value.trim().length > 0;
         if (this.elements.sendBtn) {
             this.elements.sendBtn.disabled = !hasText;
+        }
+    }
+
+    /**
+     * Update reparse button state based on input
+     */
+    updateReparseButton(visible) {
+        console.log('[WebWirePanel] updateReparseButton called with:', visible);
+        if (this.elements.reparseBtn) {
+            this.elements.reparseBtn.style.display = visible ? 'block' : 'none';
+            this.elements.reparseBtn.disabled = !visible;
         }
     }
 
@@ -345,6 +363,14 @@ export class WebWirePanel {
         
         // Emit event for chat service to handle using conversation history
         this.eventBus.emit(EVENTS.CHAT.REPLAY_LAST_TURN, {});
+    }
+
+    /**
+     * Handle reparse request
+     */
+    handleReparseRequest() {
+        console.log('[WebWirePanel] Reparse requested');
+        this.eventBus.emit(EVENTS.CHAT.REPARSE_MESSAGE, {});
     }
 
     /**
@@ -533,6 +559,12 @@ export class WebWirePanel {
 
         // Update conversation ID display
         this.updateConversationIdDisplay(conversation.threadId);
+
+        if (conversation.messages.length > 0) {
+            this.updateReparseButton(true);
+        } else {
+            this.updateReparseButton(false);
+        }
     }
 
     /**

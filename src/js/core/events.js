@@ -33,6 +33,7 @@ export const EVENTS = {
         GET_OR_CREATE_THREAD: 'chat:get-or-create-thread',
         INJECT_PANEL: 'chat:inject-panel',
         REPLAY_LAST_TURN: 'chat:replay-last-turn',
+        REPARSE_MESSAGE: 'chat:reparse-message',
         SAVE_MESSAGE: 'chat:save-message',
         SAVE_PANEL_VISIBILITY: 'chat:save-panel-visibility',
         SEND_MESSAGE: 'chat:send-message',

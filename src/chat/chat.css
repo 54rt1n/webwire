@@ -221,3 +221,19 @@
 .toggle-text {
     font-weight: var(--font-weight-medium);
 }
+
+.ww-input-actions {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+}
+
+.ww-input-actions .reparse-button {
+    background: var(--color-gray-25);
+    color: var(--color-text-secondary);
+}
+
+.ww-input-actions .send-button {
+    background: var(--color-gray-25);
+    color: var(--color-text-secondary);
+}

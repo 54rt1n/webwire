@@ -68,6 +68,7 @@ export class ChatService {
         this.eventBus.on(EVENTS.CHAT.CONVERSATION_UPDATED, this.handleConversationUpdated.bind(this));
         this.eventBus.on(EVENTS.CHAT.START_NEW_CONVERSATION, this.handleNewConversationRequest.bind(this));
         this.eventBus.on(EVENTS.CHAT.REPLAY_LAST_TURN, this.handleReplayLastTurn.bind(this));
+        this.eventBus.on(EVENTS.CHAT.REPARSE_MESSAGE, this.handleReparseMessage.bind(this));
         
         // Listen for AI streaming events
         this.eventBus.on(EVENTS.AI.STREAM_CHUNK, this.handleStreamingChunk.bind(this));
@@ -105,6 +106,28 @@ export class ChatService {
             console.error('[ChatService] Initialization failed:', error);
             throw error;
         }
+    }
+
+    /**
+     * Parse the response for tool calls
+     */
+    async parseToolsFromResponse(response, tools) {
+        // Parse for tool calls if MCP is connected
+        let toolResults = [];
+        let toolCalls = [];
+        let parseErrors = [];
+        
+        if (this.mcpConnector && tools.length > 0) {
+            const parseResult = this.toolParser.parseResponse(response);
+            if (parseResult.success && parseResult.toolCalls.length > 0) {
+                toolCalls = parseResult.toolCalls;
+                toolResults = await this.executeToolCalls(parseResult.toolCalls);
+            } else if (parseResult.errors && parseResult.errors.length > 0) {
+                parseErrors = parseResult.errors;
+            }
+        }
+
+        return { toolResults, toolCalls, parseErrors };
     }
 
     /**
@@ -234,21 +257,8 @@ export class ChatService {
             // Finalize the thinking message with the complete response
             this.finalizeStreamingMessage(thinkingMessage, response);
             
-            // Parse for tool calls if MCP is connected
-            let toolResults = [];
-            let toolCalls = [];
-            let parseErrors = [];
+            const { toolResults, toolCalls, parseErrors } = await this.parseToolsFromResponse(response, tools);
             
-            if (this.mcpConnector && tools.length > 0) {
-                const parseResult = this.toolParser.parseResponse(response);
-                if (parseResult.success && parseResult.toolCalls.length > 0) {
-                    toolCalls = parseResult.toolCalls;
-                    toolResults = await this.executeToolCalls(parseResult.toolCalls);
-                } else if (parseResult.errors && parseResult.errors.length > 0) {
-                    parseErrors = parseResult.errors;
-                }
-            }
-
             const location = typeof window !== 'undefined' ? window.location.href : undefined;
 
             // Prepare messages for storage (original unenhanced content)
@@ -293,6 +303,8 @@ export class ChatService {
 
             console.log('[ChatService] Message saved');
 
+            this.panel.updateReparseButton(true);
+
         } catch (error) {
             if (error.message.includes("Error: Empty response from AI provider")) {
                 console.log('[ChatService] Empty response from AI provider, skipping');
@@ -302,6 +314,17 @@ export class ChatService {
                 this.panel.displayError(error.message, this.streamingState.currentMessage?.id);
             }
         }
+    }
+
+    /**
+     * Handle reparse message event
+     */
+    async handleReparseMessage(payload) {
+        console.log('[ChatService] Handling reparse message:', payload);
+        const tools = this.stateService.mcp.getMcpTools();
+        const lastAssistantMessage = this.currentConversation.messages[this.currentConversation.messages.length - 1];
+        const { toolResults, toolCalls, parseErrors } = await this.parseToolsFromResponse(lastAssistantMessage.content, tools);
+        console.log('[ChatService] Reparsed message:', toolResults, toolCalls, parseErrors, lastAssistantMessage);
     }
 
     /**
