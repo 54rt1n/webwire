@@ -80,13 +80,16 @@ export class OptionsPanel {
      * Show a status message
      */
     showStatus(message, isError = false) {
-        this.status.textContent = message;
-        this.status.className = `status ${isError ? 'error' : 'success'}`;
-        this.status.style.display = 'block';
-        
-        setTimeout(() => {
-            this.status.style.display = 'none';
-        }, 3000);
+        this.elements.status.textContent = message;
+        this.elements.status.className = `status ${isError ? 'error' : 'success'}`;
+        this.elements.status.style.display = 'block';
+    }
+
+    /**
+     * Clear status message
+     */
+    clearStatus() {
+        this.elements.status.style.display = 'none';
     }
 
     /**
@@ -140,6 +143,7 @@ export class OptionsPanel {
      * Get all settings from the form fields
      */
     getAllSettings() {
+        console.log('[OptionsPanel] getAllSettings', this.elements);
         const settings = {
             aim: {
                 userName: this.elements.userNameInput.value.trim(),
@@ -155,7 +159,7 @@ export class OptionsPanel {
                 models: {}
             },
             ui: {
-                autoInject: this.autoInjectCheckbox.checked
+                autoInject: this.elements.autoInjectCheckbox.checked
             }
         };
 

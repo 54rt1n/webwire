@@ -2,6 +2,7 @@ import { initializeContext } from '../js/context/context-init.js';
 import { OptionsPanel } from './panel.js';
 import { createInitialState } from '../js/state/state-container.js';
 import { EventBus } from '../js/core/event-bus.js';
+import { EVENT_CONTEXT } from '../js/core/events.js';
 
 /**
  * Options Page Script
@@ -19,7 +20,7 @@ class OptionsApp {
     }
 
     async initialize() {
-        const { dispatcher, stateService, storage } = await initializeContext(this.eventBus);
+        const { dispatcher, stateService, storage } = await initializeContext(this.eventBus, EVENT_CONTEXT.SIMPLE);
         this.dispatcher = dispatcher;
         this.stateService = stateService;
         this.storage = storage;
@@ -56,7 +57,7 @@ class OptionsApp {
     }
 
     setupEventListeners() {
-        this.panel.saveBtn.addEventListener('click', () => {
+        this.panel.elements.saveBtn.addEventListener('click', () => {
             console.log('[OptionsApp] 🔘 Save button clicked!');
             this.saveAllSettings();
         });
@@ -413,7 +414,7 @@ class OptionsApp {
             }
 
             console.log('[OptionsApp] 6. All steps completed successfully');
-            this.panel.showStatus('All settings saved successfully');
+            this.panel.showStatus('All settings saved successfully', false);
             console.log('[OptionsApp] ===== SAVE ALL SETTINGS COMPLETED =====');
 
         } catch (error) {

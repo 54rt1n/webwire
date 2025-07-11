@@ -84,5 +84,6 @@ export const EVENT_CONTEXT = {
   BACKGROUND: 'background',
   CONTENT: 'content',
   POPUP: 'popup',
-  PANEL: 'panel'
+  PANEL: 'panel',
+  SIMPLE: 'simple'
 }

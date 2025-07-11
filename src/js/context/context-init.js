@@ -60,6 +60,15 @@ export async function initializeContext(eventBus, context = null, {} = {}) {
         {storage: true, state: true, ai: true, mcp: true},
         {backgroundIsLocal: true, loadSettings: true, loadState: true, loadStash: true, modelType: 'chat'});
       break;
+    case EVENT_CONTEXT.SIMPLE:
+      /*
+        stateService,
+        storage,
+      */
+      results = await contextFactory(eventBus, context,
+        {storage: true, state: true, ai: false, mcp: false},
+        {backgroundIsLocal: true, loadSettings: true});
+      break;
   }
   return results;
 }
