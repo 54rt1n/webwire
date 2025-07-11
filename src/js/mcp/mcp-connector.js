@@ -302,7 +302,7 @@ export class MCPConnector {
      * @returns {Promise<Object>} Promise resolving to tool execution result
      * @throws {Error} If tool execution fails
      */
-    async executeTool(toolName, parameters = {}) {
+    async executeTool(toolName, parameters = {}, options = {}) {
       const executionStart = Date.now();
       
       const response = await this.sendRequest({
@@ -336,23 +336,26 @@ export class MCPConnector {
       }
 
       const firstEntry = content[0];
-      let entry = '';
+      let entry = {};
       if (firstEntry['type'] === 'text') {
-          entry = firstEntry['text'];
+          const text = firstEntry['text'];
           if (!isError) {
-            entry = JSON.parse(entry);
+            entry = JSON.parse(text);
           } else {
             entry = {
-              error: entry
+              error: text
             }
           }
       } else {
           entry = firstEntry;
       }
-      entry.success = !isError;
-      entry.executionTime = Date.now() - executionStart;
-
-      return entry;
+      return {
+        ...options,
+        ...entry,
+        name: toolName,
+        success: !(entry.error || isError),
+        executionTime: Date.now() - executionStart,
+      }
     }
   
     /**

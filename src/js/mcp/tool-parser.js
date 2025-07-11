@@ -82,8 +82,6 @@ export class ToolParser {
      */
     parseResponse(response) {
         const result = {
-            callId: generateToolCallId(),
-            success: false,
             toolCalls: [],
             errors: [],
             raw: response
@@ -151,6 +149,7 @@ export class ToolParser {
             try {
                 const preprocessed = this.preprocessJsonString(jsonString);
                 const parsed = JSON.parse(preprocessed);
+                parsed.callId = generateToolCallId();
                 console.log('[ToolParser] Parsed tool call:', parsed);
                 const validation = this.validateToolCall(parsed);
                 

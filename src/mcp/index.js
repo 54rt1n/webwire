@@ -56,7 +56,7 @@ class MCPControlPanelApp {
             await this.chatService.initialize(this.core.aiClient, this.core.mcpConnector, this.core.stateService);
 
             // 4. Update ChatService with current settings if available
-            this.chatService.handleSettingsUpdate({ settings: this.core.stateService.settings.getSettings() });
+            this.chatService.handleSettingsRefresh({ settings: this.core.stateService.settings.getSettings() });
 
             // 5. Initialize StashPanel
             this.stashPanel.initialize();
@@ -498,21 +498,21 @@ class MCPControlPanelApp {
         }
 
         try {
-            const conversationId = this.core.stateService.conversation.getActiveConversationId();
-            if (!conversationId) {
-                conversationId = this.core.stateService.conversation.createNewConversation();
+            const threadId = this.core.stateService.conversation.getActiveThreadId();
+            if (!threadId) {
+                threadId = this.core.stateService.conversation.createNewConversation();
             }
 
-            console.log('[MCPApp] Thread ID:', conversationId);
+            console.log('[MCPApp] Thread ID:', threadId);
 
             // Get existing conversation messages
-            const messages = this.core.stateService.conversation.getConversationMessages(conversationId);
+            const messages = this.core.stateService.conversation.getConversationMessages(threadId);
             
             // Send conversation to ChatService
-            console.log('[MCPApp] Emitting chat:conversation-loaded event with threadId:', conversationId);
+            console.log('[MCPApp] Emitting chat:conversation-loaded event with threadId:', threadId);
             this.eventBus.emit(EVENTS.CHAT.CONVERSATION_LOADED, {
                 conversation: {
-                    threadId: conversationId,
+                    threadId: threadId,
                     messages: messages
                 }
             });
@@ -537,11 +537,11 @@ class MCPControlPanelApp {
             const { userMessage, assistantMessage, options } = data;
             
             // Get current active conversation ID
-            let conversationId = this.core.stateService.conversation.getActiveConversationId();
+            let threadId = this.core.stateService.conversation.getActiveThreadId();
             
             // If no active conversation, create one
-            if (!conversationId) {
-                conversationId = this.core.stateService.conversation.getOrCreateCurrentConversation({
+            if (!threadId) {
+                threadId = this.core.stateService.conversation.createNewConversation({
                     title: options.title || `Page: ${options.url || 'Unknown'}`,
                     url: options.url,
                     location: options.location
@@ -550,7 +550,7 @@ class MCPControlPanelApp {
 
             // Store the message pair
             this.core.stateService.conversation.storeMessage(
-                conversationId,
+                threadId,
                 userMessage,
                 assistantMessage,
                 {
@@ -565,13 +565,13 @@ class MCPControlPanelApp {
                 }
             );
 
-            console.log(`[MCPApp] Message saved to conversation ${conversationId}`);
+            console.log(`[MCPApp] Message saved to conversation ${threadId}`);
 
             await this.core.stateService.disk.saveToStorage();
 
             // Update ChatService with the conversation ID
-            this.eventBus.emit('chat:conversation-updated', {
-                conversationId: conversationId
+            this.eventBus.emit(EVENTS.CHAT.CONVERSATION_UPDATED, {
+                threadId: threadId
             });
 
         } catch (error) {

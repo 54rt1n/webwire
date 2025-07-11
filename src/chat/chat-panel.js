@@ -501,14 +501,14 @@ export class WebWirePanel {
                             toolMessageEl.className = 'tool-message success';
                             toolMessageEl.innerHTML = `
                                 <div class="tool-name">${toolMessage.name}</div>
-                                <div class="tool-result">${toolMessage.result}</div>
+                                <div class="tool-summary tool-success">${toolMessage.result}</div>
                             `;
                             break;
                         case 'error':
                             toolMessageEl.className = 'tool-message error';
                             toolMessageEl.innerHTML = `
                                 <div class="tool-name">${toolMessage.name}</div>
-                                <div class="tool-error">${toolMessage.error}</div>
+                                <div class="tool-summary tool-error">${toolMessage.error}</div>
                             `;
                             break;
                         case 'pending':
@@ -517,7 +517,7 @@ export class WebWirePanel {
                             // Pending is special because it gets two check, X buttons floating right we have to bind to the event bus
                             toolMessageEl.innerHTML = `
                                 <div class="tool-name">${toolMessage.name}</div>
-                                <div class="tool-pending">
+                                <div class="tool-summary tool-pending">
                                     <button class="tool-execute-btn"> ✅ Execute</button>
                                     <button class="tool-cancel-btn"> ❌ Cancel</button>
                                 </div>
@@ -531,7 +531,7 @@ export class WebWirePanel {
                                 const executeBtn = document.querySelector(`${queryPrefix} .tool-execute-btn`);
                                 if (executeBtn) {
                                     executeBtn.addEventListener('click', () => {
-                                        eventBus.emit(EVENTS.CHAT.EXECUTE_TOOL, { ...toolMessage });
+                                        eventBus.emit(EVENTS.CHAT.EXECUTE_TOOL, { messageId, ...toolMessage});
                                     });
                                 } else {
                                     console.warn('[WebWirePanel] Tool execute button not found for:', toolMessage.callId);
@@ -539,7 +539,7 @@ export class WebWirePanel {
                                 const cancelBtn = document.querySelector(`${queryPrefix} .tool-cancel-btn`);
                                 if (cancelBtn) {
                                     cancelBtn.addEventListener('click', () => {
-                                        eventBus.emit(EVENTS.CHAT.CANCEL_TOOL, { ...toolMessage });
+                                        eventBus.emit(EVENTS.CHAT.CANCEL_TOOL, { messageId, ...toolMessage});
                                     });
                                 } else {
                                     console.warn('[WebWirePanel] Tool cancel button not found for:', toolMessage.callId);
@@ -597,6 +597,29 @@ export class WebWirePanel {
             content: `<span class="error-icon">❌</span><span class="error-text">${error}</span>`,
             timestamp: Date.now()
         });
+    }
+
+    /** 
+     * Update tool result
+     */
+    updateToolResult(callId, {name, result, success, error} = {}) {
+        const messageEl = this.container.querySelector(`#${callId}`);
+        if (!messageEl) {
+            console.warn('[WebWirePanel] Message element not found for tool result:', callId);
+            return;
+        }
+        if (success) {
+            messageEl.className = 'tool-message success';
+        } else {
+            result = error;
+            messageEl.className = 'tool-message error';
+        }
+        messageEl.innerHTML = `
+            <div class="tool-name">${name}</div>
+            <div class="tool-summary tool-${success ? 'success' : 'error'}">${result}</div>
+        `;
+
+        return messageEl;
     }
 
     /**

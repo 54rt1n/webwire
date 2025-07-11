@@ -1,6 +1,5 @@
-// webwire/js/state/plugins/conversation-state.js
-
 import { EVENTS } from '../../core/events.js';
+import { generateMessageId } from '../../utils/id-generator.js';
 
 /**
  * Plugin for handling conversation history and management.
@@ -13,14 +12,14 @@ export class ConversationStatePlugin {
 
     /**
      * Gets all messages for a specific conversation.
-     * @param {string} conversationId
+     * @param {string} threadId
      * @returns {Array} Array of message objects
      */
-    getConversationMessages(conversationId) {
+    getConversationMessages(threadId) {
         const state = this.stateService.state.conversation;
 
-        if (state.history[conversationId]) {
-            return state.history[conversationId];
+        if (state.history[threadId]) {
+            return state.history[threadId];
         }
 
         return [];
@@ -28,12 +27,12 @@ export class ConversationStatePlugin {
 
     /**
      * Stores a message pair in the state.
-     * @param {string} conversationId
+     * @param {string} threadId
      * @param {object} userMessage - { role, content, timestamp, title?, url?, model?, saved? }
      * @param {object} assistantMessage - { role, content, think?, timestamp, url?, title?, model?, saved? }
      * @param {object} options - { userName?, personaName?, mood?, location?, timestamp?, toolResults?, toolCalls?, parseErrors? }
      */
-    storeMessage(conversationId, userMessage, assistantMessage, { userName, personaName, mood, location, timestamp,
+    storeMessage(threadId, userMessage, assistantMessage, { userName, personaName, mood, location, timestamp,
         toolResults = [], toolCalls = [], parseErrors = [], ...options } = {}) {
         const state = this.stateService.state.conversation;
         if (!timestamp) {
@@ -41,12 +40,13 @@ export class ConversationStatePlugin {
         }
 
         // Ensure history for this conversation exists
-        if (!state.history[conversationId]) {
-            state.history[conversationId] = [];
+        if (!state.history[threadId]) {
+            state.history[threadId] = [];
         }
 
         // Add user message
-        state.history[conversationId].push({
+        state.history[threadId].push({
+            messageId: generateMessageId(),
             role: 'user',
             content: userMessage.content,
             timestamp,
@@ -55,7 +55,8 @@ export class ConversationStatePlugin {
 
         // Add assistant message
         if (assistantMessage && assistantMessage.content) {
-            state.history[conversationId].push({
+            state.history[threadId].push({
+                messageId: generateMessageId(),
                 role: 'assistant',
                 content: assistantMessage.content,
                 timestamp: timestamp + 1, // Ensure it's ordered after user message
@@ -68,9 +69,9 @@ export class ConversationStatePlugin {
         }
         
         // Update metadata if it doesn't exist
-        if (!state.metadata[conversationId]) {
-            state.metadata[conversationId] = {
-                id: conversationId,
+        if (!state.metadata[threadId]) {
+            state.metadata[threadId] = {
+                threadId: threadId,
                 userName: userName || 'User',
                 personaName: personaName || 'Default',
                 mood: mood,
@@ -85,12 +86,12 @@ export class ConversationStatePlugin {
             };
         } else {
             // Update existing metadata
-            state.metadata[conversationId].endTime = timestamp;
-            state.metadata[conversationId].duration = timestamp - state.metadata[conversationId].startTime;
+            state.metadata[threadId].endTime = timestamp;
+            state.metadata[threadId].duration = timestamp - state.metadata[threadId].startTime;
         }
         
-        console.log(`Stored message in conversation ${conversationId}.`);
-        this.eventBus.emit(EVENTS.CONVERSATION.UPDATED, { conversationId });
+        console.log(`Stored message in conversation ${threadId}.`);
+        this.eventBus.emit(EVENTS.CONVERSATION.UPDATED, { threadId });
     }
 
     /**
@@ -108,17 +109,17 @@ export class ConversationStatePlugin {
 
     /**
      * Clears all messages for a specific conversation.
-     * @param {string} conversationId
+     * @param {string} threadId
      */
-    clearConversationHistory(conversationId) {
+    clearConversationHistory(threadId) {
         const state = this.stateService.state.conversation;
         
-        if (state.history[conversationId]) {
-            delete state.history[conversationId];
-            delete state.metadata[conversationId];
+        if (state.history[threadId]) {
+            delete state.history[threadId];
+            delete state.metadata[threadId];
             
-            console.log(`Cleared history for conversation ${conversationId}`);
-            this.eventBus.emit(EVENTS.CONVERSATION.DELETED, { conversationId });
+            console.log(`Cleared history for conversation ${threadId}`);
+            this.eventBus.emit(EVENTS.CONVERSATION.DELETED, { threadId });
             return true;
         }
         return false;
@@ -126,37 +127,37 @@ export class ConversationStatePlugin {
 
     /**
      * Updates conversation status and optional error information.
-     * @param {string} conversationId
+     * @param {string} threadId
      * @param {string} status - 'active', 'completed', 'saved', 'error', 'deleted'
      * @param {object} errorInfo - { error?, errorCode?, errorType? }
      */
-    updateConversationStatus(conversationId, status, errorInfo = {}) {
+    updateConversationStatus(threadId, status, errorInfo = {}) {
         const state = this.stateService.state.conversation;
         
-        if (state.metadata[conversationId]) {
-            state.metadata[conversationId].status = status;
-            state.metadata[conversationId].error = errorInfo.error;
-            state.metadata[conversationId].errorCode = errorInfo.errorCode;
-            state.metadata[conversationId].errorType = errorInfo.errorType;
+        if (state.metadata[threadId]) {
+            state.metadata[threadId].status = status;
+            state.metadata[threadId].error = errorInfo.error;
+            state.metadata[threadId].errorCode = errorInfo.errorCode;
+            state.metadata[threadId].errorType = errorInfo.errorType;
             
             if (status === 'completed' || status === 'saved' || status === 'deleted') {
                 const endTime = Date.now();
-                state.metadata[conversationId].endTime = endTime;
-                state.metadata[conversationId].duration = endTime - state.metadata[conversationId].startTime;
+                state.metadata[threadId].endTime = endTime;
+                state.metadata[threadId].duration = endTime - state.metadata[threadId].startTime;
             }
             
-            console.log(`Updated conversation ${conversationId} status to ${status}`);
-            this.eventBus.emit(EVENTS.CONVERSATION.STATUS_UPDATED, { conversationId, status });
+            console.log(`Updated conversation ${threadId} status to ${status}`);
+            this.eventBus.emit(EVENTS.CONVERSATION.STATUS_UPDATED, { threadId, status });
         }
     }
 
     /**
      * Gets the last assistant message from a conversation.
-     * @param {string} conversationId
+     * @param {string} threadId
      * @returns {Object|null} The last assistant message, or null if none found
      */
-    getLastAssistantMessage(conversationId) {
-        const messages = this.getConversationMessages(conversationId);
+    getLastAssistantMessage(threadId) {
+        const messages = this.getConversationMessages(threadId);
         
         for (let i = messages.length - 1; i >= 0; i--) {
             if (messages[i].role === 'assistant') {
@@ -170,10 +171,10 @@ export class ConversationStatePlugin {
     // ==== THREAD-LIKE CONVENIENCE METHODS ====
 
     /**
-     * Creates a thread-style conversation ID
+     * Creates a thread-style ID
      * @param {string} [userName] - User name (defaults to current settings)
      * @param {string} [personaName] - Persona name (defaults to current settings)
-     * @returns {string} Thread-style conversation ID
+     * @returns {string} Thread-style ID
      */
     createThreadId(userName, personaName) {
         const user = userName || this.stateService.state.settings.aim.userName || 'user';
@@ -183,10 +184,10 @@ export class ConversationStatePlugin {
     }
 
     /**
-     * Get the current active conversation ID
-     * @returns {string|null} Active conversation ID or null
+     * Get the current active thread ID
+     * @returns {string|null} Active thread ID or null
      */
-    getActiveConversationId() {
+    getActiveThreadId() {
         const state = this.stateService.state.conversation;
         
         // Get the newest conversation
@@ -201,43 +202,43 @@ export class ConversationStatePlugin {
 
     /**
      * Set a conversation as active (and mark others as inactive)
-     * @param {string} conversationId - The conversation ID to set as active
+     * @param {string} threadId - The thread ID to set as active
      */
-    setActiveConversation(conversationId) {
-        const targetMetadata = this.stateService.state.conversation.metadata[conversationId];
+    setActiveConversation(threadId) {
+        const targetMetadata = this.stateService.state.conversation.metadata[threadId];
         if (!targetMetadata) {
-            throw new Error(`Conversation ${conversationId} not found`);
+            throw new Error(`Conversation ${threadId} not found`);
         }
 
         // Mark other conversations for this user/persona as inactive
         Object.values(this.stateService.state.conversation.metadata).forEach(metadata => {
-            if (metadata.status === 'active' && metadata.id !== conversationId) {
-                this.updateConversationStatus(metadata.id, 'completed');
+            if (metadata.status === 'active' && metadata.threadId !== threadId) {
+                this.updateConversationStatus(metadata.threadId, 'completed');
             }
         });
 
         // Mark target conversation as active
-        this.updateConversationStatus(conversationId, 'active');
+        this.updateConversationStatus(threadId, 'active');
         
-        console.log(`Set active conversation to ${conversationId}`);
-        this.eventBus.emit(EVENTS.CONVERSATION.ACTIVATED, { conversationId });
+        console.log(`Set active conversation to ${threadId}`);
+        this.eventBus.emit(EVENTS.CONVERSATION.ACTIVATED, { threadId });
     }
 
     /**
      * Get the current conversation
      * @param {Object} [options={}] - Options for conversation creation
      * @param {string} [options.title] - Conversation title
-     * @returns {string} The conversation ID
+     * @returns {string} The thread ID
      */
     getCurrentConversation(options = {}) {
         console.log('[ConversationState] getCurrentConversation called with options:', options);
         
         // Try to get existing active conversation
-        let conversationId = this.getActiveConversationId();
-        console.log('[ConversationState] Active conversation ID:', conversationId);
+        let threadId = this.getActiveThreadId();
+        console.log('[ConversationState] Active thread ID:', threadId);
 
-        if (conversationId) {
-            return conversationId;
+        if (threadId) {
+            return threadId;
         }
         
         // No active conversation found, look for newest conversation
@@ -273,7 +274,7 @@ export class ConversationStatePlugin {
     /**
      * Create a new conversation
      * @param {Object} [options={}] - Options for conversation creation
-     * @returns {string} The conversation ID
+     * @returns {string} The thread ID
      */
     createNewConversation(options = {}) {
         console.log('[ConversationState] createNewConversation called with options:', options);
@@ -282,13 +283,13 @@ export class ConversationStatePlugin {
         const currentUser = this.stateService.state.settings?.aim?.userName || 'User';
         const currentPersona = this.stateService.state.settings?.aim?.personaName || 'WebWire Assistant';
         
-        const conversationId = this.createThreadId(currentUser, currentPersona);
+        const threadId = this.createThreadId(currentUser, currentPersona);
         
         const timestamp = Date.now();
         // Initialize the conversation metadata as active in an empty conversation
         this.stateService.state.conversation.history[conversationId] = [];
         this.stateService.state.conversation.metadata[conversationId] = {
-            id: conversationId,
+            threadId: threadId,
             userName: currentUser,
             personaName: currentPersona,
             startTime: timestamp,
@@ -332,5 +333,38 @@ export class ConversationStatePlugin {
             const timeB = b.endTime || b.startTime || 0;
             return timeB - timeA;
         });
+    }
+
+    /**
+     * Update tool result for a specific message
+     * @param {string} threadId
+     * @param {string} messageId
+     * @param {string} callId
+     * @param {object} toolResult
+     */
+    updateToolResult(threadId, messageId, callId, toolResult) {
+        const state = this.stateService.state.conversation;
+        if (!state.history[threadId]) {
+            throw new Error(`Conversation ${threadId} not found`, state);
+        }
+        const message = state.history[threadId].find(m => m.messageId === messageId);
+        if (message) {
+            if (!message.toolResults) {
+                message.toolResults = [];
+            }
+            message.toolResults.push({ callId, ...toolResult });
+        }
+        console.log(`[ConversationState] Updated tool result for message ${messageId} in conversation ${threadId}`);
+        this.eventBus.emit(EVENTS.CONVERSATION.UPDATED, { threadId });
+    }
+
+    /**
+     * Get the thread ID for a specific message
+     * @param {string} messageId
+     * @returns {string|null} The thread ID or null if not found
+     */
+    getThreadForMessage(messageId) {
+        const state = this.stateService.state.conversation;
+        return Object.keys(state.history).find(threadId => state.history[threadId].some(m => m.messageId === messageId));
     }
 }

@@ -158,6 +158,8 @@ export class PanelEventHandlers {
      */
     setupChatListeners() {
         this.eventBus.on(EVENTS.CHAT.CREATE_NEW_THREAD, this.handleCreateNewThread.bind(this));
+        this.eventBus.on(EVENTS.CHAT.EXECUTE_TOOL, this.handleExecuteTool.bind(this));
+        this.eventBus.on(EVENTS.CHAT.CANCEL_TOOL, this.handleCancelTool.bind(this));
     }
 
     /**
@@ -169,17 +171,44 @@ export class PanelEventHandlers {
             console.error('[MCPApp] State service or required plugins missing');
             return;
         }
-        const conversationId = this.stateService.conversation.createNewConversation();
+        const threadId = this.stateService.conversation.createNewConversation();
         // Save to disk
         await this.stateService.disk.saveToStorage();
         // Emit event to notify listeners (e.g., chat panel) of new thread
         this.eventBus.emit(EVENTS.CHAT.CONVERSATION_LOADED, {
             conversation: {
-                threadId: conversationId,
+                threadId: threadId,
                 messages: [],
-                metadata: this.stateService.state.conversation.metadata[conversationId]
+                metadata: this.stateService.state.conversation.metadata[threadId]
             }
         });
+    }
+
+    /**
+     * Handle execute tool event
+     */
+    async handleExecuteTool(data) {
+        console.log('[MCPApp] Handling execute tool event:', data);
+        const { messageId, callId, name, parameters } = data;
+        const threadId = this.stateService.conversation.getThreadForMessage(messageId);
+        if (!threadId) {
+            console.error('[MCPApp] No thread found for message:', messageId);
+            return;
+        }
+        const toolResult = await this.core.mcpConnector.executeTool(name, parameters, {callId});
+        // Update the conversation state with the tool result
+        this.stateService.conversation.updateToolResult(threadId, messageId, callId, toolResult);
+        // Save to disk
+        await this.stateService.disk.saveToStorage();
+        // Emit event to notify listeners (e.g., chat panel) of tool result
+        this.eventBus.emit(EVENTS.CHAT.TOOL_RESULT, { threadId, messageId, callId, toolResult });
+    }
+
+    /**
+     * Handle cancel tool event
+     */
+    async handleCancelTool(data) {
+        console.log('[MCPApp] Handling cancel tool event:', data);
     }
 
 }

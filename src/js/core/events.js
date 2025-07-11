@@ -42,7 +42,8 @@ export const EVENTS = {
         UPDATE_SETTINGS: 'chat:update-settings',
         TOGGLE_PAGE_CONTENT: 'chat:toggle-page-content',
         EXECUTE_TOOL: 'chat:execute-tool',
-        CANCEL_TOOL: 'chat:cancel-tool'
+        CANCEL_TOOL: 'chat:cancel-tool',
+        TOOL_RESULT: 'chat:tool-result'
     },
     AIM: {
         THOUGHT_TOGGLED: 'aim:thought_toggled',

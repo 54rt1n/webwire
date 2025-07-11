@@ -63,13 +63,14 @@ export class ChatService {
         // Listen for chat events
         this.eventBus.on(EVENTS.CHAT.SEND_MESSAGE, this.handleUserMessage.bind(this));
         this.eventBus.on(EVENTS.CHAT.ANALYZE_PAGE, this.handlePageAnalysisRequest.bind(this));
-        this.eventBus.on(EVENTS.CHAT.UPDATE_SETTINGS, this.handleSettingsUpdate.bind(this));
+        this.eventBus.on(EVENTS.CHAT.UPDATE_SETTINGS, this.handleSettingsRefresh.bind(this));
         this.eventBus.on(EVENTS.CHAT.UPDATE_MCP_STATUS, this.handleMCPStatusUpdate.bind(this));
         this.eventBus.on(EVENTS.CHAT.CONVERSATION_LOADED, this.handleConversationLoaded.bind(this));
         this.eventBus.on(EVENTS.CHAT.CONVERSATION_UPDATED, this.handleConversationUpdated.bind(this));
         this.eventBus.on(EVENTS.CHAT.START_NEW_CONVERSATION, this.handleNewConversationRequest.bind(this));
         this.eventBus.on(EVENTS.CHAT.REPLAY_LAST_TURN, this.handleReplayLastTurn.bind(this));
         this.eventBus.on(EVENTS.CHAT.REPARSE_MESSAGE, this.handleReparseMessage.bind(this));
+        this.eventBus.on(EVENTS.CHAT.TOOL_RESULT, this.handleToolResult.bind(this));
         
         // Listen for AI streaming events
         this.eventBus.on(EVENTS.AI.STREAM_CHUNK, this.handleStreamingChunk.bind(this));
@@ -284,7 +285,7 @@ export class ChatService {
             };
 
             // Finalize the thinking message with the complete response
-            this.finalizeStreamingMessage(thinkingMessage, userMsg, assistantMsg);
+            this.finalizeStreamingMessage(thinkingMessage, assistantMsg);
 
             this.lastMessage = message;
 
@@ -349,7 +350,7 @@ export class ChatService {
     /**
      * Handle settings update event
      */
-    async handleSettingsUpdate(payload) {
+    async handleSettingsRefresh(payload) {
         console.log('[ChatService] Handling settings update:', payload);
         
         const { settings } = payload;
@@ -375,11 +376,11 @@ export class ChatService {
     async handleConversationUpdated(payload) {
         console.log('[ChatService] Handling conversation updated:', payload);
         
-        const { conversationId } = payload;
+        const { threadId } = payload;
         
-        // Update the conversation ID display in the panel
+        // Update the thread ID display in the panel
         if (this.panel.isReady()) {
-            this.panel.updateConversationIdDisplay(conversationId);
+            this.panel.updateConversationIdDisplay(threadId);
         }
     }
 
@@ -502,6 +503,16 @@ export class ChatService {
     }
 
     /**
+     * Handle tool result event
+     */
+    async handleToolResult(payload) {
+        console.log('[ChatService] Handling tool result:', payload);
+        const { threadId, messageId, callId, toolResult } = payload;
+        // We need to update the tool result for our panel
+        this.panel.updateToolResult(callId, toolResult);
+    }
+
+    /**
      * Update connection status and notify panel
      */
     updateConnectionStatus() {
@@ -589,7 +600,7 @@ export class ChatService {
 
         let toolMessages = [];
         for (const toolCall of toolCalls) {
-            const toolResult = toolResults.find(result => result.callId === toolCall.callId);
+            const toolResult = toolResults?.find(result => result.callId === toolCall.callId);
             if (toolResult) {
                 if (toolResult.success) {
                     display = 'success';
