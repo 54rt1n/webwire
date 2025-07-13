@@ -241,8 +241,8 @@ export class ChatService {
 
             const messageId = userMessage.messageId;
 
-            // Create thinking message
-            const thinkingMessage = this.addThinkingMessage('Thinking...', messageId);
+            // Create thinking message with unique ID
+            const thinkingMessage = this.addThinkingMessage('Thinking...');
             this.streamingState.currentMessage = thinkingMessage;
             let streamingText = '';
 
@@ -331,10 +331,10 @@ export class ChatService {
         } catch (error) {
             if (error.message.includes("Error: Empty response from AI provider")) {
                 console.log('[ChatService] Empty response from AI provider, skipping');
-                this.panel.displayError(error.message, this.streamingState.currentMessage?.id);
+                this.panel.displayError(error.message, this.streamingState.currentMessage?.messageId);
             } else {
                 console.error('[ChatService] Error handling user message:', error);
-                this.panel.displayError(error.message, this.streamingState.currentMessage?.id);
+                this.panel.displayError(error.message, this.streamingState.currentMessage?.messageId);
             }
         }
     }
@@ -614,7 +614,7 @@ export class ChatService {
         console.log('[ChatService] Streaming chunk to panel:', chunk.length, messageHandle);
         
         // Update panel directly
-        this.panel.updateStreamingMessage(messageHandle.id, this.streamingState.streamingText);
+        this.panel.updateStreamingMessage(messageHandle.messageId, this.streamingState.streamingText);
     }
         
     /**
@@ -622,7 +622,7 @@ export class ChatService {
      */
     finalizeStreamingMessage(messageHandle, { content, toolCalls, toolResults, parseErrors, ...assistantMsg } = {}) {
         this.streamingState.isActive = false;
-        //this.streamingState.currentMessage = null;
+        this.streamingState.currentMessage = null;
         this.streamingState.streamingText = '';
 
         const toolMessages = buildToolMessages(toolCalls, toolResults);

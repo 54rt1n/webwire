@@ -15,6 +15,10 @@ Note: This project uses both Webpack (primary) for Chrome extension and Vite for
 
 **Important**: Do not run `npm run build` or other build commands in this environment - the development environment is not configured for running builds.
 
+## Development Workflow
+
+- The first thing you should always do is run tree src and then node scripts/sig.js src to see the code documentation.
+
 ## Architecture Overview
 
 WebWire is a Chrome extension providing AI-powered web page analysis with Model Context Protocol (MCP) tool integration. The codebase is ~20k lines with sophisticated architecture across 77 files in 21 directories.
