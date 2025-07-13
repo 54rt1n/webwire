@@ -1,8 +1,8 @@
 import '../shared/global.scss';
 import './style.css';
-import { TextViewModal } from './textview-modal.js';
-import { GraphDraw } from './graph-draw.js';
-import { StashButton } from './stash-button.js';
+import { TextViewModal } from './components/textview-modal.js';
+import { GraphDraw } from './components/graph-draw.js';
+import { StashButton } from './components/stash-button.js';
 import { EVENTS } from '../js/core/events.js';
 
 /**

@@ -3,10 +3,10 @@ import { MCPControlPanel } from './panel.js';
 import { WebWireClientCore } from '../js/client/webwire-client-core.js';
 import { PanelEventHandlers } from '../js/client/panel-event-handlers.js';
 import { CMCPHelper } from '../js/client/cmcp-helper.js';
-import { documentModal } from './document-modal.js';
+import { documentModal } from './components/document-modal.js';
 import { ChatService } from '../chat/chat-service.js';
 import { EventBus } from '../js/core/event-bus.js';
-import { StashPanel } from './stash-panel.js';
+import { StashPanel } from './components/stash-panel.js';
 import '../chat/chat.css';
 
 /**

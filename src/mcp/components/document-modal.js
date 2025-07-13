@@ -1,6 +1,6 @@
 import './document-modal.css';
 import { StashButton } from './stash-button.js';
-import { EVENTS } from '../js/core/events.js';
+import { EVENTS } from '../../js/core/events.js';
 
 /**
  * DocumentModal
