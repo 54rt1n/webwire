@@ -231,15 +231,18 @@ export class ChatService {
                 console.log('[ChatService] Tool messages:', toolMessages, lastAssistantMessage);
                 const toolMessagesString = toolMessages.map(toolMessage => {
                     const { callId, display, error, executionTime, name, parameters, success, ...results } = toolMessage;
-                    const resultString = JSON.stringify(results, null, 2);
-                    return `|tool_response|\n\n${name}: ${resultString}\n\n|end_tool_response|`;
+                    if (error) {
+                        return `|tool_error|\n\n${name}: ${error}\n\n|end_tool_error|`;
+                    } else {
+                        const resultString = JSON.stringify(results, null, 2);
+                        return `|tool_response|\n\n${name}: ${resultString}\n\n|end_tool_response|`;
+                    }
                 }).join('\n\n');
+                console.log('[ChatService] Tool messages string:', toolMessagesString);
                 syntheticPlayerHeader.push(toolMessagesString);
             } else {
                 console.log('[ChatService] No tool messages found');
             }
-
-            const messageId = userMessage.messageId;
 
             // Create thinking message with unique ID
             const thinkingMessage = this.addThinkingMessage('Thinking...');
@@ -434,16 +437,16 @@ export class ChatService {
             return;
         }
 
-        // Remove the last assistant message from the conversation if the assistant
-        // was the last message in the conversation
+        // Remove the last assistant message from the conversation ONLY if the assistant
+        // was actually the last message in the conversation (not if last message was user message with error)
         if (this.currentConversation && this.currentConversation.messages && this.currentConversation.messages.length > 0) {
             const lastMessage = this.currentConversation.messages[this.currentConversation.messages.length - 1];
             if (lastMessage.role === MESSAGE_ROLES.ASSISTANT) {
                 this.currentConversation.messages.pop();
-            }
-            // Update the panel
-            if (this.panel.isReady()) {
-                this.panel.updateConversation(this.currentConversation);
+                // Update the panel
+                if (this.panel.isReady()) {
+                    this.panel.updateConversation(this.currentConversation);
+                }
             }
         }
 
@@ -611,7 +614,7 @@ export class ChatService {
         
         this.streamingState.streamingText += chunk;
 
-        console.log('[ChatService] Streaming chunk to panel:', chunk.length, messageHandle);
+        //console.log('[ChatService] Streaming chunk to panel:', chunk.length, messageHandle);
         
         // Update panel directly
         this.panel.updateStreamingMessage(messageHandle.messageId, this.streamingState.streamingText);
