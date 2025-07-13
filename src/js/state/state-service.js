@@ -76,4 +76,59 @@ class StateService {
     }
 }
 
-export { StateService }; 
+class ContentStateService {
+    /**
+     * Create a StateService instance with required dependencies
+     * @param {Object} initialState - Initial state object
+     * @param {Object} eventBus - Event bus instance for inter-component communication
+     * @throws {Error} If eventBus or initial state are not provided
+     */
+    constructor(initialState, eventBus) {
+        if (!eventBus || !initialState) {
+            throw new Error('Event bus and initial state are required');
+        }
+
+        this.eventBus = eventBus;
+
+        // Initialize state with default structure
+        this.state = initialState;
+
+        // Initialize plugins
+        this.settings = new SettingsStatePlugin(this);
+        this.aim = new AIMStatePlugin(this);
+        this.conversation = new ConversationStatePlugin(this);
+        this.mcp = new MCPStatePlugin(this);
+        this.stash = new StashStatePlugin(this);
+        this.ui = new UiStatePlugin(this);
+
+        this.validator = new StateValidator();
+    }
+
+    /**
+     * Initialize the state service and its plugins
+     * Performs any necessary setup operations for the state management system
+     */
+    initialize() {
+        console.log('[ContentStateService]', 'ContentStateService initialized');
+    }
+
+    /**
+     * Set the state
+     */
+    setState(state) {
+        this.state = state;
+    }
+
+    // ==== UTILITY & STATUS METHODS ====
+
+    /**
+     * Check if the state is empty or uninitialized
+     * @returns {boolean} True if state is empty, false otherwise
+     * @deprecated This method currently always returns false and may be removed
+     */
+    isEmpty() {
+        return false;
+    }
+}
+
+export { StateService, ContentStateService }; 

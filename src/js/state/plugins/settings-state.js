@@ -7,7 +7,7 @@ export class SettingsStatePlugin {
     constructor(stateService) {
         this.stateService = stateService;
         this.eventBus = stateService.eventBus;
-        this.settingsAdapter = stateService.storage.settings;
+        this.settingsAdapter = stateService.storage?.settings;
     }
 
     /**
@@ -24,6 +24,11 @@ export class SettingsStatePlugin {
      */
     async loadFromStorage() {
         try {
+            if (!this.settingsAdapter) {
+                console.log('[StateService::SettingsState] No settings adapter found');
+                return {};
+            }
+
             console.log('[StateService::SettingsState] Loading settings from adapter...');
             console.log('[StateService::SettingsState] Settings adapter:', this.settingsAdapter);
             
@@ -52,6 +57,11 @@ export class SettingsStatePlugin {
      */
     async saveToStorage() {
         try {
+            if (!this.settingsAdapter) {
+                console.log('[StateService::SettingsState] No settings adapter found');
+                return;
+            }
+
             console.log('[StateService::SettingsState] Saving settings to adapter...');
             console.log('[StateService::SettingsState] Settings to save:', this.stateService.state.settings);
             console.log('[StateService::SettingsState] Settings adapter:', this.settingsAdapter);

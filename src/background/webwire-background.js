@@ -1,6 +1,7 @@
 import { EVENT_TYPES, EVENT_CONTEXT } from '../js/core/events.js';
 import { initializeContext } from '../js/context/context-init.js';
 import { EventBus } from '../js/core/event-bus.js';
+import { BACKGROUND_ACTIONS } from '../chat/chat-constants.js';
 
 /**
  * WebWire Extension Background Script
@@ -37,6 +38,99 @@ class WebWireBackground {
         this.setupEventListeners();
         
         console.log('WebWire background script initialized');
+    }
+
+    /**
+     * Setup EventBus listeners for handling cross-context events
+     */
+    setupEventBusListeners() {
+        // Handle state and settings requests
+        this.eventBus.on('GET_WEBWIRE_SETTINGS', (data, options) => {
+            const settings = this.stateService?.state?.settings || {};
+            return { success: true, settings: settings };
+        });
+
+        this.eventBus.onAsync('SAVE_WEBWIRE_SETTINGS', async (data, options) => {
+            if (this.stateService?.state && this.stateService?.settings) {
+                this.stateService.state.settings = { ...this.stateService.state.settings, ...data.settings };
+                await this.stateService.settings.saveToStorage();
+                return { success: true };
+            } else {
+                throw new Error('State service not initialized');
+            }
+        });
+
+        this.eventBus.onAsync('GET_WEBWIRE_STATE', async (data, options) => {
+            const { sender } = options;
+            const tabId = await this.resolveTabId(sender, data);
+            const state = await this.getWebWireState(tabId);
+            return state;
+        });
+
+        this.eventBus.onAsync('SAVE_WEBWIRE_STATE', async (data, options) => {
+            const success = await this.saveState(data.state);
+            return { success };
+        });
+
+        // Handle thread/conversation operations
+        this.eventBus.onAsync(BACKGROUND_ACTIONS.GET_OR_CREATE_CURRENT_THREAD, async (data, options) => {
+            let threadId = this.stateService.conversation.getActiveThreadId();
+            if (!threadId) {
+                threadId = this.stateService.conversation.createNewConversation();
+            }
+            
+            const messages = this.stateService.conversation.getConversationMessages(threadId);
+            const currentThreadData = {
+                threadId: threadId,
+                metadata: this.stateService.state.conversation.metadata[threadId],
+                messages: messages
+            };
+            return { success: true, thread: currentThreadData };
+        });
+
+        this.eventBus.onAsync('SAVE_THREAD_MESSAGE', async (data, options) => {
+            this.stateService.conversation.storeMessage(
+                data.threadId,
+                data.userMessage,
+                data.assistantMessage,
+                data.options || {}
+            );
+            
+            // Auto-save state and notify listeners
+            await this.stateService.disk.saveToStorage();
+            
+            // Notify all tabs about the conversation update
+            const completeConversationState = {
+                threadId: data.threadId,
+                metadata: this.stateService.state.conversation.metadata[data.threadId],
+                messages: this.stateService.conversation.getConversationMessages(data.threadId),
+                isActive: this.stateService.conversation.getActiveConversationId() === data.threadId
+            };
+            
+            await this.notifyTabsOfConversationUpdate(data.threadId, {
+                action: 'CONVERSATION_UPDATED',
+                conversation: completeConversationState,
+                timestamp: Date.now()
+            });
+            
+            return { success: true };
+        });
+
+        this.eventBus.onAsync('SAVE_PANEL_VISIBILITY', async (data, options) => {
+            await this.savePanelVisibilityState(data.visible);
+            return { success: true };
+        });
+
+        this.eventBus.on('PING', (data, options) => {
+            return { 
+                success: true, 
+                status: 'ready',
+                timestamp: Date.now(),
+                stateServiceReady: !!this.stateService
+            };
+        });
+
+        console.log('[WebWireBackground] EventBus listeners set up');
     }
 
     async loadSettings() {
@@ -149,19 +243,8 @@ class WebWireBackground {
             this.handleCommand(command, tab);
         });
 
-        // Handle messages from content scripts and popup
-        chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-            // Handle async operations by wrapping in a promise
-            this.handleMessage(message, sender, sendResponse)
-                .catch(error => {
-                    console.error('Error in handleMessage:', error);
-                    sendResponse({ 
-                        success: false, 
-                        error: error.message 
-                    });
-                });
-            return true; // Always return true to keep message channel open for async responses
-        });
+        // Setup EventBus listeners for cross-context events (EventDispatcher handles Chrome messaging)
+        this.setupEventBusListeners();
 
         // Handle tab updates
         chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
@@ -449,11 +532,16 @@ class WebWireBackground {
                     return true;
 
                 case 'GET_OR_CREATE_CURRENT_THREAD':
-                    const currentThreadId = this.stateService.conversation.getOrCreateCurrentConversation(message.options || {});
+                    let currentThreadId = this.stateService.conversation.getActiveThreadId();
+                    if (!currentThreadId) {
+                        currentThreadId = this.stateService.conversation.createNewConversation();
+                    }
+                    
+                    const messages = this.stateService.conversation.getConversationMessages(currentThreadId);
                     const currentThreadData = {
                         threadId: currentThreadId,
                         metadata: this.stateService.state.conversation.metadata[currentThreadId],
-                        messages: this.stateService.conversation.getConversationMessages(currentThreadId)
+                        messages: messages
                     };
                     sendResponse({ 
                         success: true, 

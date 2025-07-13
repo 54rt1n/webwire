@@ -1,6 +1,8 @@
 import { EventBus } from '../js/core/event-bus.js';
+import { EVENTS } from '../js/core/events.js';
 import { ChatService } from '../chat/chat-service.js';
 import { PageUtils } from '../chat/page-utils.js';
+import { WebWireClientCore } from '../js/client/webwire-client-core.js';
 import { setupDebugMethods, setupGlobalDebugAccess } from './debug.js';
 import {
     BACKGROUND_ACTIONS,
@@ -11,8 +13,8 @@ import {
     KEYBOARD_SHORTCUTS,
     DOM_READY_STATES
 } from '../chat/chat-constants.js';
-//import '../shared/global.scss';
-//import '../chat/chat.css';
+import '../shared/global.scss';
+import '../chat/chat.css';
 
 /**
  * WebWire Content Script - Thin Host/Adapter
@@ -28,6 +30,10 @@ class WebWireContentHost {
     constructor() {
         // Create event bus for communication with ChatService
         this.eventBus = new EventBus({domain: 'content', debug: true});
+        
+        // Create WebWire core for infrastructure
+        this.core = new WebWireClientCore(this.eventBus);
+        
         // Create the chat service (platform-agnostic core)
         this.chatService = new ChatService(this.eventBus);
         
@@ -38,6 +44,7 @@ class WebWireContentHost {
         
         // Setup host-specific event handlers
         this.setupHostEventHandlers();
+        this.setupChatServiceEvents();
     }
 
     /**
@@ -51,11 +58,92 @@ class WebWireContentHost {
     }
 
     /**
+     * Setup event handling between ChatService and background using EventDispatcher
+     */
+    setupChatServiceEvents() {
+        // Handle outbound requests from ChatService using dispatcher
+        this.eventBus.onAsync(EVENTS.CHAT.SAVE_MESSAGE, this.handleSaveMessage.bind(this));
+        this.eventBus.onAsync(EVENTS.CHAT.GET_OR_CREATE_THREAD, this.handleGetOrCreateThread.bind(this));
+        this.eventBus.onAsync(EVENTS.CHAT.SAVE_PANEL_VISIBILITY, this.handleSavePanelVisibility.bind(this));
+    }
+
+    /**
+     * Handle save message request using EventDispatcher
+     */
+    async handleSaveMessage(data) {
+        try {
+            const response = await this.core.dispatcher.dispatch(
+                BACKGROUND_ACTIONS.SAVE_THREAD_MESSAGE,
+                data,
+                { target: 'background' }
+            );
+            return response;
+        } catch (error) {
+            console.error('[WebWireContentHost] Failed to save message:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Handle get or create thread request using EventDispatcher
+     */
+    async handleGetOrCreateThread(data) {
+        try {
+            const response = await this.core.dispatcher.dispatch(
+                BACKGROUND_ACTIONS.GET_OR_CREATE_CURRENT_THREAD,
+                data,
+                { target: 'background' }
+            );
+            
+            // Emit conversation loaded event for ChatService
+            if (response.success && response.thread) {
+                this.eventBus.emit(EVENTS.CHAT.CONVERSATION_LOADED, {
+                    conversation: response.thread
+                });
+            }
+            
+            return response;
+        } catch (error) {
+            console.error('[WebWireContentHost] Failed to get/create thread:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Handle save panel visibility using EventDispatcher
+     */
+    async handleSavePanelVisibility(data) {
+        try {
+            const response = await this.core.dispatcher.dispatch(
+                BACKGROUND_ACTIONS.SAVE_PANEL_VISIBILITY,
+                data,
+                { target: 'background' }
+            );
+            return response;
+        } catch (error) {
+            console.error('[WebWireContentHost] Failed to save panel visibility:', error);
+            throw error;
+        }
+    }
+
+    /**
      * Initialize the content host
      */
     async initialize() {
-        return;
         console.log('[WebWireContentHost] Starting initialization...');
+        
+        // Initialize WebWire core
+        await this.core.initialize();
+        
+        console.log('[WebWireContentHost] Core initialized with:', {
+            stateService: !!this.core.stateService,
+            aiClient: !!this.core.aiClient,
+            mcpConnector: !!this.core.mcpConnector
+        });
+        
+        // Initialize ChatService with the core services
+        await this.chatService.initialize(this.core.aiClient, this.core.mcpConnector, this.core.stateService);
+        console.log('[WebWireContentHost] ChatService initialized');
         
         // Set up Chrome extension communication
         if (typeof chrome !== 'undefined' && chrome.runtime) {
@@ -75,18 +163,9 @@ class WebWireContentHost {
         
         // Load settings and initialize ChatService
         try {
-            await this.loadSettingsFromBackground();
-            console.log('[WebWireContentHost] Settings loaded successfully');
-
-            // TODO we need to have these to contiune
-            
             // Initialize the ChatService
-            await this.chatService.initialize(aiClient, mcpConnector, stateService);
+            await this.chatService.initialize(this.core.aiClient, this.core.mcpConnector, this.core.stateService);
             console.log('[WebWireContentHost] ChatService initialized');
-            
-            // Send settings to ChatService
-            this.eventBus.emit('chat:update-settings', { settings: this.currentSettings });
-            
         } catch (error) {
             console.error('[WebWireContentHost] Settings loading failed:', error);
         }
@@ -94,14 +173,7 @@ class WebWireContentHost {
         // Handle auto-inject and panel restoration
         try {
             const shouldInject = await this.shouldAutoInject();
-            const backgroundState = await this.getBackgroundState();
-            const shouldShowPanel = backgroundState?.ui?.panelVisible || false;
-            
-            console.log('[WebWireContentHost] Panel state from background:', {
-                shouldInject,
-                shouldShowPanel,
-                backgroundState: backgroundState?.ui
-            });
+            const shouldShowPanel = this.core.stateService.ui?.panelVisible || false;
             
             if (shouldInject || shouldShowPanel) {
                 console.log(shouldInject ? 'Auto-inject enabled, injecting panel...' : 'Panel was previously visible, restoring...');
@@ -147,18 +219,19 @@ class WebWireContentHost {
      */
     async handleBackgroundDispatch(event, data) {
         switch (event) {
-            case 'threads:get-or-create':
-                const threadResponse = await chrome.runtime.sendMessage({
-                    action: BACKGROUND_ACTIONS.GET_OR_CREATE_CURRENT_THREAD,
-                    options: data
-                });
+            case EVENTS.THREADS.GET_OR_CREATE:
+                const threadResponse = await this.core.dispatcher.dispatch(
+                    BACKGROUND_ACTIONS.GET_OR_CREATE_CURRENT_THREAD,
+                    data,
+                    { target: 'background' }
+                );
 
                 if (threadResponse.success) {
                     const { threadId, metadata, messages } = threadResponse.thread;
                     this.currentThreadId = threadId;
                     
                     // Send conversation history back to ChatService
-                    this.eventBus.emit('chat:conversation-loaded', {
+                    this.eventBus.emit(EVENTS.CHAT.CONVERSATION_LOADED, {
                         conversation: {
                             threadId,
                             metadata,
@@ -170,25 +243,24 @@ class WebWireContentHost {
                 }
                 break;
 
-            case 'threads:save-message':
-                const saveResponse = await chrome.runtime.sendMessage({
-                    action: BACKGROUND_ACTIONS.SAVE_THREAD_MESSAGE,
-                    threadId: this.currentThreadId,
-                    userMessage: data.userMessage,
-                    assistantMessage: data.assistantMessage,
-                    options: data.options
-                });
+            case EVENTS.THREADS.SAVE_MESSAGE:
+                const saveResponse = await this.core.dispatcher.dispatch(
+                    BACKGROUND_ACTIONS.SAVE_THREAD_MESSAGE,
+                    data,
+                    { target: 'background' }
+                );
 
                 if (!saveResponse.success) {
                     console.warn('[WebWireContentHost] Failed to save conversation:', saveResponse.error);
                 }
                 break;
 
-            case 'ui:save-panel-visibility':
-                const visibilityResponse = await chrome.runtime.sendMessage({
-                    action: BACKGROUND_ACTIONS.SAVE_PANEL_VISIBILITY,
-                    visible: data.visible
-                });
+            case EVENTS.UI.SAVE_PANEL_VISIBILITY:
+                const visibilityResponse = await this.core.dispatcher.dispatch(
+                    BACKGROUND_ACTIONS.SAVE_PANEL_VISIBILITY,
+                    data,
+                    { target: 'background' }
+                );
 
                 if (!visibilityResponse.success) {
                     console.warn('[WebWireContentHost] Failed to save panel visibility:', visibilityResponse.error);
@@ -205,42 +277,12 @@ class WebWireContentHost {
      */
     async handleHostDispatch(event, data) {
         switch (event) {
-            case 'ui:inject-panel':
+            case EVENTS.UI.INJECT_PANEL:
                 await this.injectPanel();
                 break;
 
             default:
                 console.warn('[WebWireContentHost] Unknown host event:', event);
-        }
-    }
-
-    /**
-     * Load settings from background script
-     */
-    async loadSettingsFromBackground() {
-        try {
-            const response = await chrome.runtime.sendMessage({
-                action: BACKGROUND_ACTIONS.GET_WEBWIRE_SETTINGS
-            });
-
-            console.log('[WebWireContentHost] Settings from background:', response);
-            
-            if (!response) {
-                console.error('[WebWireContentHost] No response from background script');
-                this.currentSettings = {};
-                return;
-            }
-            
-            if (response.success) {
-                this.currentSettings = response.settings || {};
-                console.log('[WebWireContentHost] Successfully loaded settings:', this.currentSettings);
-            } else {
-                console.error('[WebWireContentHost] Background script returned error:', response.error);
-                this.currentSettings = {};
-            }
-        } catch (error) {
-            console.error('[WebWireContentHost] Failed to load settings from background:', error);
-            this.currentSettings = {};
         }
     }
 
@@ -299,24 +341,24 @@ class WebWireContentHost {
             switch (action) {
                 case PANEL_ACTIONS.SEND_CHAT_MESSAGE:
                     // Delegate to ChatService
-                    this.eventBus.emit('chat:send-message', { message: data.message });
+                    this.eventBus.emit(EVENTS.CHAT.SEND_MESSAGE, { message: data.message });
                     break;
                     
                 case PANEL_ACTIONS.ANALYZE_PAGE_CONTENT:
                     // Delegate to ChatService
-                    this.eventBus.emit('chat:analyze-page', {});
+                    this.eventBus.emit(EVENTS.CHAT.ANALYZE_PAGE, {});
                     break;
                     
                 case PANEL_ACTIONS.CONNECT_MCP:
                     // Update settings and notify ChatService
                     this.currentSettings.mcp = { ...this.currentSettings.mcp, serverUrl: data.url };
-                    this.eventBus.emit('chat:update-settings', { settings: this.currentSettings });
+                    this.eventBus.emit(EVENTS.CHAT.UPDATE_SETTINGS, { settings: this.currentSettings });
                     break;
                     
                 case PANEL_ACTIONS.DISCONNECT_MCP:
                     // Update settings and notify ChatService
                     this.currentSettings.mcp = { ...this.currentSettings.mcp, serverUrl: '' };
-                    this.eventBus.emit('chat:update-settings', { settings: this.currentSettings });
+                    this.eventBus.emit(EVENTS.CHAT.UPDATE_SETTINGS, { settings: this.currentSettings });
                     break;
                     
                 case PANEL_ACTIONS.GET_PAGE_CONTENT:
@@ -339,7 +381,7 @@ class WebWireContentHost {
                         // Update local settings and notify ChatService
                         if (response.success) {
                             this.currentSettings = data.settings;
-                            this.eventBus.emit('chat:update-settings', { settings: this.currentSettings });
+                            this.eventBus.emit(EVENTS.CHAT.UPDATE_SETTINGS, { settings: this.currentSettings });
                         }
                     } catch (error) {
                         console.error('[WebWireContentHost] Failed to save settings:', error);
@@ -406,13 +448,13 @@ class WebWireContentHost {
                 case BACKGROUND_HANDLERS.SETTINGS_CHANGED:
                     // Settings have been updated - notify ChatService
                     this.currentSettings = message.data.settings || {};
-                    this.eventBus.emit('chat:update-settings', { settings: this.currentSettings });
+                    this.eventBus.emit(EVENTS.CHAT.UPDATE_SETTINGS, { settings: this.currentSettings });
                     sendResponse({ success: true });
                     return false;
                     
                 case BACKGROUND_HANDLERS.CONVERSATION_UPDATED:
                     // Conversation has been updated - notify ChatService
-                    this.eventBus.emit('chat:conversation-loaded', { conversation: message.data.conversation });
+                    this.eventBus.emit(EVENTS.CHAT.CONVERSATION_LOADED, { conversation: message.data.conversation });
                     sendResponse({ success: true });
                     return false;
                     
@@ -441,27 +483,6 @@ class WebWireContentHost {
         } catch (error) {
             console.warn('[WebWireContentHost] Could not check auto-inject setting:', error);
             return false;
-        }
-    }
-
-    /**
-     * Get state from background script
-     */
-    async getBackgroundState() {
-        try {
-            const response = await chrome.runtime.sendMessage({
-                action: BACKGROUND_ACTIONS.GET_WEBWIRE_STATE
-            });
-
-            if (response && response.success) {
-                return response.state;
-            } else {
-                console.warn('[WebWireContentHost] Failed to get background state:', response?.error);
-                return null;
-            }
-        } catch (error) {
-            console.error('[WebWireContentHost] Error getting background state:', error);
-            return null;
         }
     }
 

@@ -400,7 +400,7 @@ export class EventDispatcher {
 
   async handleCrossContextEvent(message, sender, sendResponse) {
     try {
-      const result = await this.eventBus.emit(message.event, message.data, {
+      const result = await this.eventBus.emitAsync(message.event, message.data, {
         source: message.source,
         sender
       });

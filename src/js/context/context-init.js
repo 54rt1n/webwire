@@ -2,7 +2,7 @@
 import { EVENT_CONTEXT } from '../core/events.js';
 import { contextFactory } from './context-factory.js';
 
-export async function initializeContext(eventBus, context = null, {} = {}) {
+export async function initializeContext(eventBus, context = null, {initialState = null} = {}) {
   if (context === null) {
     context = detectContext();
   }
@@ -31,10 +31,10 @@ export async function initializeContext(eventBus, context = null, {} = {}) {
         pageAnalyzer,
       */
      // TODO our settings can't be loaded here, so we will need to get them from the background
-     throw new Error('Settings can\'t be loaded here, so we will need to get them from the background');
+     // We will need to make our own state-service instance 
       results = await contextFactory(eventBus, context,
-        {storage: false, state: true, ai: true, mcp: true},
-        {backgroundIsLocal: false, modelType: 'chat'});
+        {storage: false, contentState: true, ai: true, mcp: true},
+        {backgroundIsLocal: false, modelType: 'chat', readInitialState: true});
       break;
     case EVENT_CONTEXT.POPUP:
       /*

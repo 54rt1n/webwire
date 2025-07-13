@@ -7,7 +7,7 @@ export class UiStatePlugin {
     constructor(stateService) {
         this.stateService = stateService;
         this.eventBus = stateService.eventBus;
-        this.uiAdapter = stateService.storage.ui;
+        this.uiAdapter = stateService.storage?.ui;
     }
 
     /**
@@ -23,6 +23,11 @@ export class UiStatePlugin {
      * Read UI state and set them in the state
      */
     async loadFromStorage() {
+        if (!this.uiAdapter) {
+            console.log('[StateService::UiState] No UI adapter found');
+            return {};
+        }
+
         const uiState = await this.uiAdapter.getAll();
         this.stateService.state.ui = uiState;
         console.log('[StateService::UiState] UI state read:', uiState);
@@ -33,6 +38,11 @@ export class UiStatePlugin {
      * Save UI state
      */
     async saveToStorage() {
+        if (!this.uiAdapter) {
+            console.log('[StateService::UiState] No UI adapter found');
+            return;
+        }
+
         await this.uiAdapter.setAll(this.stateService.state.ui);
     }
 

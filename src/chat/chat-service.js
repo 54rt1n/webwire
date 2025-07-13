@@ -225,23 +225,25 @@ export class ChatService {
             }
 
             // Add any tool calls and responses (a toolMessage) from the last assistant message and add them as a prefix to the user message
-            const lastAssistantMessage = this.currentConversation.messages[this.currentConversation.messages.length - 1];
-            if (lastAssistantMessage && lastAssistantMessage.toolCalls?.length > 0) {
-                const toolMessages = buildToolMessages(lastAssistantMessage.toolCalls, lastAssistantMessage.toolResults);
-                console.log('[ChatService] Tool messages:', toolMessages, lastAssistantMessage);
-                const toolMessagesString = toolMessages.map(toolMessage => {
-                    const { callId, display, error, executionTime, name, parameters, success, ...results } = toolMessage;
-                    if (error) {
-                        return `|tool_error|\n\n${name}: ${error}\n\n|end_tool_error|`;
-                    } else {
-                        const resultString = JSON.stringify(results, null, 2);
-                        return `|tool_response|\n\n${name}: ${resultString}\n\n|end_tool_response|`;
-                    }
-                }).join('\n\n');
-                console.log('[ChatService] Tool messages string:', toolMessagesString);
-                syntheticPlayerHeader.push(toolMessagesString);
-            } else {
-                console.log('[ChatService] No tool messages found');
+            if (this.currentConversation && this.currentConversation.messages && this.currentConversation.messages.length > 0) {
+                const lastAssistantMessage = this.currentConversation.messages[this.currentConversation.messages.length - 1];
+                if (lastAssistantMessage && lastAssistantMessage.toolCalls?.length > 0) {
+                    const toolMessages = buildToolMessages(lastAssistantMessage.toolCalls, lastAssistantMessage.toolResults);
+                    console.log('[ChatService] Tool messages:', toolMessages, lastAssistantMessage);
+                    const toolMessagesString = toolMessages.map(toolMessage => {
+                        const { callId, display, error, executionTime, name, parameters, success, ...results } = toolMessage;
+                        if (error) {
+                            return `|tool_error|\n\n${name}: ${error}\n\n|end_tool_error|`;
+                        } else {
+                            const resultString = JSON.stringify(results, null, 2);
+                            return `|tool_response|\n\n${name}: ${resultString}\n\n|end_tool_response|`;
+                        }
+                    }).join('\n\n');
+                    console.log('[ChatService] Tool messages string:', toolMessagesString);
+                    syntheticPlayerHeader.push(toolMessagesString);
+                } else {
+                    console.log('[ChatService] No tool messages found');
+                }
             }
 
             // Create thinking message with unique ID

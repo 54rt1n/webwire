@@ -95,7 +95,7 @@ export class StashAdapter {
         const success = await this.storage.remove(this.storageKey);
         
         if (success && this.eventBus) {
-            this.eventBus.emit(EVENTS.STASH?.CLEARED_ALL || 'stash:cleared_all', {});
+            this.eventBus.emit(EVENTS.STASH.CLEARED, { operation: 'clear' });
         }
         
         return success;

@@ -14,24 +14,30 @@ export class WebWireClientCore {
         this.aiClient = null;
         this.serverUrl = null;
         this.storage = null;
+        this.dispatcher = null;
     }
 
     /**
      * Initializes the core state and services.
      */
-    async initialize() {
+    async initialize(initialState = null) {
         console.log('[WebWireClientCore] Initializing Context...');
 
         const { stateService,
             storage,
             aiClient,
+            mcpConnector,
+            dispatcher,
             ...rest
-        } = await initializeContext(this.eventBus);
+        } = await initializeContext(this.eventBus, null, { initialState });
+        
         this.stateService = stateService;
         this.storage = storage;
         this.aiClient = aiClient;
+        this.mcpConnector = mcpConnector;
+        this.dispatcher = dispatcher;
 
-        console.log('[WebWireClientCore] StateService:', this.stateService, 'storage:', this.storage, 'aiClient:', this.aiClient, 'rest:', rest);
+        console.log('[WebWireClientCore] StateService:', this.stateService, 'storage:', this.storage, 'aiClient:', this.aiClient, 'mcpConnector:', this.mcpConnector, 'dispatcher:', this.dispatcher, 'rest:', rest);
     }
 
     /**

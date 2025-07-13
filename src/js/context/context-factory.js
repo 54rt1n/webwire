@@ -2,21 +2,37 @@ import { AIClientFactory } from '../ai/ai-client-factory.js';
 import { EventDispatcher } from '../core/event-dispatcher.js';
 import { EventErrorBoundary } from '../core/error-boundary.js';
 import { MCPConnector } from '../mcp/mcp-connector.js';
-import { StateService } from '../state/state-service.js';
+import { StateService, ContentStateService } from '../state/state-service.js';
 import { StorageManager } from '../storage/storage-manager.js';
 
 export async function contextFactory(eventBus, context,
-    {storage = false, state = false, ai = false, mcp = false},
-    {backgroundIsLocal = false, loadSettings = false, loadState = false, loadStash = false, modelType = null} = {}) {
+    {storage = false, state = false, contentState = false, ai = false, mcp = false},
+    {backgroundIsLocal = false, loadSettings = false, loadState = false, loadStash = false, modelType = null, initialState = null, readInitialState = false} = {}) {
 
-    if ((ai || mcp) && (!state || !loadSettings)) {
+    if ((ai || mcp) && ((!state || !loadSettings) && (!readInitialState && !initialState))) {
+        console.error('[ContextFactory] Invalid context configuration: loading settings is required for AI and MCP', {ai, mcp, state, loadSettings, readInitialState, initialState});
         throw new Error('Invalid context configuration: loading settings is required for AI and MCP');
+    }
+
+    if (state && !storage) {
+        console.error('[ContextFactory] Invalid context configuration: storage is required for state', {state, storage});
+        throw new Error('Invalid context configuration: storage is required for state');
     }
 
     const results = {};
     results.eventBus = eventBus;
     results.dispatcher = new EventDispatcher(context, results.eventBus, {backgroundIsLocal});
     results.errorBoundary = new EventErrorBoundary(results.dispatcher);
+
+    if (readInitialState) {
+        const response = await results.dispatcher.dispatch(
+                'GET_WEBWIRE_STATE', 
+                {}, 
+                { target: 'background' }
+            );
+        console.log('[ContextFactory] Initial state from background:', response);
+        initialState = response.result || {};
+    }
 
     if (storage) {
         results.storage = new StorageManager(results.eventBus);
@@ -33,6 +49,12 @@ export async function contextFactory(eventBus, context,
         if (loadStash) {
             await results.stateService.stash.loadFromStorage();
         }
+    } else if (contentState) {
+        if (!initialState) {
+            throw new Error('Initial state is required for content state');
+        }
+        console.log('[ContextFactory] Creating content state service with initial state:', initialState);
+        results.stateService = new ContentStateService(initialState, results.eventBus);
     }
 
     if (ai) {

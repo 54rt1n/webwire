@@ -14,7 +14,7 @@ export class StashStatePlugin {
     constructor(stateService) {
         this.stateService = stateService;
         this.eventBus = stateService.eventBus;
-        this.stashAdapter = stateService.storage.stash;
+        this.stashAdapter = stateService.storage?.stash;
     }
 
     /**
@@ -97,6 +97,11 @@ export class StashStatePlugin {
      */
     async loadFromStorage() {
         try {
+            if (!this.stashAdapter) {
+                console.log('[StateService::StashState] No stash adapter found');
+                return {};
+            }
+
             const stashData = await this.stashAdapter.getAll();
             this.stateService.state.stash = stashData || {};
             console.log('[StateService::StashState] Stash data loaded:', Object.keys(this.stateService.state.stash).length, 'keys');
@@ -113,6 +118,11 @@ export class StashStatePlugin {
      */
     async saveToStorage() {
         try {
+            if (!this.stashAdapter) {
+                console.log('[StateService::StashState] No stash adapter found');
+                return;
+            }
+
             this._ensureStashExists();
             await this.stashAdapter.setAll(this.stateService.state.stash);
             console.log('[StateService::StashState] Stash data saved:', Object.keys(this.stateService.state.stash).length, 'keys');
@@ -130,7 +140,7 @@ export class StashStatePlugin {
         this.stateService.state.stash = {};
         console.log(`[StateService::StashState] Cleared all stash data: ${uriCount} URIs removed`);
         
-        this.eventBus.emit(EVENTS.STASH?.CLEARED_ALL || 'stash:cleared_all', { 
+        this.eventBus.emit(EVENTS.STASH.CLEARED, { 
             operation: 'clear_all',
             urisRemoved: uriCount
         });

@@ -68,7 +68,13 @@ export const EVENTS = {
         KEY_NOT_SET: 'error:key_not_set'
     },
     UI: {
-        CHANGED: 'ui:changed'
+        CHANGED: 'ui:changed',
+        SAVE_PANEL_VISIBILITY: 'ui:save-panel-visibility',
+        INJECT_PANEL: 'ui:inject-panel'
+    },
+    THREADS: {
+        GET_OR_CREATE: 'threads:get-or-create',
+        SAVE_MESSAGE: 'threads:save-message'
     },
     STASH: {
         ADD: 'stash:add',
