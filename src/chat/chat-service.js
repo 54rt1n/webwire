@@ -1,11 +1,10 @@
 import { EVENTS, EVENT_CONTEXT } from '../js/core/events.js';
-import { AIClientFactory } from '../js/ai/ai-client-factory.js';
-import { MCPConnector } from '../js/mcp/mcp-connector.js';
 import { ToolParser } from '../js/mcp/tool-parser.js';
 import { ToolFormatter } from '../js/mcp/tool-formatter.js';
-import { WebWirePanel } from './chat-panel.js';
+import { WebChatPanel } from './chat-panel.js';
 import { PageUtils } from './page-utils.js';
 import { generateMessageId } from '../js/utils/id-generator.js';
+import { buildToolMessages } from './message-utils.js';
 
 /**
  * WebWire Chat Service - Platform-Agnostic Core
@@ -29,7 +28,7 @@ export class ChatService {
         this.eventBus = eventBus;
         
         // UI Components
-        this.panel = new WebWirePanel(this.eventBus);
+        this.panel = new WebChatPanel(this.eventBus);
         this.pageUtils = new PageUtils();
 
         // AI/MCP Components  
@@ -196,6 +195,7 @@ export class ChatService {
             
             let syntheticMessages = [];
             let syntheticSources = [];
+            let syntheticPlayerHeader = [];
             const stashContent = this.buildStashContext();
             if (stashContent) {
                 syntheticMessages.push(stashContent);
@@ -218,15 +218,31 @@ export class ChatService {
                 };
                 console.log(`[ChatService] Enhanced first user message with ${syntheticSources.join(', ')} sources for API`);
             } else {
-                userMessage = {
-                    ...userMessage,
-                    content: syntheticMessages.join('\n\n') + '\n\n' + userMessage.content
-                };
+                for (const syntheticMessage of syntheticMessages) {
+                    syntheticPlayerHeader.push(syntheticMessage);
+                }
                 console.log(`[ChatService] Enhanced current user message with ${syntheticSources.join(', ')} sources for API`);
             }
 
+            // Add any tool calls and responses (a toolMessage) from the last assistant message and add them as a prefix to the user message
+            const lastAssistantMessage = this.currentConversation.messages[this.currentConversation.messages.length - 1];
+            if (lastAssistantMessage && lastAssistantMessage.toolCalls?.length > 0) {
+                const toolMessages = buildToolMessages(lastAssistantMessage.toolCalls, lastAssistantMessage.toolResults);
+                console.log('[ChatService] Tool messages:', toolMessages, lastAssistantMessage);
+                const toolMessagesString = toolMessages.map(toolMessage => {
+                    const { callId, display, error, executionTime, name, parameters, success, ...results } = toolMessage;
+                    const resultString = JSON.stringify(results, null, 2);
+                    return `|tool_response|\n\n${name}: ${resultString}\n\n|end_tool_response|`;
+                }).join('\n\n');
+                syntheticPlayerHeader.push(toolMessagesString);
+            } else {
+                console.log('[ChatService] No tool messages found');
+            }
+
+            const messageId = userMessage.messageId;
+
             // Create thinking message
-            const thinkingMessage = this.addThinkingMessage('Thinking...');
+            const thinkingMessage = this.addThinkingMessage('Thinking...', messageId);
             this.streamingState.currentMessage = thinkingMessage;
             let streamingText = '';
 
@@ -236,10 +252,13 @@ export class ChatService {
                 this.handleStreamingChunk(data.chunk, thinkingMessage);
             });
 
+            const enchancedUserMessage = syntheticPlayerHeader.join('\n\n') + '\n\n' + userMessage.content;
+
             let response = null;
             try {
-                console.log('[ChatService] Generating AI response...');
-                response = await this.aiClient.generateTurn(userMessage.content, messagesForAPI, { 
+                const totalMessagesLength = messagesForAPI.reduce((acc, msg) => acc + msg.content.length, 0);
+                console.log('[ChatService] Generating AI response...', enchancedUserMessage.length, totalMessagesLength);
+                response = await this.aiClient.generateTurn(enchancedUserMessage, messagesForAPI, { 
                     systemPrompt: systemPrompts.join('\n\n'),
                     maxHistory: 100, 
                 });
@@ -328,6 +347,10 @@ export class ChatService {
         const tools = this.stateService.mcp.getMcpTools();
         const lastAssistantMessage = this.currentConversation.messages[this.currentConversation.messages.length - 1];
         const { toolCalls, parseErrors } = await this.parseToolsFromResponse(lastAssistantMessage.content, tools);
+        this.stateService.conversation.updateToolCalls(lastAssistantMessage.messageId, toolCalls);
+
+        await this.stateService.disk.saveToStorage();
+
         console.log('[ChatService] Reparsed message:', toolCalls, parseErrors, lastAssistantMessage);
         const lastChatMessageElement = this.panel.getLastChatMessageElement();
         if (lastChatMessageElement) {
@@ -507,7 +530,7 @@ export class ChatService {
      */
     async handleToolResult(payload) {
         console.log('[ChatService] Handling tool result:', payload);
-        const { threadId, messageId, callId, toolResult } = payload;
+        const { callId, toolResult } = payload;
         // We need to update the tool result for our panel
         this.panel.updateToolResult(callId, toolResult);
     }
@@ -561,17 +584,19 @@ export class ChatService {
     /**
      * Add a thinking message and return handle for streaming updates
      */
-    addThinkingMessage(message) {
-        const messageId = `thinking-${++this.streamingState.messageCounter}`;
+    addThinkingMessage(message, messageId) {
+        if (!messageId) {
+            messageId = generateMessageId();
+        }
         
         // Display thinking message in panel
         this.panel.displayThinkingMessage({
-            id: messageId,
+            messageId: messageId,
             content: message,
             role: MESSAGE_ROLES.ASSISTANT
         });
         
-        return { id: messageId };
+        return { messageId: messageId };
     }
     
     /**
@@ -585,11 +610,13 @@ export class ChatService {
         }
         
         this.streamingState.streamingText += chunk;
+
+        console.log('[ChatService] Streaming chunk to panel:', chunk.length, messageHandle);
         
         // Update panel directly
         this.panel.updateStreamingMessage(messageHandle.id, this.streamingState.streamingText);
     }
-    
+        
     /**
      * Finalize streaming and clean up the thinking message
      */
@@ -598,29 +625,10 @@ export class ChatService {
         //this.streamingState.currentMessage = null;
         this.streamingState.streamingText = '';
 
-        let toolMessages = [];
-        for (const toolCall of toolCalls) {
-            const toolResult = toolResults?.find(result => result.callId === toolCall.callId);
-            if (toolResult) {
-                if (toolResult.success) {
-                    display = 'success';
-                } else {
-                    display = 'error';
-                }
-                toolMessages.push({
-                    ...toolResult,
-                    display: display
-                });
-            } else {
-                toolMessages.push({
-                    ...toolCall,
-                    display: 'pending'
-                });
-            }
-        }
-        
+        const toolMessages = buildToolMessages(toolCalls, toolResults);
+
         // Finalize in panel
-        this.panel.finalizeThinkingMessage(messageHandle.id, assistantMsg.content, toolMessages);
+        this.panel.finalizeThinkingMessage(messageHandle.messageId, content, toolMessages);
     }
 
     /**

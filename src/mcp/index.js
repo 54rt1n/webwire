@@ -108,56 +108,6 @@ class MCPControlPanelApp {
     }
 
     /**
-     * Setup message bridge between WebWirePanel (window.postMessage) and ChatService (event bus)
-     */
-    setupPanelMessageBridge() {
-        console.log('[MCPApp] Setting up panel message bridge...');
-        
-        // Listen for window messages from the WebWirePanel
-        // TODO this is all wrong and needs to be setting up event listeners on the event bus
-        window.addEventListener('message', (event) => {
-            // Only handle our panel messages
-            if (event.data && event.data.type === 'WEBWIRE_PANEL_MESSAGE') {
-                console.log('[MCPApp] Received panel message:', event.data);
-                
-                const { action, data } = event.data;
-                
-                switch (action) {
-                    case 'SEND_CHAT_MESSAGE':
-                        console.log('[MCPApp] Bridging chat message to event bus:', data);
-                        this.eventBus.emit('chat:send-message', { message: data.message });
-                        break;
-                        
-                    case 'ANALYZE_PAGE_CONTENT':
-                        console.log('[MCPApp] Bridging page analysis to event bus');
-                        this.eventBus.emit('chat:analyze-page', {});
-                        break;
-                        
-                    case 'START_NEW_CONVERSATION':
-                        console.log('[MCPApp] Starting new conversation');
-                        this.startNewConversation();
-                        break;
-                        
-                    case 'CONNECT_MCP':
-                        console.log('[MCPApp] MCP connect requested from panel');
-                        this.connect();
-                        break;
-                        
-                    case 'DISCONNECT_MCP':
-                        console.log('[MCPApp] MCP disconnect requested from panel');
-                        // Add disconnect logic if needed
-                        break;
-                        
-                    default:
-                        console.log('[MCPApp] Unhandled panel action:', action, data);
-                }
-            }
-        });
-        
-        console.log('[MCPApp] Panel message bridge set up');
-    }
-
-    /**
      * Setup stash event handlers for MCP integration
      */
     setupStashEventHandlers() {
@@ -498,7 +448,7 @@ class MCPControlPanelApp {
         }
 
         try {
-            const threadId = this.core.stateService.conversation.getActiveThreadId();
+            let threadId = this.core.stateService.conversation.getActiveThreadId();
             if (!threadId) {
                 threadId = this.core.stateService.conversation.createNewConversation();
             }

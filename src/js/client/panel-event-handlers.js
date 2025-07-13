@@ -1,3 +1,4 @@
+// src/js/client/panel-event-handlers.js
 import { EVENTS } from '../core/events.js';
 
 export class PanelEventHandlers {
@@ -189,19 +190,22 @@ export class PanelEventHandlers {
      */
     async handleExecuteTool(data) {
         console.log('[MCPApp] Handling execute tool event:', data);
-        const { messageId, callId, name, parameters } = data;
-        const threadId = this.stateService.conversation.getThreadForMessage(messageId);
-        if (!threadId) {
-            console.error('[MCPApp] No thread found for message:', messageId);
-            return;
+        try {
+            const { callId, name } = data;
+            // We need to look up the threadId and the messageId for the callId
+            const { threadId, messageId } = this.stateService.conversation.getThreadAndMessageForCallId(callId);
+            const toolResult = await this.core.mcpConnector.executeTool(name, {}, {callId});
+            // Update the conversation state with the tool result
+            this.stateService.conversation.updateToolResult(threadId, messageId, callId, toolResult);
+            console.log('[MCPApp] Updated tool result (saving to disk):', this.stateService.state.conversation.history[threadId]);
+            // Save to disk
+            await this.stateService.disk.saveToStorage();
+
+            // Emit event to notify listeners (e.g., chat panel) of tool result
+            this.eventBus.emit(EVENTS.CHAT.TOOL_RESULT, { threadId, messageId, callId, toolResult });
+        } catch (error) {
+            console.error('[MCPApp] Failed to execute tool:', error);
         }
-        const toolResult = await this.core.mcpConnector.executeTool(name, parameters, {callId});
-        // Update the conversation state with the tool result
-        this.stateService.conversation.updateToolResult(threadId, messageId, callId, toolResult);
-        // Save to disk
-        await this.stateService.disk.saveToStorage();
-        // Emit event to notify listeners (e.g., chat panel) of tool result
-        this.eventBus.emit(EVENTS.CHAT.TOOL_RESULT, { threadId, messageId, callId, toolResult });
     }
 
     /**

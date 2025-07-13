@@ -197,7 +197,7 @@ export class ConversationStatePlugin {
 
         console.log('[ConversationState] Found', activeConversations.length, 'active conversations');
         
-        return activeConversations.length > 0 ? activeConversations[0].id : null;
+        return activeConversations.length > 0 ? activeConversations[0].threadId : null;
     }
 
     /**
@@ -287,8 +287,8 @@ export class ConversationStatePlugin {
         
         const timestamp = Date.now();
         // Initialize the conversation metadata as active in an empty conversation
-        this.stateService.state.conversation.history[conversationId] = [];
-        this.stateService.state.conversation.metadata[conversationId] = {
+        this.stateService.state.conversation.history[threadId] = [];
+        this.stateService.state.conversation.metadata[threadId] = {
             threadId: threadId,
             userName: currentUser,
             personaName: currentPersona,
@@ -301,9 +301,9 @@ export class ConversationStatePlugin {
             errorType: undefined,
         };
 
-        console.log(`[ConversationState] Created new conversation: ${conversationId}`);
+        console.log(`[ConversationState] Created new conversation: ${threadId}`);
 
-        return conversationId;
+        return threadId;
     }
 
     /**
@@ -336,6 +336,26 @@ export class ConversationStatePlugin {
     }
 
     /**
+     * Update tool calls for a specific message
+     * @param {string} messageId
+     * @param {array} toolCalls
+     */
+    updateToolCalls(messageId, toolCalls) {
+        const state = this.stateService.state.conversation;
+        const threadId = this.getThreadForMessage(messageId);
+        if (!state.history[threadId]) {
+            console.error('[ConversationState] Conversation not found:', threadId, state);
+            throw new Error(`Conversation ${threadId} not found`);
+        }
+        const message = state.history[threadId].find(m => m.messageId === messageId);
+        if (message) {
+            message.toolCalls = toolCalls;
+        }
+        console.log(`[ConversationState] Updated tool calls for message ${messageId} in conversation ${threadId}`);
+        this.eventBus.emit(EVENTS.CONVERSATION.UPDATED, { threadId });
+    }
+
+    /**
      * Update tool result for a specific message
      * @param {string} threadId
      * @param {string} messageId
@@ -355,7 +375,7 @@ export class ConversationStatePlugin {
             message.toolResults.push({ callId, ...toolResult });
         }
         console.log(`[ConversationState] Updated tool result for message ${messageId} in conversation ${threadId}`);
-        this.eventBus.emit(EVENTS.CONVERSATION.UPDATED, { threadId });
+        //this.eventBus.emit(EVENTS.CONVERSATION.UPDATED, { threadId, save: true });
     }
 
     /**
@@ -366,5 +386,24 @@ export class ConversationStatePlugin {
     getThreadForMessage(messageId) {
         const state = this.stateService.state.conversation;
         return Object.keys(state.history).find(threadId => state.history[threadId].some(m => m.messageId === messageId));
+    }
+
+    /**
+     * Get the thread ID and message ID for a specific call ID
+     * @param {string} callId
+     * @returns {Object} The thread ID and message ID
+     */
+    getThreadAndMessageForCallId(callId) {
+        const state = this.stateService.state.conversation;
+        const threadId = Object.keys(state.history).find(
+            threadId => state.history[threadId].some(
+                m => m.toolCalls?.some(
+                    r => r.callId === callId)));
+        if (!threadId) {
+            console.error('[ConversationState] Call ID not found in any conversation:', callId, this.stateService.state.conversation.history);
+            throw new Error(`Call ID ${callId} not found in any conversation`);
+        }
+        const messageId = state.history[threadId].find(m => m.toolCalls?.some(r => r.callId === callId))?.messageId;
+        return { threadId, messageId };
     }
 }
