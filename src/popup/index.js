@@ -51,7 +51,8 @@ class WebWirePopupApp {
             onAnalyzePage: () => this.analyzePage(),
             onOpenOptions: () => this.openOptions(),
             onHelp: (e) => this.openHelp(e),
-            onMCP: (e) => this.openMCP(e)
+            onMCP: (e) => this.openMCP(e),
+            onConversations: (e) => this.openConversations(e)
         });
     }
 
@@ -176,6 +177,33 @@ class WebWirePopupApp {
         } catch (error) {
             console.error('[WebWirePopupApp] Failed to open MCP panel:', error);
             this.popup.showError(`Failed to open MCP panel: ${error.message}`);
+            
+            // Don't close popup if there's an error so user can see it
+        }
+    }
+
+    /**
+     * Opens the Conversations panel in a new tab
+     * @param {Event} e - Click event
+     */
+    async openConversations(e) {
+        try {
+            e.preventDefault();
+            console.log('[WebWirePopupApp] Opening Conversations panel...');
+            
+            const conversationsUrl = chrome.runtime.getURL('conversations.html');
+            console.log('[WebWirePopupApp] Conversations URL:', conversationsUrl);
+            
+            const tab = await chrome.tabs.create({
+                url: conversationsUrl
+            });
+            console.log('[WebWirePopupApp] Tab created:', tab);
+            
+            this.popup.close();
+            
+        } catch (error) {
+            console.error('[WebWirePopupApp] Failed to open Conversations panel:', error);
+            this.popup.showError(`Failed to open Conversations panel: ${error.message}`);
             
             // Don't close popup if there's an error so user can see it
         }

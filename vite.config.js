@@ -17,6 +17,7 @@ export default defineConfig({
         index: resolve(__dirname, 'public/index.html'),
         main: resolve(__dirname, 'public/main/index.html'),
         mcp: resolve(__dirname, 'public/mcp/index.html'),
+        conversations: resolve(__dirname, 'public/conversations/index.html'),
         options: resolve(__dirname, 'public/options/index.html')
       }
     }

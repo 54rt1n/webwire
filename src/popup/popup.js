@@ -42,6 +42,7 @@ export class WebWirePopup {
         this.openOptionsBtn = document.getElementById('open-options');
         this.helpLink = document.getElementById('help-link');
         this.mcpLink = document.getElementById('mcp-link');
+        this.conversationsLink = document.getElementById('conversations-link');
     }
 
     /**
@@ -75,6 +76,7 @@ export class WebWirePopup {
         this.openOptionsBtn.addEventListener('click', handlers.onOpenOptions);
         this.helpLink.addEventListener('click', handlers.onHelp);
         this.mcpLink.addEventListener('click', handlers.onMCP);
+        this.conversationsLink.addEventListener('click', handlers.onConversations);
     }
 
     /**
