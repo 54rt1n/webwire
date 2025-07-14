@@ -1,0 +1,79 @@
+/* WebWire Content Script Styles */
+/* Extension-specific overrides and adjustments */
+/* Main styles are now in global.scss under .ww-* containers */
+
+@use '../shared/common';
+
+/* ========================================
+   Extension Container & Positioning
+   ======================================== */
+
+#ww-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+  z-index: var(--z-max);
+  font-family: var(--font-family-base);
+}
+
+/* ========================================
+   Extension-specific overrides only
+   ======================================== */
+
+/* Panel styles are now in global.scss under .ww-panel */
+/* This file only contains extension-specific adjustments */
+
+.ww-panel {
+  /* Extension-specific positioning adjustments if needed */
+  
+  .header .icon {
+    width: var(--space-8);
+    height: var(--space-8);
+    border: none;
+    background: transparent;
+    border-radius: var(--radius-md);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: var(--color-text-secondary);
+    transition: all var(--transition-normal);
+    
+    &:hover {
+      background: var(--color-border);
+      color: var(--color-text-primary);
+    }
+  }
+  
+  .loading-indicator {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(255, 255, 255, 0.95);
+    padding: var(--space-5);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-md);
+    z-index: 10;
+    
+    .content {
+      display: flex;
+      align-items: center;
+      gap: var(--space-3);
+      color: var(--color-text-secondary);
+      font-size: var(--font-size-sm);
+    }
+  }
+}
+
+/* FAB styles are now in global.scss under .ww-fab */
+.ww-fab {
+  /* Extension-specific FAB adjustments if needed */
+}
+
+.ww-notification {
+  /* Extension-specific notification adjustments if needed */
+}

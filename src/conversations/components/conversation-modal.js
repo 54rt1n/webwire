@@ -1,4 +1,4 @@
-import './conversation-modal.css';
+import './conversation-modal.scss';
 import { EVENTS } from '../../js/core/events.js';
 import { buildToolMessages } from '../../chat/message-utils.js';
 

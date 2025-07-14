@@ -1,5 +1,5 @@
 import '../shared/global.scss';
-import './style.css';
+import './style.scss';
 
 /**
  * UI management for the WebWire popup providing status display and user interaction controls.

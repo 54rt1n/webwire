@@ -1,4 +1,4 @@
-import './textview.css';
+import './textview.scss';
 import { StashButton } from './stash-button.js';
 
 /**

@@ -499,7 +499,7 @@ export class EventDispatcher {
 
   findPanelWindow() {
     // Look for panel iframe or popup window
-    const panelFrame = document.querySelector('#webwire-panel iframe');
+    const panelFrame = document.querySelector('#ww-panel iframe');
     if (panelFrame) {
       return panelFrame.contentWindow;
     }

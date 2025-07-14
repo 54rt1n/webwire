@@ -1,4 +1,4 @@
-import './document-modal.css';
+import './document-modal.scss';
 import { StashButton } from './stash-button.js';
 import { EVENTS } from '../../js/core/events.js';
 

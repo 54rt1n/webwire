@@ -1,5 +1,5 @@
 import '../shared/global.scss';
-import './style.css';
+import './style.scss';
 import { EVENTS } from '../js/core/events.js';
 
 /**

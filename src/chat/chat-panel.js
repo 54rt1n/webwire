@@ -69,20 +69,20 @@ export class WebChatPanel {
      */
     cacheElements() {
         this.elements = {
-            panel: this.container.querySelector('.webwire-panel'),
-            fab: this.container.querySelector('.webwire-fab'),
+            panel: this.container.querySelector('.ww-panel'),
+            fab: this.container.querySelector('.ww-fab'),
             closeBtn: this.container.querySelector('#close-panel'),
             replayTurnBtn: this.container.querySelector('#replay-turn'),
             analyzePageBtn: this.container.querySelector('#analyze-page-btn'),
             newConversationBtn: this.container.querySelector('#new-conversation'),
-            chatContent: this.container.querySelector('.chat-content'),
-            chatInput: this.container.querySelector('.chat-input'),
+            chatContent: this.container.querySelector('.content'),
+            chatInput: this.container.querySelector('.input'),
             reparseBtn: this.container.querySelector('.reparse-button'),
             sendBtn: this.container.querySelector('.send-button'),
             statusIndicator: this.container.querySelector('.status-indicator'),
             statusText: this.container.querySelector('.status-text'),
             conversationId: this.container.querySelector('.conversation-id'),
-            pageContentCheckbox: this.container.querySelector('.page-content-checkbox')
+            pageContentCheckbox: this.container.querySelector('.checkbox')
         };
     }
 
@@ -295,7 +295,7 @@ export class WebChatPanel {
         messageEl.classList.add('assistant');
         
         // Update content
-        const messageContent = messageEl.querySelector('.message-content');
+        const messageContent = messageEl.querySelector('.content');
         if (messageContent) {
             console.log('[WebChatPanel] Updating message content:', finalContent, toolMessages);
             messageContent.innerHTML = this.renderer.createFinalizedMessageHTML(
@@ -436,7 +436,7 @@ export class WebChatPanel {
      * Remove error messages
      */
     removeErrorMessages() {
-        const errors = this.elements.chatContent?.querySelectorAll('.chat-message.error');
+        const errors = this.elements.chatContent?.querySelectorAll('.message.error');
         errors?.forEach(error => error.remove());
     }
 
@@ -621,7 +621,7 @@ export class WebChatPanel {
         document.body.appendChild(notification.firstChild);
         
         setTimeout(() => {
-            const notif = document.querySelector('.webwire-error-notification');
+            const notif = document.querySelector('.ww-error-notification');
             notif?.remove();
         }, 5000);
     }
@@ -658,7 +658,7 @@ export class WebChatPanel {
      * Get last chat message element
      */
     getLastChatMessageElement() {
-        const chatMessages = this.container.querySelectorAll('.chat-message');
+        const chatMessages = this.container.querySelectorAll('.message');
         if (chatMessages.length > 0) {
             return chatMessages[chatMessages.length - 1];
         }

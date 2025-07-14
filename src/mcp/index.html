@@ -6,7 +6,7 @@
     <title>WebWire - MCP Control Panel</title>
 </head>
 <body>
-    <div class="mcp-dashboard">
+    <div class="ww-dashboard">
         <!-- ======================= HEADER ======================= -->
         <header class="widget widget-header">
             <h1>MCP Control Panel</h1>
@@ -25,7 +25,7 @@
 
         <!-- ======================= HEALTH CHECK ======================= -->
         <section id="health-check-widget" class="widget widget-health">
-            <div class="widget-header">
+            <div class="header">
                 <h2>Health Check</h2>
                 <button id="refresh-health-btn" class="btn btn-icon" title="Refresh Health">
                     <!-- Refresh Icon SVG -->
@@ -35,7 +35,7 @@
                     </svg>
                 </button>
             </div>
-            <div id="health-check-content" class="widget-content">
+            <div id="health-check-content" class="content">
                 <!-- Health data will be rendered here by panel.js -->
                 <div class="placeholder">Click Refresh to check server health.</div>
             </div>
@@ -43,9 +43,9 @@
 
         <!-- ======================= FILESYSTEM ======================= -->
         <main id="filesystem-widget" class="widget widget-filesystem">
-            <div class="widget-header">
+            <div class="header">
                 <h2>Filesystem Explorer</h2>
-                <div class="widget-actions">
+                <div class="actions">
                     <button id="open-file-btn" class="btn btn-icon" title="Open Selected File" style="display: none;">
                         📂
                     </button>
@@ -58,7 +58,7 @@
                     </button>
                 </div>
             </div>
-            <div id="fs-tree-container" class="widget-content fs-tree">
+            <div id="fs-tree-container" class="content fs-tree">
                  <!-- FS tree will be rendered here by panel.js -->
                  <div class="placeholder">Connect to server to browse filesystem.</div>
             </div>
@@ -66,9 +66,9 @@
 
         <!-- ======================= KNOWLEDGE BASE ======================= -->
         <aside id="kb-widget" class="widget widget-kb">
-            <div class="widget-header">
+            <div class="header">
                 <h2>Knowledge Base Graph</h2>
-                <div class="widget-actions">
+                <div class="actions">
                     <button id="open-kb-btn" class="btn btn-icon" title="Open Selected Document" style="display: none;">
                         📄
                     </button>
@@ -81,7 +81,7 @@
                     </button>
                 </div>
             </div>
-            <div id="kb-graph-container" class="widget-content kb-graph">
+            <div id="kb-graph-container" class="content kb-graph">
                  <!-- Graph visualization will be rendered here by panel.js -->
                  <div class="placeholder">Connect to server to visualize knowledge base.</div>
             </div>
@@ -90,7 +90,7 @@
         <!-- ======================= LISTS ======================= -->
         <section id="lists-widget" class="widget widget-lists">
             <div class="lists-browser-pane">
-                 <div class="widget-header">
+                 <div class="header">
                     <h3>Lists</h3>
                      <button id="refresh-lists-btn" class="btn btn-icon" title="Refresh Lists">
                         <!-- Refresh Icon SVG -->
@@ -100,19 +100,19 @@
                         </svg>
                     </button>
                 </div>
-                <ul id="lists-browser" class="widget-content">
+                <ul id="lists-browser" class="content">
                     <!-- List of lists will be rendered here -->
                     <li class="placeholder">No lists found.</li>
                 </ul>
             </div>
             <div class="list-content-pane">
-                 <div class="widget-header">
+                 <div class="header">
                     <h3 id="list-content-title">Select a list</h3>
-                    <div class="widget-actions">
+                    <div class="actions">
                         <!-- List stash button will be added here dynamically -->
                     </div>
                 </div>
-                <div id="list-content-view" class="widget-content">
+                <div id="list-content-view" class="content">
                     <!-- Content of selected list will be rendered here -->
                     <div class="placeholder">Select a list from the left to view its contents.</div>
                 </div>

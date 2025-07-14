@@ -1,5 +1,5 @@
 import '../shared/global.scss';
-import './style.css';
+import './style.scss';
 
 /**
  * UI management for the MCP test interface providing all user interaction controls.
@@ -191,7 +191,7 @@ export class MCPTestPanel {
      */
     addChatMessage(type, content, { statusText = '', additionalContent = '', isLoading = false, isHtml = false, ...options } = {}) {
         const messageDiv = document.createElement('div');
-        messageDiv.className = `chat-message ${type}`;
+        messageDiv.className = `message ${type}`;
 
         const timestamp = new Date().toLocaleTimeString();
         const typeLabel = type === 'user' ? 'You' : 

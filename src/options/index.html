@@ -6,15 +6,16 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
 </head>
 <body>
-  <div class="container">
-    <div class="text-center" style="margin-bottom: var(--space-8);">
-      <h1>WebWire Options</h1>
-      <p class="text-secondary">Configure your AI assistant settings</p>
-    </div>
+  <div class="ww-options">
+    <div class="ww-container">
+      <div class="ww-text-center margin-bottom-8">
+        <h1>WebWire Options</h1>
+        <p class="ww-text-secondary">Configure your AI assistant settings</p>
+      </div>
     
-    <div class="form-section">
-      <h2>General Settings</h2>
-      <div class="grid-2">
+      <div class="section">
+        <h2>General Settings</h2>
+      <div class="ww-grid-2">
         <div class="form-group">
           <label for="userName">User Name:</label>
           <input type="text" id="userName" placeholder="Enter your user name">
@@ -31,7 +32,7 @@
           <small>The URL of your MCP server for tool-enabled agents.</small>
         </div>
       </div>
-      <div class="grid-2" style="margin-top: var(--space-4);">
+      <div class="ww-grid-2 margin-top-4">
         <div class="form-group checkbox-group">
           <input type="checkbox" id="showThought">
           <label for="showThought">Show Thought Process</label>
@@ -41,17 +42,16 @@
           <label for="autoThink">Enable Auto-Think</label>
         </div>
       </div>
-      <div class="grid-2" style="margin-top: var(--space-4);">
+      <div class="ww-grid-2 margin-top-4">
         <div class="form-group checkbox-group">
           <input type="checkbox" id="autoInject">
           <label for="autoInject">Auto-Inject WebWire Panel</label>
         </div>
       </div>
-    </div>
 
-    <div class="form-section">
+      <div class="section">
         <h2>Provider Settings</h2>
-        <div class="grid-2">
+        <div class="ww-grid-2">
             <div class="form-group">
                 <label for="featherlessApiKey">Featherless API Key:</label>
                 <input type="password" id="featherlessApiKey" placeholder="Enter Featherless API key">
@@ -78,7 +78,7 @@
             </div>
         </div>
         <h3>AIMind</h3>
-        <div class="grid-2">
+        <div class="ww-grid-2">
             <div class="form-group">
                 <label for="aimindApiEndpoint">AIMind API Endpoint:</label>
                 <input type="text" id="aimindApiEndpoint" placeholder="e.g. http://localhost:8000/v1">
@@ -89,7 +89,7 @@
             </div>
         </div>
         <h3>OpenRouter</h3>
-        <div class="grid-2">
+        <div class="ww-grid-2">
             <div class="form-group">
                 <label for="openrouterApiEndpoint">OpenRouter API Endpoint:</label>
                 <input type="text" id="openrouterApiEndpoint" placeholder="e.g. https://openrouter.ai/api/v1">
@@ -99,15 +99,15 @@
                 <input type="password" id="openrouterApiKey" placeholder="Enter OpenRouter API key">
             </div>
         </div>
-    </div>
+      </div>
     
-    <div class="form-section">
-      <h2>Model Configuration</h2>
+      <div class="section">
+        <h2>Model Configuration</h2>
       
       <!-- Chat Model -->
       <div class="model-config">
         <h3>Chat Model (Primary)</h3>
-        <div class="model-config-grid">
+        <div class="grid">
             <div class="form-group">
                 <label for="chatModel">Model Name:</label>
                 <input type="text" id="chatModel" placeholder="e.g., gpt-4-turbo">
@@ -159,7 +159,7 @@
       <!-- Thought Model -->
       <div class="model-config">
         <h3>Thought Model (Optional)</h3>
-        <div class="model-config-grid">
+        <div class="grid">
             <div class="form-group">
                 <label for="thoughtModel">Model Name:</label>
                 <input type="text" id="thoughtModel" placeholder="Leave blank to use Chat Model">
@@ -212,7 +212,7 @@
       <!-- Tool Model -->
       <div class="model-config">
         <h3>Tool Model (Optional)</h3>
-        <div class="model-config-grid">
+        <div class="grid">
             <div class="form-group">
                 <label for="toolModel">Model Name:</label>
                 <input type="text" id="toolModel" placeholder="Leave blank to use Chat Model">
@@ -261,11 +261,12 @@
             </div>
         </div>
       </div>
-    </div>
+      </div>
     
-    <div id="status" class="status"></div>
-    <div class="text-center" style="margin-top: var(--space-8);">
-      <button id="saveBtn" class="btn btn-primary btn-lg">💾 Save All Settings</button>
+      <div id="status" class="status"></div>
+      <div class="ww-text-center margin-top-8">
+        <button id="saveBtn" class="btn primary lg">💾 Save All Settings</button>
+      </div>
     </div>
   </div>
 </body>

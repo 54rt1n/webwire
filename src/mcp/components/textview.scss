@@ -1,0 +1,166 @@
+/*
+ * TextView Modal Styles
+ * Fullscreen modal for displaying file contents in a textarea
+ * Uses ww-modal structure from global.scss
+ */
+
+@use '../../shared/common';
+
+/* TextView modal styling is nested within ww-modal container */
+.ww-modal {
+  &.textview-modal-overlay {
+    background: rgba(0, 0, 0, 0.75);
+    padding: var(--space-5);
+    opacity: 0;
+    transition: opacity 200ms ease-out;
+    
+    &.modal-visible {
+      opacity: 1;
+      
+      .textview-modal {
+        transform: scale(1) translateY(0);
+      }
+    }
+    
+    .textview-modal {
+      @extend %ww-modal-content-base;
+      width: 100%;
+      height: 100%;
+      max-width: 1200px;
+      max-height: 90vh;
+      transform: scale(0.95) translateY(20px);
+      transition: transform 200ms ease-out;
+      
+      .textview-modal-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: var(--space-5);
+        border-bottom: 1px solid var(--color-border);
+        flex-shrink: 0;
+        
+        .textview-modal-title {
+          margin: 0;
+          font-size: var(--font-size-lg);
+          font-weight: var(--font-weight-semibold);
+          color: var(--color-text-primary);
+          font-family: var(--font-family-mono);
+          word-break: break-all;
+        }
+        
+        .textview-modal-actions {
+          display: flex;
+          align-items: center;
+          gap: var(--space-2);
+          flex-shrink: 0;
+          
+          .textview-modal-close {
+            flex-shrink: 0;
+          }
+        }
+      }
+      
+      .textview-modal-content {
+        flex: 1;
+        padding: var(--space-5);
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        
+        .textview-modal-textarea {
+          @include common.ww-form-input-base;
+          width: 100%;
+          height: 100%;
+          border-radius: var(--radius-lg);
+          padding: var(--space-4);
+          font-family: var(--font-family-mono);
+          font-size: var(--font-size-sm);
+          line-height: var(--line-height-relaxed);
+          resize: none;
+          overflow-y: auto;
+          overflow-x: auto;
+          white-space: pre;
+          word-wrap: normal;
+          tab-size: 4;
+          
+          &::placeholder {
+            color: var(--color-text-muted);
+            font-style: italic;
+          }
+          
+          &.loading {
+            background: var(--color-gray-50);
+            color: var(--color-text-muted);
+          }
+          
+          /* Custom scrollbar */
+          &::-webkit-scrollbar {
+            width: 12px;
+            height: 12px;
+          }
+          
+          &::-webkit-scrollbar-track {
+            background: var(--color-gray-100);
+            border-radius: var(--radius-md);
+          }
+          
+          &::-webkit-scrollbar-thumb {
+            background: var(--color-gray-400);
+            border-radius: var(--radius-md);
+            border: 2px solid var(--color-gray-100);
+            
+            &:hover {
+              background: var(--color-gray-500);
+            }
+          }
+          
+          &::-webkit-scrollbar-corner {
+            background: var(--color-gray-100);
+          }
+        }
+      }
+      
+      /* Responsive design */
+      @media (max-width: 768px) {
+        max-height: 95vh;
+        
+        .textview-modal-header {
+          padding: var(--space-4);
+          
+          .textview-modal-title {
+            font-size: var(--font-size-base);
+          }
+        }
+        
+        .textview-modal-content {
+          padding: var(--space-4);
+        }
+      }
+      
+      @media (max-width: 480px) {
+        max-height: 98vh;
+        
+        .textview-modal-header {
+          padding: var(--space-3);
+        }
+        
+        .textview-modal-content {
+          padding: var(--space-3);
+        }
+      }
+    }
+  }
+  
+  /* Responsive overlay adjustments */
+  @media (max-width: 768px) {
+    &.textview-modal-overlay {
+      padding: var(--space-3);
+    }
+  }
+  
+  @media (max-width: 480px) {
+    &.textview-modal-overlay {
+      padding: var(--space-2);
+    }
+  }
+}

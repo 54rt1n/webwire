@@ -1,12 +1,12 @@
 /* WebWire Content Script Styles */
-/* Extension-specific positioning and layout only */
-/* Global styles are imported via JavaScript */
+/* Extension-specific overrides and adjustments */
+/* Main styles are now in global.scss under .ww-* containers */
 
 /* ========================================
    Extension Container & Positioning
    ======================================== */
 
-#webwire-container {
+#ww-container {
     position: fixed;
     top: 0;
     left: 0;
@@ -18,222 +18,67 @@
 }
 
 /* ========================================
-   WebWire Panel (Extension-specific layout)
+   Extension-specific overrides only
    ======================================== */
 
-.webwire-panel {
-    position: fixed;
-    top: var(--space-5);
-    right: var(--space-5);
-    width: 400px;
-    height: 600px;
-    background: var(--color-surface);
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-xl);
-    box-shadow: var(--shadow-xl);
-    font-family: var(--font-family-base);
-    z-index: var(--z-max);
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-    transition: all var(--transition-bounce);
-    pointer-events: auto;
-    
-    &.hidden {
-        opacity: 0;
-        transform: translateX(100%) scale(0.95);
-        pointer-events: none;
-    }
+/* Panel styles are now in global.scss under .ww-panel */
+/* This file only contains extension-specific adjustments */
+
+.ww-panel {
+    /* Extension-specific positioning adjustments if needed */
+}
+
+/* FAB styles are now in global.scss under .ww-fab */
+
+.ww-fab {
+    /* Extension-specific FAB adjustments if needed */
+}
+
+.ww-notification {
+    /* Extension-specific notification adjustments if needed */
 }
 
 /* ========================================
-   Floating Action Button (Extension-specific)
+   Extension-specific adjustments
    ======================================== */
 
-.webwire-fab {
-    position: fixed;
-    bottom: var(--space-6);
-    right: var(--space-6);
-    width: 56px;
-    height: 56px;
-    background: var(--color-primary-500);
-    color: white;
-    border: none;
-    border-radius: var(--radius-full);
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    box-shadow: var(--shadow-lg);
-    z-index: calc(var(--z-max) - 1);
-    transition: all var(--transition-bounce);
-    pointer-events: auto;
-    
-    &:hover {
-        background: var(--color-primary-600);
-        transform: scale(1.1);
-    }
-    
-    &.hidden {
-        opacity: 0;
-        transform: scale(0);
-        pointer-events: none;
-    }
-}
-
-/* ========================================
-   Panel Header (Extension-specific layout)
-   ======================================== */
-
-.panel-header {
-    padding: var(--space-4);
-    border-bottom: 1px solid var(--color-border);
-    background: var(--color-gray-50);
-    flex-shrink: 0;
-}
-
-.header-top {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: var(--space-2);
-}
-
-.agent-info {
-    display: flex;
-    flex-direction: column;
-}
-
-.agent-name {
-    font-weight: var(--font-weight-semibold);
-    color: var(--color-text-primary);
-    font-size: var(--font-size-sm);
-}
-
-.conversation-id {
-    font-size: var(--font-size-xs);
-    color: var(--color-text-secondary);
-}
-
-.header-actions {
-    display: flex;
-    gap: var(--space-2);
-}
-
-.connection-status {
-    display: flex;
-    align-items: center;
-    gap: var(--space-2);
-    font-size: var(--font-size-xs);
-    color: var(--color-text-secondary);
-}
-
-/* ========================================
-   Extension-specific Button Overrides
-   ======================================== */
-
-.panel-header .btn-icon {
-    width: var(--space-8);
-    height: var(--space-8);
-    border: none;
-    background: transparent;
-    border-radius: var(--radius-md);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    color: var(--color-text-secondary);
-    transition: all var(--transition-normal);
-    
-    &:hover {
-        background: var(--color-border);
-        color: var(--color-text-primary);
-    }
-}
-
-/* ========================================
-   Extension Error Notifications
-   ======================================== */
-
-.webwire-error-notification {
-    position: fixed;
-    top: var(--space-5);
-    right: var(--space-5);
-    background: var(--color-error-500);
-    color: white;
-    padding: var(--space-3) var(--space-4);
-    border-radius: var(--radius-lg);
-    z-index: var(--z-max);
-    font-family: var(--font-family-base);
-    box-shadow: var(--shadow-lg);
-    font-size: var(--font-size-sm);
-    max-width: 300px;
-}
-
-/* ========================================
-   Extension Loading Overlay
-   ======================================== */
-
-.webwire-panel .loading-indicator {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    background: rgba(255, 255, 255, 0.95);
-    padding: var(--space-5);
-    border-radius: var(--radius-lg);
-    box-shadow: var(--shadow-md);
-    z-index: 10;
-    
-    .loading-content {
+.ww-panel {
+    .header .icon {
+        width: var(--space-8);
+        height: var(--space-8);
+        border: none;
+        background: transparent;
+        border-radius: var(--radius-md);
         display: flex;
         align-items: center;
-        gap: var(--space-3);
+        justify-content: center;
+        cursor: pointer;
         color: var(--color-text-secondary);
-        font-size: var(--font-size-sm);
+        transition: all var(--transition-normal);
+        
+        &:hover {
+            background: var(--color-border);
+            color: var(--color-text-primary);
+        }
     }
-} 
-
-/* Page Content Toggle */
-.page-content-toggle {
-    padding: var(--space-2) var(--space-4);
-    border-top: 1px solid var(--color-border);
-    background: var(--color-gray-25);
-}
-
-.toggle-label {
-    display: flex;
-    align-items: center;
-    gap: var(--space-2);
-    font-size: var(--font-size-xs);
-    color: var(--color-text-secondary);
-    cursor: pointer;
-    user-select: none;
-}
-
-.page-content-checkbox {
-    width: 14px;
-    height: 14px;
-    accent-color: var(--color-primary-500);
-    cursor: pointer;
-}
-
-.toggle-text {
-    font-weight: var(--font-weight-medium);
-}
-
-.ww-input-actions {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-2);
-}
-
-.ww-input-actions .reparse-button {
-    background: var(--color-gray-25);
-    color: var(--color-text-secondary);
-}
-
-.ww-input-actions .send-button {
-    background: var(--color-gray-25);
-    color: var(--color-text-secondary);
+    
+    .loading-indicator {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background: rgba(255, 255, 255, 0.95);
+        padding: var(--space-5);
+        border-radius: var(--radius-lg);
+        box-shadow: var(--shadow-md);
+        z-index: 10;
+        
+        .content {
+            display: flex;
+            align-items: center;
+            gap: var(--space-3);
+            color: var(--color-text-secondary);
+            font-size: var(--font-size-sm);
+        }
+    }
 }

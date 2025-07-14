@@ -15,7 +15,7 @@ import {
     DOM_READY_STATES
 } from '../chat/chat-constants.js';
 import '../shared/global.scss';
-import '../chat/chat.css';
+import '../chat/chat.scss';
 
 /**
  * WebWire Content Script - Thin Host/Adapter

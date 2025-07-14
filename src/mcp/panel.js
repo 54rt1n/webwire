@@ -1,5 +1,5 @@
 import '../shared/global.scss';
-import './style.css';
+import './style.scss';
 import { TextViewModal } from './components/textview-modal.js';
 import { GraphDraw } from './components/graph-draw.js';
 import { StashButton } from './components/stash-button.js';
@@ -265,7 +265,7 @@ export class MCPControlPanel {
             html += `<span class="fs-line-prefix">${this._escapeHtml(linePrefix)}</span>`;
             
             // File/folder icon
-            const iconClass = node.type === 'folder' ? 'fs-icon-folder' : 'fs-icon-file';
+            const iconClass = node.type === 'folder' ? 'folder' : 'file';
             html += `<span class="fs-icon ${iconClass}"></span>`;
             
             // File/folder name

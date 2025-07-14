@@ -7,7 +7,7 @@ import { documentModal } from './components/document-modal.js';
 import { ChatService } from '../chat/chat-service.js';
 import { EventBus } from '../js/core/event-bus.js';
 import { StashPanel } from './components/stash-panel.js';
-import '../chat/chat.css';
+import '../chat/chat.scss';
 
 /**
  * MCPControlPanelApp

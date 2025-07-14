@@ -1,5 +1,5 @@
 import '../shared/global.scss';
-import './style.css';
+import './style.scss';
 
 export class OptionsPanel {
     constructor(eventBus) {

@@ -1,5 +1,5 @@
 // StashPanel - Floating stash viewer for MCP
-import './stash-panel.css';
+import './stash-panel.scss';
 
 export class StashPanel {
     constructor(eventBus, stateService) {
@@ -35,7 +35,7 @@ export class StashPanel {
 
     _createPanel() {
         this.panel = document.createElement('div');
-        this.panel.className = 'stash-panel-box';
+        this.panel.className = 'ww-stash-panel stash-panel-box';
         this.panel.innerHTML = `
             <div class="stash-panel-header">Stash</div>
             <ul class="stash-panel-list"></ul>
