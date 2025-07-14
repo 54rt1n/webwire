@@ -175,15 +175,17 @@ export function createInitialState() {
             metadata: {}, // key is conversation_id, value is the current metadata for the conversation
         },
 
-        ui: {
-            // Panel display state - persists across browser sessions
-            panelVisible: false,
-            // Other ui state
-        },
+        ui: createInitialUiState(),
 
         stash: {
             // Stash state - persists across browser sessions
         }
+    };
+}
+
+export function createInitialUiState() {
+    return {
+        panelVisible: false,
     };
 }
 

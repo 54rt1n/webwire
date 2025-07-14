@@ -195,9 +195,10 @@ export class ConversationStatePlugin {
             .filter(conv => conv.status === 'active')
             .sort((a, b) => (b.endTime || b.startTime) - (a.endTime || a.startTime));
 
-        console.log('[ConversationState] Found', activeConversations.length, 'active conversations');
-        
-        return activeConversations.length > 0 ? activeConversations[0].threadId : null;
+        const conversation = activeConversations.length > 0 ? activeConversations[0] : null;
+        console.log('[ConversationState] Found', activeConversations.length, 'active conversations', conversation);
+
+        return conversation ? conversation.threadId : null;
     }
 
     /**

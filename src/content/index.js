@@ -69,6 +69,7 @@ class WebWireContentHost {
         this.eventBus.onAsync(EVENTS.CHAT.SAVE_PANEL_VISIBILITY, this.handleSavePanelVisibility.bind(this));
         this.eventBus.onAsync(EVENTS.CHAT.EXECUTE_TOOL, this.handleExecuteTool.bind(this));
         this.eventBus.onAsync(EVENTS.CHAT.CREATE_NEW_THREAD, this.handleCreateNewThread.bind(this));
+        this.eventBus.onAsync(EVENTS.CHAT.UPDATE_SETTINGS, this.handleUpdateSettings.bind(this));
     }
 
     /**
@@ -193,6 +194,25 @@ class WebWireContentHost {
             return response;
         } catch (error) {
             console.error('[WebWireContentHost] Failed to create new thread:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Handle update settings request using EventDispatcher
+     */
+    async handleUpdateSettings(data) {
+        console.log('[WebWireContentHost] Handling settings update request:', data);
+        try {
+            const response = await this.core.dispatcher.dispatch(
+                BACKGROUND_ACTIONS.SAVE_WEBWIRE_SETTINGS,
+                data,
+                { target: 'background' }
+            );
+            console.log('[WebWireContentHost] Settings update response from background:', response);
+            return response;
+        } catch (error) {
+            console.error('[WebWireContentHost] Failed to update settings:', error);
             throw error;
         }
     }

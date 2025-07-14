@@ -72,6 +72,7 @@ export class ChatService {
         this.eventBus.on(EVENTS.CHAT.REPLAY_LAST_TURN, this.handleReplayLastTurn.bind(this));
         this.eventBus.on(EVENTS.CHAT.REPARSE_MESSAGE, this.handleReparseMessage.bind(this));
         this.eventBus.on(EVENTS.CHAT.TOOL_RESULT, this.handleToolResult.bind(this));
+        this.eventBus.on(EVENTS.CHAT.TOGGLE_PAGE_CONTENT, this.handlePageContentToggle.bind(this));
         
         // Listen for AI streaming events
         this.eventBus.on(EVENTS.AI.STREAM_CHUNK, this.handleStreamingChunk.bind(this));
@@ -415,6 +416,27 @@ export class ChatService {
         const { settings } = payload;
         this.currentSettings = settings;
         console.log('[ChatService] Settings update processed successfully');
+    }
+
+    /**
+     * Handle page content toggle request
+     */
+    async handlePageContentToggle(data) {
+        console.log('[ChatService] Handling page content toggle:', data);
+        const { includePageContent } = data;
+        
+        // Update local state
+        this.stateService.ui.setIncludePageContent(includePageContent);
+        
+        // Send settings update to background for persistence
+        this.eventBus.emit(EVENTS.CHAT.UPDATE_SETTINGS, {
+            settings: this.stateService.state.settings
+        }, { target: EVENT_CONTEXT.BACKGROUND });
+
+        // Update the panel with the current state
+        this.panel.updatePageContentSetting(includePageContent);
+        
+        console.log('[ChatService] Page content toggle processed successfully');
     }
 
     /**

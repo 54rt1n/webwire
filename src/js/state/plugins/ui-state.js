@@ -1,4 +1,4 @@
-import { EVENTS } from '../../core/events.js';
+import { createInitialUiState } from '../state-container.js';
 
 /**
  * Plugin for handling UI state
@@ -25,10 +25,14 @@ export class UiStatePlugin {
     async loadFromStorage() {
         if (!this.uiAdapter) {
             console.log('[StateService::UiState] No UI adapter found');
-            return {};
+            return createInitialUiState();
         }
 
-        const uiState = await this.uiAdapter.getAll();
+        let uiState = await this.uiAdapter.getAll();
+        if (!uiState) {
+            console.log('[StateService::UiState] No UI state found');
+            uiState = createInitialUiState();
+        }
         this.stateService.state.ui = uiState;
         console.log('[StateService::UiState] UI state read:', uiState);
         return uiState;

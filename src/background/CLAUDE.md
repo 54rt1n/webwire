@@ -224,3 +224,136 @@ const notifications = validTabs.map(async (tab) => {
 3. Wait for ready state
 4. Send target message
 5. Handle errors gracefully
+
+## Critical Content Script Integration
+
+### ⚠️ Modern EventDispatcher Communication
+
+The background script uses a modern EventDispatcher system for all cross-context communication. **There are no direct Chrome message handlers** - all communication flows through the EventDispatcher → EventBus pattern.
+
+#### EventDispatcher CROSS_CONTEXT_EVENT System
+
+All cross-context communication uses the EventDispatcher:
+
+```javascript
+// Content script uses dispatcher
+dispatcher.dispatch('SAVE_WEBWIRE_SETTINGS', data, { target: 'background' });
+
+// Dispatcher sends Chrome message with type 'CROSS_CONTEXT_EVENT'
+{
+    type: 'CROSS_CONTEXT_EVENT',
+    event: 'SAVE_WEBWIRE_SETTINGS',
+    data: data,
+    source: 'content'
+}
+
+// Background EventDispatcher receives and emits to EventBus
+this.eventBus.emitAsync(message.event, message.data);
+
+// Background EventBus handler processes the event
+this.eventBus.onAsync('SAVE_WEBWIRE_SETTINGS', async (data, options) => {
+    // Handle the request
+    return { success: true };
+});
+```
+
+### Content Script Event Flow
+
+Complete flow from ChatService to background response:
+
+```
+ChatService → Content EventBus → Content Dispatcher → Background EventDispatcher → Background EventBus → Background Handler → Response
+```
+
+1. **ChatService emits**: `EVENTS.CHAT.UPDATE_SETTINGS` with `{ target: 'background' }`
+2. **Content onAsync handler**: Catches event in `setupChatServiceEvents()`
+3. **Content dispatcher**: Calls `dispatcher.dispatch(BACKGROUND_ACTIONS.*, data, { target: 'background' })`
+4. **Background receives**: `CROSS_CONTEXT_EVENT` message via Chrome runtime
+5. **Background EventDispatcher**: Handles and emits to background eventBus
+6. **Background EventBus**: Delivers to registered `onAsync()` handler
+7. **Response flows back**: Through same chain in reverse
+
+### EventBus Handler Pattern
+
+All background actions use EventBus handlers in `setupEventBusListeners()`:
+
+```javascript
+this.eventBus.onAsync('SAVE_WEBWIRE_SETTINGS', async (data, options) => {
+    if (this.stateService?.state && this.stateService?.settings) {
+        this.stateService.state.settings = { ...this.stateService.state.settings, ...data.settings };
+        await this.stateService.settings.saveToStorage();
+        return { success: true };
+    } else {
+        throw new Error('State service not initialized');
+    }
+});
+```
+
+### Data Format
+
+EventDispatcher sends data in a consistent format:
+
+```javascript
+// EventDispatcher message format
+{
+    type: 'CROSS_CONTEXT_EVENT',
+    event: 'SAVE_WEBWIRE_SETTINGS',
+    data: {
+        settings: { /* settings object */ }
+    },
+    source: 'content'
+}
+
+// Background EventBus handler receives:
+// - event: 'SAVE_WEBWIRE_SETTINGS'
+// - data: { settings: { ... } }
+// - options: { source: 'content', sender: chromeMessageSender }
+```
+
+### Adding New Background Actions
+
+When adding new actions for content script communication:
+
+1. **Add EventBus handler**:
+```javascript
+// In setupEventBusListeners()
+this.eventBus.onAsync('NEW_ACTION', async (data, options) => {
+    // Handle using data.* properties
+    // options.source tells you where it came from
+    // options.sender provides Chrome message sender context
+    return { success: true, result: processedData };
+});
+```
+
+2. **Define action constant**:
+```javascript
+// In chat-constants.js
+export const BACKGROUND_ACTIONS = {
+    NEW_ACTION: 'NEW_ACTION'
+};
+```
+
+3. **Content script integration**:
+```javascript
+// In content script setupChatServiceEvents()
+this.eventBus.onAsync(EVENTS.CHAT.NEW_EVENT, this.handleNewEvent.bind(this));
+
+async handleNewEvent(data) {
+    return await this.core.dispatcher.dispatch(
+        BACKGROUND_ACTIONS.NEW_ACTION,
+        data,
+        { target: 'background' }
+    );
+}
+```
+
+### ⚠️ No Direct Chrome Message Handlers
+
+**IMPORTANT**: The background script does NOT handle direct Chrome runtime messages for application logic. All communication flows through the EventDispatcher system. This ensures:
+
+- Consistent data format and error handling
+- Proper request/response correlation
+- Unified logging and debugging
+- Clean separation between Chrome APIs and application logic
+
+The only direct Chrome message handling is for Chrome extension lifecycle events (installation, tab updates, etc.), not application communication.
