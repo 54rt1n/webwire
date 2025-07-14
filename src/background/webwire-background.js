@@ -74,9 +74,13 @@ class WebWireBackground {
 
         // Handle thread/conversation operations
         this.eventBus.onAsync(BACKGROUND_ACTIONS.GET_OR_CREATE_CURRENT_THREAD, async (data, options) => {
-            let threadId = this.stateService.conversation.getActiveThreadId();
+            let threadId = this.stateService.conversation.getCurrentConversation();
+            let reason = null;
             if (!threadId) {
                 threadId = this.stateService.conversation.createNewConversation();
+                reason = 'new_conversation';
+            } else {
+                reason = 'existing_conversation';
             }
             
             const messages = this.stateService.conversation.getConversationMessages(threadId);
@@ -85,7 +89,8 @@ class WebWireBackground {
                 metadata: this.stateService.state.conversation.metadata[threadId],
                 messages: messages
             };
-            return { success: true, thread: currentThreadData };
+            console.log('[WebWireBackground] GET_OR_CREATE_CURRENT_THREAD', currentThreadData);
+            return { success: true, thread: currentThreadData, reason: reason };
         });
 
         this.eventBus.onAsync('SAVE_THREAD_MESSAGE', async (data, options) => {
@@ -104,7 +109,7 @@ class WebWireBackground {
                 threadId: data.threadId,
                 metadata: this.stateService.state.conversation.metadata[data.threadId],
                 messages: this.stateService.conversation.getConversationMessages(data.threadId),
-                isActive: this.stateService.conversation.getActiveConversationId() === data.threadId
+                isActive: this.stateService.conversation.getActiveThreadId() === data.threadId
             };
             
             await this.notifyTabsOfConversationUpdate(data.threadId, {
@@ -434,7 +439,7 @@ class WebWireBackground {
                                 threadId: message.threadId,
                                 metadata: this.stateService.state.conversation.metadata[message.threadId],
                                 messages: this.stateService.conversation.getConversationMessages(message.threadId),
-                                isActive: this.stateService.conversation.getActiveConversationId() === message.threadId
+                                isActive: this.stateService.conversation.getActiveThreadId() === message.threadId
                             };
                             
                             await this.notifyTabsOfConversationUpdate(message.threadId, {
@@ -498,7 +503,7 @@ class WebWireBackground {
                     return deleted;
 
                 case 'GET_ACTIVE_THREAD':
-                    const activeThreadId = this.stateService.conversation.getActiveConversationId();
+                    const activeThreadId = this.stateService.conversation.getActiveThreadId();
                     if (activeThreadId) {
                         const activeThreadData = {
                             threadId: activeThreadId,
@@ -532,9 +537,13 @@ class WebWireBackground {
                     return true;
 
                 case 'GET_OR_CREATE_CURRENT_THREAD':
-                    let currentThreadId = this.stateService.conversation.getActiveThreadId();
+                    let currentThreadId = this.stateService.conversation.getCurrentConversation();
+                    let reason = null;
                     if (!currentThreadId) {
                         currentThreadId = this.stateService.conversation.createNewConversation();
+                        reason = 'new_conversation';
+                    } else {
+                        reason = 'existing_conversation';
                     }
                     
                     const messages = this.stateService.conversation.getConversationMessages(currentThreadId);
@@ -545,7 +554,8 @@ class WebWireBackground {
                     };
                     sendResponse({ 
                         success: true, 
-                        thread: currentThreadData 
+                        thread: currentThreadData,
+                        reason: reason
                     });
                     return false;
 

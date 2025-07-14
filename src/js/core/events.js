@@ -86,6 +86,15 @@ export const EVENTS = {
         CLEARED: 'stash:cleared',
         LOADED: 'stash:loaded',
         SAVED: 'stash:saved'
+    },
+    DOM: {
+        EXECUTE: 'dom:execute',
+        NAVIGATE: 'dom:navigate',
+        CLICK: 'dom:click',
+        FORM_FILL: 'dom:form_fill',
+        SCROLL: 'dom:scroll',
+        OPERATION_COMPLETE: 'dom:operation_complete',
+        OPERATION_ERROR: 'dom:operation_error'
     }
 }; 
 

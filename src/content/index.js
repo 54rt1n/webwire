@@ -1,7 +1,8 @@
 import { EventBus } from '../js/core/event-bus.js';
 import { EVENTS } from '../js/core/events.js';
 import { ChatService } from '../chat/chat-service.js';
-import { PageUtils } from '../chat/page-utils.js';
+import { PageUtils } from '../js/browser/page-utils.js';
+import { DOMAgent } from '../js/browser/dom-agent.js';
 import { WebWireClientCore } from '../js/client/webwire-client-core.js';
 import { setupDebugMethods, setupGlobalDebugAccess } from './debug.js';
 import {
@@ -41,6 +42,7 @@ class WebWireContentHost {
         this.currentSettings = {};
         this.currentThreadId = null;
         this.pageUtils = new PageUtils();
+        this.domAgent = new DOMAgent(this.eventBus);
         
         // Setup host-specific event handlers
         this.setupHostEventHandlers();
@@ -65,6 +67,8 @@ class WebWireContentHost {
         this.eventBus.onAsync(EVENTS.CHAT.SAVE_MESSAGE, this.handleSaveMessage.bind(this));
         this.eventBus.onAsync(EVENTS.CHAT.GET_OR_CREATE_THREAD, this.handleGetOrCreateThread.bind(this));
         this.eventBus.onAsync(EVENTS.CHAT.SAVE_PANEL_VISIBILITY, this.handleSavePanelVisibility.bind(this));
+        this.eventBus.onAsync(EVENTS.CHAT.EXECUTE_TOOL, this.handleExecuteTool.bind(this));
+        this.eventBus.onAsync(EVENTS.CHAT.CREATE_NEW_THREAD, this.handleCreateNewThread.bind(this));
     }
 
     /**
@@ -94,6 +98,8 @@ class WebWireContentHost {
                 data,
                 { target: 'background' }
             );
+
+            console.log('[WebWireContentHost] handleGetOrCreateThread', response);
             
             // Emit conversation loaded event for ChatService
             if (response.success && response.thread) {
@@ -122,6 +128,71 @@ class WebWireContentHost {
             return response;
         } catch (error) {
             console.error('[WebWireContentHost] Failed to save panel visibility:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Handle tool execution request from ChatService
+     */
+    async handleExecuteTool(data) {
+        console.log('[WebWireContentHost] Handling execute tool request:', data);
+        
+        const { toolName, parameters } = data;
+        
+        // List of DOM tools that should be handled locally
+        const domTools = ['navigate_to_url', 'click_element', 'form_fill', 'extract_elements', 'scroll_to', 'wait_for_element'];
+        
+        try {
+            if (domTools.includes(toolName)) {
+                // Handle DOM tools locally using the DOM agent
+                console.log('[WebWireContentHost] Executing DOM tool locally:', toolName);
+                const result = await this.domAgent.executeTool(toolName, parameters);
+                console.log('[WebWireContentHost] DOM tool execution result:', result);
+                return result;
+            } else {
+                // Handle MCP tools using the MCP connector
+                if (!this.core.mcpConnector) {
+                    console.error('[WebWireContentHost] No MCP connector available for tool execution');
+                    throw new Error('MCP connector not available');
+                }
+                
+                console.log('[WebWireContentHost] Executing MCP tool:', toolName);
+                const result = await this.core.mcpConnector.executeTool(toolName, parameters);
+                console.log('[WebWireContentHost] MCP tool execution result:', result);
+                return result;
+            }
+        } catch (error) {
+            console.error('[WebWireContentHost] Failed to execute tool:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Handle create new thread request from ChatService
+     */
+    async handleCreateNewThread(data) {
+        console.log('[WebWireContentHost] Handling create new thread request:', data);
+        
+        try {
+            const response = await this.core.dispatcher.dispatch(
+                BACKGROUND_ACTIONS.CREATE_NEW_THREAD,
+                data,
+                { target: 'background' }
+            );
+            
+            if (response.success && response.thread) {
+                this.currentThreadId = response.thread.threadId;
+                
+                // Emit conversation loaded event for ChatService
+                this.eventBus.emit(EVENTS.CHAT.CONVERSATION_LOADED, {
+                    conversation: response.thread
+                });
+            }
+            
+            return response;
+        } catch (error) {
+            console.error('[WebWireContentHost] Failed to create new thread:', error);
             throw error;
         }
     }
@@ -280,9 +351,42 @@ class WebWireContentHost {
             case EVENTS.UI.INJECT_PANEL:
                 await this.injectPanel();
                 break;
+                
+            case EVENTS.DOM.EXECUTE:
+                await this.handleDOMExecute(data);
+                break;
 
             default:
                 console.warn('[WebWireContentHost] Unknown host event:', event);
+        }
+    }
+
+    /**
+     * Handle DOM operation execution request
+     */
+    async handleDOMExecute(data) {
+        const { operationId, toolName, parameters } = data;
+        
+        try {
+            console.log(`[WebWireContentHost] Executing DOM operation: ${toolName}`, parameters);
+            
+            // Execute the DOM operation using the DOM agent
+            const result = await this.domAgent.executeTool(toolName, parameters);
+            
+            // Send success result back to chat service
+            this.eventBus.emit(EVENTS.DOM.OPERATION_COMPLETE, {
+                operationId,
+                result: result.result
+            });
+            
+        } catch (error) {
+            console.error(`[WebWireContentHost] DOM operation failed:`, error);
+            
+            // Send error result back to chat service
+            this.eventBus.emit(EVENTS.DOM.OPERATION_ERROR, {
+                operationId,
+                error: error.message
+            });
         }
     }
 

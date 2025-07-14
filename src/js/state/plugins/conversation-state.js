@@ -247,12 +247,20 @@ export class ConversationStatePlugin {
         
         if (allConversations.length > 0) {
             console.log('[ConversationState] All conversations:', allConversations.map(conv => ({
-                id: conv.id,
+                threadId: conv.threadId,
                 userName: conv.userName, 
                 personaName: conv.personaName,
                 status: conv.status,
                 startTime: conv.startTime
             })));
+
+            const activeConversations = allConversations.filter(conv => conv.status === 'active');
+            if (activeConversations.length > 0) {
+                threadId = activeConversations[0].threadId;
+                this.setActiveConversation(threadId);
+                console.log(`[ConversationState] Reactivated newest conversation: ${threadId}`);
+                return threadId;
+            }
             
             // Sort all conversations by newest first (endTime or startTime)
             const sortedConversations = allConversations.sort((a, b) => {
@@ -262,10 +270,10 @@ export class ConversationStatePlugin {
             });
             
             // Reactivate the newest conversation
-            conversationId = sortedConversations[0].id;
-            this.setActiveConversation(conversationId);
-            console.log(`[ConversationState] Reactivated newest conversation: ${conversationId}`);
-            return conversationId;
+            threadId = sortedConversations[0].threadId;
+            this.setActiveConversation(threadId);
+            console.log(`[ConversationState] Reactivated newest conversation: ${threadId}`);
+            return threadId;
         }
         
         return null;

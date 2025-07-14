@@ -2,7 +2,8 @@ import { EVENTS, EVENT_CONTEXT } from '../js/core/events.js';
 import { ToolParser } from '../js/mcp/tool-parser.js';
 import { ToolFormatter } from '../js/mcp/tool-formatter.js';
 import { WebChatPanel } from './chat-panel.js';
-import { PageUtils } from './page-utils.js';
+import { PageUtils } from '../js/browser/page-utils.js';
+import { DOMConnector } from '../js/browser/dom-connector.js';
 import { generateMessageId } from '../js/utils/id-generator.js';
 import { buildToolMessages } from './message-utils.js';
 
@@ -34,6 +35,7 @@ export class ChatService {
         // AI/MCP Components  
         this.aiClient = null;
         this.mcpConnector = null;
+        this.domConnector = new DOMConnector(this.eventBus);
         this.stateService = null;
         this.toolParser = new ToolParser();
         
@@ -159,20 +161,49 @@ export class ChatService {
                 this.panel.displayMessage(userMessage, { autoScroll: true });
             }
 
-            // Create system prompt with tools if MCP is connected
+            // Create system prompt with tools (MCP + DOM tools)
             let systemPrompts = ["You are a helpful assistant analyzing web pages and helping users."];
             let tools = [];
             
+            // Get MCP tools
             if (this.mcpConnector && this.stateService) {
                 try {
-                    tools = this.stateService.mcp.getMcpTools();
-                    if (tools && tools.length > 0) {
-                        systemPrompts.push(ToolFormatter.generateSystemPrompt(tools));
-                        console.log(`[ChatService] Using ${tools.length} MCP tools for system prompt`);
+                    const mcpTools = this.stateService.mcp.getMcpTools();
+                    if (mcpTools && mcpTools.length > 0) {
+                        tools.push(...mcpTools);
+                        console.log(`[ChatService] Found ${mcpTools.length} MCP tools`);
                     }
                 } catch (error) {
                     console.warn('[ChatService] Failed to get MCP tools:', error);
                 }
+            }
+            
+            // Get DOM tools and convert to OpenAI format
+            if (this.domConnector) {
+                try {
+                    const domTools = this.domConnector.getAvailableTools();
+                    if (domTools && domTools.length > 0) {
+                        // Convert DOM tools to OpenAI format to match MCP tools
+                        const formattedDomTools = domTools.map(tool => ({
+                            type: 'function',
+                            function: {
+                                name: tool.name,
+                                description: tool.description,
+                                parameters: tool.parameters
+                            }
+                        }));
+                        tools.push(...formattedDomTools);
+                        console.log(`[ChatService] Found ${domTools.length} DOM tools`);
+                    }
+                } catch (error) {
+                    console.warn('[ChatService] Failed to get DOM tools:', error);
+                }
+            }
+            
+            // Generate system prompt with all tools using existing ToolFormatter
+            if (tools.length > 0) {
+                systemPrompts.push(ToolFormatter.generateSystemPrompt(tools));
+                console.log(`[ChatService] Using ${tools.length} total tools (MCP + DOM) for system prompt`);
             }
 
 
@@ -496,14 +527,22 @@ export class ChatService {
         const { toolCall } = payload;
         const result = null;
         try {
-            // Tool execution notification would be sent to panel
-            // But since panel is in same context, we can call directly
-            console.log(`[ChatService] Executing tool: ${toolCall.name}`);
-
-            const toolResponse = await this.mcpConnector.executeTool(
-                toolCall.name, 
-                toolCall.parameters
-            );
+            // Check if it's a DOM tool first
+            let toolResponse;
+            if (this.domConnector.isDOMTool(toolCall.name)) {
+                console.log(`[ChatService] Executing DOM tool: ${toolCall.name}`);
+                toolResponse = await this.domConnector.executeTool(
+                    toolCall.name, 
+                    toolCall.parameters
+                );
+            } else {
+                // Fallback to MCP connector for external tools
+                console.log(`[ChatService] Executing MCP tool: ${toolCall.name}`);
+                toolResponse = await this.mcpConnector.executeTool(
+                    toolCall.name, 
+                    toolCall.parameters
+                );
+            }
 
             result = {
                 callId: toolCall.callId,

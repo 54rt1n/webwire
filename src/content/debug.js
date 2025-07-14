@@ -5,7 +5,7 @@
  * Updated for the new ChatService architecture.
  */
 
-import { PageUtils } from '../chat/page-utils.js';
+import { PageUtils } from '../js/browser/page-utils.js';
 
 // Export functions for testing and debugging
 let webwireContentHost = null;
