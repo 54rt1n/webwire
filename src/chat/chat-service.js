@@ -349,6 +349,7 @@ export class ChatService {
 
             // Request host to save conversation
             this.eventBus.emit(EVENTS.CHAT.SAVE_MESSAGE, {
+                threadId: this.stateService.conversation.getActiveThreadId(),
                 userMessage: userMsg,
                 assistantMessage: assistantMsg,
                 options: {
