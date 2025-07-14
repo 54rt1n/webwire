@@ -30,7 +30,7 @@ export class ConversationsPanel {
             conversationsCountDisplay: document.getElementById('conversations-count-display'),
             
             // Action buttons
-            newConversationBtn: document.getElementById('new-conversation-btn'),
+            deleteAllConversationsBtn: document.getElementById('delete-all-conversations-btn'),
             refreshConversationsBtn: document.getElementById('refresh-conversations-btn'),
             
             // Bulk actions
@@ -80,10 +80,8 @@ export class ConversationsPanel {
      */
     _setupEventListeners() {
         // Action buttons
-        this.elements.newConversationBtn.addEventListener('click', () => {
-            if (this.handlers.onCreateNewConversation) {
-                this.handlers.onCreateNewConversation();
-            }
+        this.elements.deleteAllConversationsBtn.addEventListener('click', () => {
+            this._showDeleteAllConfirmation();
         });
 
         this.elements.refreshConversationsBtn.addEventListener('click', () => {
@@ -644,6 +642,49 @@ export class ConversationsPanel {
             
         } catch (error) {
             console.error('[ConversationsPanel] Failed to export conversations:', error);
+        }
+    }
+
+    /**
+     * Shows delete all conversations confirmation dialog
+     * @private
+     */
+    _showDeleteAllConfirmation() {
+        const totalConversations = Object.keys(this.stateService.state.conversation.metadata).length;
+        
+        if (totalConversations === 0) {
+            console.log('[ConversationsPanel] No conversations to delete');
+            return;
+        }
+
+        const confirmed = window.confirm(
+            `Are you sure you want to delete ALL ${totalConversations} conversations?\n\n` +
+            'This action cannot be undone and will permanently remove all conversation history.'
+        );
+
+        if (confirmed) {
+            this._handleDeleteAllConversations();
+        }
+    }
+
+    /**
+     * Handles the deletion of all conversations
+     * @private
+     */
+    _handleDeleteAllConversations() {
+        try {
+            if (this.stateService && this.stateService.conversation) {
+                this.stateService.conversation.hardResetAllConversations();
+                console.log('[ConversationsPanel] All conversations deleted successfully');
+                
+                // Refresh the conversations list
+                if (this.handlers.onRefreshConversations) {
+                    this.handlers.onRefreshConversations();
+                }
+            }
+        } catch (error) {
+            console.error('[ConversationsPanel] Failed to delete all conversations:', error);
+            alert('Failed to delete conversations. Please try again.');
         }
     }
 

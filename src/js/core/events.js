@@ -23,7 +23,8 @@ export const EVENTS = {
         UPDATED: 'conversation:updated',
         DELETED: 'conversation:deleted',
         STATUS_UPDATED: 'conversation:status_updated',
-        ACTIVATED: 'conversation:activated'
+        ACTIVATED: 'conversation:activated',
+        HARD_RESET: 'conversation:hard_reset'
     },
     CHAT: {
         ANALYZE_PAGE: 'chat:analyze-page',

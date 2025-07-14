@@ -30,6 +30,18 @@ export class ChatUIRenderer {
                 
                 chat: `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                </svg>`,
+                
+                send: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="m22 2-7 20-4-9-9-4Z"/>
+                    <path d="M22 2 11 13"/>
+                </svg>`,
+                
+                reparse: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M21 12c0 1-1 3-3 3s-3-2-3-3 1-3 3-3 3 2 3 3"/>
+                    <path d="M6 12c0 1-1 3-3 3s-3-2-3-3 1-3 3-3 3 2 3 3"/>
+                    <path d="M13 12h4"/>
+                    <path d="M7 12h4"/>
                 </svg>`
             }
         };
@@ -53,7 +65,7 @@ export class ChatUIRenderer {
             <div class="ww-panel hidden">
                 ${this.createHeaderHTML()}
                 ${this.createChatContentHTML()}
-                ${this.createPageContentToggleHTML()}
+                ${this.createInputContainerHTML()}
             </div>
         `;
     }
@@ -133,7 +145,6 @@ export class ChatUIRenderer {
         return `
             <div class="content ww-chat">
                 ${this.createWelcomeHTML()}
-                ${this.createInputContainerHTML()}
             </div>
         `;
     }
@@ -163,14 +174,23 @@ export class ChatUIRenderer {
     createInputContainerHTML() {
         return `
             <div class="input-container">
+                <div class="page-content-toggle">
+                    <label class="label">
+                        <input type="checkbox" class="checkbox">
+                        <span class="text">Include page content</span>
+                    </label>
+                </div>
                 <div class="wrapper">
                     <textarea 
                         class="input" 
                         placeholder="Ask me anything about this page or use tools..."
-                        rows="1"
                     ></textarea>
-                    <button class="reparse-button" disabled title="Reparse">®</button>
-                    <button class="send-button" disabled title="Send">📨</button>
+                    <button class="reparse-button" disabled title="Reparse with tools">
+                        ${this.templates.icons.reparse}
+                    </button>
+                    <button class="send-button" disabled title="Send message">
+                        ${this.templates.icons.send}
+                    </button>
                 </div>
             </div>
         `;

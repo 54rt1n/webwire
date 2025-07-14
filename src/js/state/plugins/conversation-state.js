@@ -415,4 +415,21 @@ export class ConversationStatePlugin {
         const messageId = state.history[threadId].find(m => m.toolCalls?.some(r => r.callId === callId))?.messageId;
         return { threadId, messageId };
     }
+
+    /**
+     * Hard resets all conversation data - clears all conversations and metadata
+     * This is a destructive operation that cannot be undone
+     */
+    hardResetAllConversations() {
+        const state = this.stateService.state.conversation;
+        
+        console.log('[ConversationState] Performing hard reset of all conversations');
+        
+        // Clear all conversation history and metadata
+        state.history = {};
+        state.metadata = {};
+        
+        console.log('[ConversationState] Hard reset completed - all conversations cleared');
+        this.eventBus.emit(EVENTS.CONVERSATION.HARD_RESET, {});
+    }
 }
