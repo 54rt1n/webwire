@@ -82,6 +82,14 @@
     max-height: 600px;
     overflow-y: auto;
   }
+    .thread-id {
+      font-size: var(--font-size-sm);
+      color: var(--color-text-muted);
+      font-weight: var(--font-weight-medium);
+      font-style: italic;
+      margin-left: var(--space-2);
+    }
+    
   
   .conversation-item {
     background: var(--color-surface);
@@ -227,7 +235,7 @@
       font-size: var(--font-size-lg);
       color: var(--color-text-primary);
     }
-    
+
     .conversation-details-meta {
       display: flex;
       flex-direction: column;

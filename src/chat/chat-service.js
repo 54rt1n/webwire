@@ -51,6 +51,8 @@ export class ChatService {
             messageCounter: 0
         };
 
+        this.initialized = false;
+
         this.lastMessage = null;
         
         this.setupEventListeners();
@@ -85,7 +87,15 @@ export class ChatService {
      */
     async initialize(aiClient, mcpConnector, stateService) {
         console.log('[ChatService] Starting initialization...');
-        
+        // show full stack
+        console.trace();
+
+        if (this.initialized) {
+            throw new Error('[ChatService] Already initialized');
+        }
+
+        this.initialized = true;
+
         this.aiClient = aiClient;
         this.mcpConnector = mcpConnector;
         this.stateService = stateService;
@@ -149,6 +159,14 @@ export class ChatService {
         this.panel.removeErrorMessages();
 
         try {
+            const threadId = this.stateService.conversation.getActiveThreadId();
+
+            if (!threadId) {
+                console.log('[ChatService] No active thread found');
+                this.panel.displayError('No active thread found. Please create a new conversation.');
+                return;
+            }
+
             // Prepare messages for API with conversation history
             let userMessage = {
                 messageId: generateMessageId(),
@@ -349,7 +367,7 @@ export class ChatService {
 
             // Request host to save conversation
             this.eventBus.emit(EVENTS.CHAT.SAVE_MESSAGE, {
-                threadId: this.stateService.conversation.getActiveThreadId(),
+                threadId: threadId,
                 userMessage: userMsg,
                 assistantMessage: assistantMsg,
                 options: {

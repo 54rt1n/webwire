@@ -192,7 +192,7 @@ export class ConversationStatePlugin {
         
         // Get the newest conversation
         const activeConversations = Object.values(state.metadata)
-            .filter(conv => conv.status === 'active')
+            .filter(conv => conv.status === 'active' && conv.threadId)
             .sort((a, b) => (b.endTime || b.startTime) - (a.endTime || a.startTime));
 
         const conversation = activeConversations.length > 0 ? activeConversations[0] : null;

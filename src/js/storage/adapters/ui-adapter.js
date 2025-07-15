@@ -27,17 +27,40 @@ export class UiAdapter {
      * @returns {Promise<Object|null>}
      */
     async getAll() {
-        const data = this.storage.get(this.storageKey);
-        if (!data) return null;
-        
-        // Handle version migration
-        if (data.version !== this.version) {
-            const migrated = this._migrate(data);
-            await this.setAll(migrated);
-            return migrated;
+        try {
+            let data;
+            
+            // Use Chrome extension storage if available (for extension contexts)
+            if (this.isChromeExtension) {
+                console.log('[UiAdapter] Using Chrome extension storage');
+                const result = await chrome.storage.local.get(this.storageKey);
+                data = result[this.storageKey] || null;
+            } else {
+                // Fallback to localStorage for non-extension contexts
+                console.log('[UiAdapter] Using localStorage fallback');
+                data = this.storage.get(this.storageKey);
+            }
+            
+            if (!data) {
+                console.log('[UiAdapter] No UI state found');
+                return null;
+            }
+            
+            // Handle version migration
+            if (data.version !== this.version) {
+                console.log('[UiAdapter] Version mismatch, migrating...');
+                const migrated = this._migrate(data);
+                await this.setAll(migrated);
+                return migrated;
+            }
+
+            console.log('[UiAdapter] UI state read:', data);
+            return data;
+            
+        } catch (error) {
+            console.error('[UiAdapter] Error reading UI state:', error);
+            return null;
         }
-        
-        return data;
     }
 
     /**
@@ -46,19 +69,37 @@ export class UiAdapter {
      * @returns {Promise<boolean>}
      */
     async setAll(uiState) {
-        const data = {
-            ...uiState,
-            version: this.version,
-            timestamp: Date.now()
-        };
-        
-        const success = this.storage.set(this.storageKey, data);
-        
-        if (success && this.eventBus) {
-            this.eventBus.emit(EVENTS.UI.CHANGED, data);
+        try {
+            const data = {
+                ...uiState,
+                version: this.version,
+                timestamp: Date.now()
+            };
+            
+            let success;
+            
+            // Use Chrome extension storage if available (for extension contexts)
+            if (this.isChromeExtension) {
+                console.log('[UiAdapter] Saving to Chrome extension storage');
+                await chrome.storage.local.set({ [this.storageKey]: data });
+                success = true;
+            } else {
+                // Fallback to localStorage for non-extension contexts
+                console.log('[UiAdapter] Saving to localStorage fallback');
+                success = this.storage.set(this.storageKey, data);
+            }
+            
+            if (success && this.eventBus) {
+                this.eventBus.emit(EVENTS.UI.CHANGED, data);
+            }
+
+            console.log('[UiAdapter] UI state saved:', data);
+            return success;
+            
+        } catch (error) {
+            console.error('[UiAdapter] Error saving UI state:', error);
+            return false;
         }
-        
-        return success;
     }
 
     /**
@@ -101,13 +142,34 @@ export class UiAdapter {
     }
 
     /**
-     * Clear all settings
+     * Clear all UI state
      * @returns {Promise<boolean>}
      */
     async clear() {
-        const success = this.storage.remove(this.storageKey);
-        
-        return success;
+        try {
+            let success;
+            
+            // Use Chrome extension storage if available (for extension contexts)
+            if (this.isChromeExtension) {
+                console.log('[UiAdapter] Clearing from Chrome extension storage');
+                await chrome.storage.local.remove(this.storageKey);
+                success = true;
+            } else {
+                // Fallback to localStorage for non-extension contexts
+                console.log('[UiAdapter] Clearing from localStorage fallback');
+                success = this.storage.remove(this.storageKey);
+            }
+            
+            if (success && this.eventBus) {
+                this.eventBus.emit(EVENTS.UI.CLEARED);
+            }
+            
+            return success;
+            
+        } catch (error) {
+            console.error('[UiAdapter] Error clearing UI state:', error);
+            return false;
+        }
     }
 
     /**

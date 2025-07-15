@@ -502,7 +502,7 @@ export class WebChatPanel {
         if (!this.elements.conversationId) return;
 
         if (threadId) {
-            const shortId = threadId.split('-').slice(-2).join('-');
+            const shortId = threadId.split('-').slice(-1).join('-');
             this.elements.conversationId.textContent = `Thread: ${shortId}`;
             this.elements.conversationId.title = `Full ID: ${threadId}`;
         } else {

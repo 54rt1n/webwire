@@ -43,6 +43,8 @@ class WebWireContentHost {
         this.currentThreadId = null;
         this.pageUtils = new PageUtils();
         this.domAgent = new DOMAgent(this.eventBus);
+
+        this.initialized = false;
         
         // Setup host-specific event handlers
         this.setupHostEventHandlers();
@@ -77,6 +79,12 @@ class WebWireContentHost {
      */
     async handleSaveMessage(data) {
         try {
+            const threadId = data.threadId;
+            if (!threadId) {
+                console.log('[WebWireContentHost] No threadId found in data:', data);
+                throw new Error('[WebWireContentHost] No threadId found in data');
+            }
+
             const response = await this.core.dispatcher.dispatch(
                 BACKGROUND_ACTIONS.SAVE_THREAD_MESSAGE,
                 data,
@@ -222,6 +230,12 @@ class WebWireContentHost {
      */
     async initialize() {
         console.log('[WebWireContentHost] Starting initialization...');
+
+        if (this.initialized) {
+            throw new Error('[WebWireContentHost] Already initialized');
+        }
+
+        this.initialized = true;
         
         // Initialize WebWire core
         await this.core.initialize();
@@ -537,13 +551,6 @@ class WebWireContentHost {
                 case BACKGROUND_HANDLERS.TOGGLE_WEBWIRE_PANEL:
                     this.chatService.togglePanel();
                     sendResponse({ success: true });
-                    return false;
-                    
-                case BACKGROUND_HANDLERS.CAPTURE_PAGE_CONTENT:
-                    sendResponse({
-                        success: true,
-                        data: this.pageUtils.getCurrentPageContent()
-                    });
                     return false;
                     
                 case BACKGROUND_HANDLERS.GET_WEBWIRE_STATE:

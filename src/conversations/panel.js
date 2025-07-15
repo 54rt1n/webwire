@@ -180,6 +180,7 @@ export class ConversationsPanel {
      * @private
      */
     _createConversationElement(conversation) {
+        console.log('[ConversationsPanel] Creating conversation element:', conversation);
         const conversationEl = this._createEl('div', {
             className: 'conversation-item',
             'data-thread-id': conversation.threadId
@@ -196,7 +197,7 @@ export class ConversationsPanel {
                 <div class="conversation-checkbox-area" data-thread-id="${conversation.threadId}">
                     <input type="checkbox" class="conversation-checkbox" data-thread-id="${conversation.threadId}">
                 </div>
-                <div class="conversation-title">${this._escapeHtml(title)}</div>
+                <div class="conversation-title">${this._escapeHtml(title)} <span class="thread-id">(${conversation.threadId})</span></div>
                 <div class="conversation-actions">
                     <button class="btn-icon view-conversation" title="View Conversation" data-thread-id="${conversation.threadId}">
                         👁️
@@ -422,7 +423,7 @@ export class ConversationsPanel {
 
         this.elements.conversationDetailsContent.innerHTML = `
             <div class="conversation-details">
-                <h3>${this._escapeHtml(title)}</h3>
+                <h3>${this._escapeHtml(title)} <span class="thread-id">(${conversation.threadId})</span></h3>
                 <div class="conversation-details-meta">
                     <div class="conversation-detail-row">
                         <span class="conversation-detail-label">Participants</span>
