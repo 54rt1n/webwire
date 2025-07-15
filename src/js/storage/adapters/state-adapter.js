@@ -3,7 +3,7 @@ import { EVENTS } from '../../core/events.js';
 
 /**
  * State Adapter - Specialized adapter for game state management
- * Provides clean state operations with validation and IndexedDB fallback
+ * Provides clean state operations with validation using Chrome storage
  */
 
 export class StateAdapter {
@@ -13,14 +13,20 @@ export class StateAdapter {
         this.eventBus = eventBus;
         
         this.storageKey = config.storageKey || 'app-state';
-        this.dbName = config.dbName || 'app-db';
-        this.storeName = config.storeName || 'states';
         this.version = config.version || '1.0.0';
         this.maxSize = config.maxSize || 5 * 1024 * 1024; // 5MB
+        
+        // Check Chrome extension storage availability
+        this.isChromeExtension = typeof chrome !== 'undefined' && 
+                                 chrome.storage && 
+                                 chrome.storage.local;
+        
+        console.log('[StateAdapter] Initialized with storage type:', 
+                   this.isChromeExtension ? 'Chrome Extension Storage' : 'localStorage');
     }
 
     /**
-     * Save state with validation and fallback
+     * Save state with validation
      * @param {Object} state 
      * @returns {Promise<boolean>}
      */
@@ -50,22 +56,25 @@ export class StateAdapter {
                 // Could implement compression here if needed
             }
 
-            // Save to localStorage
-            const localSuccess = this.storage.set(this.storageKey, data);
+            let success;
             
-            // Save to IndexedDB as fallback
-            const indexedSuccess = await this.storage.setIndexedDB(
-                this.dbName, 
-                this.storeName, 
-                'current', 
-                data
-            );
+            // Use Chrome extension storage if available (for extension contexts)
+            if (this.isChromeExtension) {
+                console.log('[StateAdapter] Saving to Chrome extension storage');
+                await chrome.storage.local.set({ [this.storageKey]: data });
+                success = true;
+            } else {
+                // Fallback to localStorage for non-extension contexts
+                console.log('[StateAdapter] Saving to localStorage fallback');
+                success = this.storage.set(this.storageKey, data);
+            }
 
-            if (localSuccess && this.eventBus) {
+            if (success && this.eventBus) {
                 this.eventBus.emit(EVENTS.STATE.SAVED, data);
             }
 
-            return localSuccess || indexedSuccess;
+            console.log('[StateAdapter] State saved:', data);
+            return success;
 
         } catch (error) {
             console.error('[StateAdapter] Failed to save state:', error);
@@ -74,34 +83,36 @@ export class StateAdapter {
     }
 
     /**
-     * Load state with fallback
+     * Load state
      * @returns {Promise<Object|null>}
      */
     async load() {
         try {
-            // Try localStorage first
-            let data = this.storage.get(this.storageKey);
+            let data;
             
-            if (data) {
-                if (!this.validator || this.validator.validate(data)) {
-                    return data;
-                } else {
-                    console.warn('[StateAdapter] Local state validation failed');
-                }
+            // Use Chrome extension storage if available (for extension contexts)
+            if (this.isChromeExtension) {
+                console.log('[StateAdapter] Using Chrome extension storage');
+                const result = await chrome.storage.local.get(this.storageKey);
+                data = result[this.storageKey] || null;
+            } else {
+                // Fallback to localStorage for non-extension contexts
+                console.log('[StateAdapter] Using localStorage fallback');
+                data = this.storage.get(this.storageKey);
             }
-
-            // Fallback to IndexedDB
-            data = await this.storage.getIndexedDB(
-                this.dbName, 
-                this.storeName, 
-                'current'
-            );
-
-            if (data && this.validator && !this.validator.validate(data)) {
-                console.warn('[StateAdapter] IndexedDB state validation failed');
+            
+            if (!data) {
+                console.log('[StateAdapter] No state found');
                 return null;
             }
 
+            // Validate if validator provided
+            if (this.validator && !this.validator.validate(data)) {
+                console.warn('[StateAdapter] State validation failed');
+                return null;
+            }
+
+            console.log('[StateAdapter] State loaded:', data);
             return data;
 
         } catch (error) {
@@ -116,14 +127,24 @@ export class StateAdapter {
      */
     async clear() {
         try {
-            const localSuccess = this.storage.remove(this.storageKey);
-            const indexedSuccess = await this.storage.deleteIndexedDB(this.dbName);
+            let success;
             
-            if (this.eventBus) {
+            // Use Chrome extension storage if available (for extension contexts)
+            if (this.isChromeExtension) {
+                console.log('[StateAdapter] Clearing from Chrome extension storage');
+                await chrome.storage.local.remove(this.storageKey);
+                success = true;
+            } else {
+                // Fallback to localStorage for non-extension contexts
+                console.log('[StateAdapter] Clearing from localStorage fallback');
+                success = this.storage.remove(this.storageKey);
+            }
+            
+            if (success && this.eventBus) {
                 this.eventBus.emit(EVENTS.STATE.CLEARED);
             }
             
-            return localSuccess || indexedSuccess;
+            return success;
 
         } catch (error) {
             console.error('[StateAdapter] Failed to clear state:', error);
@@ -136,15 +157,19 @@ export class StateAdapter {
      * @returns {Promise<boolean>}
      */
     async exists() {
-        const localExists = this.storage.get(this.storageKey) !== null;
-        if (localExists) return true;
-        
-        const indexedData = await this.storage.getIndexedDB(
-            this.dbName, 
-            this.storeName, 
-            'current'
-        );
-        return indexedData !== null;
+        try {
+            // Use Chrome extension storage if available (for extension contexts)
+            if (this.isChromeExtension) {
+                const result = await chrome.storage.local.get(this.storageKey);
+                return result[this.storageKey] !== undefined;
+            } else {
+                // Fallback to localStorage for non-extension contexts
+                return this.storage.get(this.storageKey) !== null;
+            }
+        } catch (error) {
+            console.error('[StateAdapter] Error checking if state exists:', error);
+            return false;
+        }
     }
 
     /**

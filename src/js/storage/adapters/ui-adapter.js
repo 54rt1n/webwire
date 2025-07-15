@@ -12,6 +12,14 @@ export class UiAdapter {
         this.eventBus = eventBus;
         this.storageKey = config.storageKey || 'app-ui';
         this.version = config.version || '1.0.0';
+        
+        // Check Chrome extension storage availability
+        this.isChromeExtension = typeof chrome !== 'undefined' && 
+                                 chrome.storage && 
+                                 chrome.storage.local;
+        
+        console.log('[UiAdapter] Initialized with storage type:', 
+                   this.isChromeExtension ? 'Chrome Extension Storage' : 'localStorage');
     }
 
     /**
@@ -108,5 +116,23 @@ export class UiAdapter {
      */
     async exists() {
         return (await this.getAll()) !== null;
+    }
+
+    /**
+     * Migrate UI state from older version
+     * @param {Object} oldData 
+     * @returns {Object}
+     * @private
+     */
+    _migrate(oldData) {
+        console.log(`[UiAdapter] Migrating from ${oldData.version} to ${this.version}`);
+        
+        return {
+            ...oldData,
+            version: this.version,
+            timestamp: Date.now(),
+            migrated: true,
+            migratedFrom: oldData.version
+        };
     }
 } 

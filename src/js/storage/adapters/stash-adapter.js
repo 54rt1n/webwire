@@ -12,6 +12,14 @@ export class StashAdapter {
         this.eventBus = eventBus;
         this.storageKey = config.storageKey || 'app-stash';
         this.version = config.version || '1.0.0';
+        
+        // Check Chrome extension storage availability
+        this.isChromeExtension = typeof chrome !== 'undefined' && 
+                                 chrome.storage && 
+                                 chrome.storage.local;
+        
+        console.log('[StashAdapter] Initialized with storage type:', 
+                   this.isChromeExtension ? 'Chrome Extension Storage' : 'localStorage');
     }
 
     /**
@@ -19,12 +27,29 @@ export class StashAdapter {
      * @returns {Promise<Object|null>}
      */
     async getAll() {
-        const data = await this.storage.get(this.storageKey);
-        if (!data) return {};
-        
-        // Return the stash data without metadata
-        const { version, timestamp, ...stashData } = data;
-        return stashData;
+        try {
+            let data;
+            
+            // Use Chrome extension storage if available (for extension contexts)
+            if (this.isChromeExtension) {
+                console.log('[StashAdapter] Using Chrome extension storage');
+                const result = await chrome.storage.local.get(this.storageKey);
+                data = result[this.storageKey] || null;
+            } else {
+                // Fallback to localStorage for non-extension contexts
+                console.log('[StashAdapter] Using localStorage fallback');
+                data = this.storage.get(this.storageKey);
+            }
+            
+            if (!data) return {};
+            
+            // Return the stash data without metadata
+            const { version, timestamp, ...stashData } = data;
+            return stashData;
+        } catch (error) {
+            console.error('[StashAdapter] Error reading stash data:', error);
+            return {};
+        }
     }
 
     /**
@@ -33,19 +58,35 @@ export class StashAdapter {
      * @returns {Promise<boolean>}
      */
     async setAll(stashData) {
-        const data = {
-            ...stashData,
-            version: this.version,
-            timestamp: Date.now()
-        };
-        
-        const success = await this.storage.set(this.storageKey, data);
-        
-        if (success && this.eventBus) {
-            this.eventBus.emit(EVENTS.STASH?.SAVED || 'stash:saved', data);
+        try {
+            const data = {
+                ...stashData,
+                version: this.version,
+                timestamp: Date.now()
+            };
+            
+            let success;
+            
+            // Use Chrome extension storage if available (for extension contexts)
+            if (this.isChromeExtension) {
+                console.log('[StashAdapter] Saving to Chrome extension storage');
+                await chrome.storage.local.set({ [this.storageKey]: data });
+                success = true;
+            } else {
+                // Fallback to localStorage for non-extension contexts
+                console.log('[StashAdapter] Saving to localStorage fallback');
+                success = this.storage.set(this.storageKey, data);
+            }
+            
+            if (success && this.eventBus) {
+                this.eventBus.emit(EVENTS.STASH?.SAVED || 'stash:saved', data);
+            }
+            
+            return success;
+        } catch (error) {
+            console.error('[StashAdapter] Error saving stash data:', error);
+            return false;
         }
-        
-        return success;
     }
 
     /**
@@ -92,13 +133,29 @@ export class StashAdapter {
      * @returns {Promise<boolean>}
      */
     async clear() {
-        const success = await this.storage.remove(this.storageKey);
-        
-        if (success && this.eventBus) {
-            this.eventBus.emit(EVENTS.STASH.CLEARED, { operation: 'clear' });
+        try {
+            let success;
+            
+            // Use Chrome extension storage if available (for extension contexts)
+            if (this.isChromeExtension) {
+                console.log('[StashAdapter] Clearing from Chrome extension storage');
+                await chrome.storage.local.remove(this.storageKey);
+                success = true;
+            } else {
+                // Fallback to localStorage for non-extension contexts
+                console.log('[StashAdapter] Clearing from localStorage fallback');
+                success = this.storage.remove(this.storageKey);
+            }
+            
+            if (success && this.eventBus) {
+                this.eventBus.emit(EVENTS.STASH.CLEARED, { operation: 'clear' });
+            }
+            
+            return success;
+        } catch (error) {
+            console.error('[StashAdapter] Error clearing stash data:', error);
+            return false;
         }
-        
-        return success;
     }
 
     /**
