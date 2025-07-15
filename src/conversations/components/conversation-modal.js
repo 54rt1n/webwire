@@ -8,13 +8,15 @@ import { buildToolMessages } from '../../chat/message-utils.js';
  * Shows a chronological list of messages with user and assistant interactions.
  */
 export class ConversationModal {
-    constructor(stateService = null) {
+    constructor(stateService = null, eventBus = null) {
         this.modal = null;
         this.isOpen = false;
         this.onClose = null;
         this.currentConversation = null;
         this.stateService = stateService;
         this.onSetActive = null;
+        this.eventBus = eventBus;
+        this.eventListeners = [];
     }
 
     /**
@@ -23,6 +25,14 @@ export class ConversationModal {
      */
     setStateService(stateService) {
         this.stateService = stateService;
+    }
+
+    /**
+     * Sets the event bus for listening to state changes
+     * @param {object} eventBus - The event bus instance
+     */
+    setEventBus(eventBus) {
+        this.eventBus = eventBus;
     }
 
     /**
@@ -77,6 +87,9 @@ export class ConversationModal {
             // Restore body scroll
             document.body.style.overflow = '';
             
+            // Clean up event listeners
+            this._cleanupEventListeners();
+            
             // Call onClose callback if provided
             if (this.onClose) {
                 this.onClose();
@@ -92,12 +105,13 @@ export class ConversationModal {
      */
     _createModal(conversationData) {
         this.modal = document.createElement('div');
-        this.modal.className = 'conversation-modal-overlay';
+        this.modal.className = 'ww-modal conversation-modal-overlay';
         
         const title = this._getConversationTitle(conversationData);
         const messageCount = this._getMessageCount(conversationData.threadId);
         const participantsText = `${conversationData.userName || 'User'} & ${conversationData.personaName || 'Assistant'}`;
-        const isActive = this._isActiveConversation(conversationData.threadId);
+        const status = this._getConversationStatus(conversationData.threadId);
+        const isActive = status === 'active';
         
         this.modal.innerHTML = `
             <div class="conversation-modal">
@@ -109,7 +123,7 @@ export class ConversationModal {
                         </div>
                     </div>
                     <div class="conversation-modal-actions">
-                        <button class="btn ${isActive ? 'btn-complete' : 'btn-set-active'}" id="set-active-btn" title="${isActive ? 'Complete Conversation' : 'Set as Active Conversation'}">
+                        <button class="btn ${isActive ? 'btn-complete' : 'btn-set-active'}" id="set-active-btn" title="${isActive ? 'Complete this active conversation' : 'Set as Active Conversation'}">
                             ${isActive ? '✅ Complete' : '➕ Set Active'}
                         </button>
                         <button class="conversation-modal-close" id="close-modal-btn" title="Close">
@@ -358,6 +372,21 @@ export class ConversationModal {
     }
 
     /**
+     * Gets the conversation status
+     * @param {string} threadId - Thread ID
+     * @returns {string} The conversation status ('active', 'completed', 'saved', 'error', 'deleted')
+     * @private
+     */
+    _getConversationStatus(threadId) {
+        if (!this.stateService || !this.stateService.conversation) {
+            return 'active'; // default
+        }
+        
+        const metadata = this.stateService.state.conversation.metadata[threadId];
+        return metadata ? metadata.status || 'active' : 'active';
+    }
+
+    /**
      * Attaches event listeners to modal elements
      * @private
      */
@@ -372,8 +401,13 @@ export class ConversationModal {
         const setActiveBtn = this.modal.querySelector('#set-active-btn');
         if (setActiveBtn) {
             setActiveBtn.addEventListener('click', () => {
+                if (setActiveBtn.disabled) return;
+                
                 if (this.onSetActive && this.currentConversation) {
+                    // Always call onSetActive - the handler will determine the appropriate action
                     this.onSetActive(this.currentConversation.threadId);
+                    // Update button state after action
+                    setTimeout(() => this._updateButtonState(), 100);
                 }
             });
         }
@@ -393,6 +427,64 @@ export class ConversationModal {
             }
         };
         document.addEventListener('keydown', handleKeyDown);
+
+        // Listen for conversation state changes
+        if (this.eventBus) {
+            const conversationUpdateListener = () => {
+                this._updateButtonState();
+            };
+            
+            this.eventBus.on(EVENTS.CONVERSATION.ACTIVATED, conversationUpdateListener);
+            this.eventBus.on(EVENTS.CONVERSATION.UPDATED, conversationUpdateListener);
+            
+            // Store listeners for cleanup
+            this.eventListeners.push({
+                event: EVENTS.CONVERSATION.ACTIVATED,
+                listener: conversationUpdateListener
+            });
+            this.eventListeners.push({
+                event: EVENTS.CONVERSATION.UPDATED,
+                listener: conversationUpdateListener
+            });
+        }
+    }
+
+    /**
+     * Cleans up event listeners
+     * @private
+     */
+    _cleanupEventListeners() {
+        if (this.eventBus && this.eventListeners.length > 0) {
+            this.eventListeners.forEach(({ event, listener }) => {
+                this.eventBus.off(event, listener);
+            });
+            this.eventListeners = [];
+        }
+    }
+
+    /**
+     * Updates the button state based on current conversation status
+     * @private
+     */
+    _updateButtonState() {
+        if (!this.modal || !this.currentConversation) return;
+        
+        const setActiveBtn = this.modal.querySelector('#set-active-btn');
+        if (!setActiveBtn) return;
+        
+        const status = this._getConversationStatus(this.currentConversation.threadId);
+        
+        if (status === 'active') {
+            setActiveBtn.className = 'btn btn-complete';
+            setActiveBtn.innerHTML = '✅ Complete';
+            setActiveBtn.title = 'Complete this active conversation';
+            setActiveBtn.disabled = false;
+        } else {
+            setActiveBtn.className = 'btn btn-set-active';
+            setActiveBtn.innerHTML = '➕ Set Active';
+            setActiveBtn.title = 'Set as Active Conversation';
+            setActiveBtn.disabled = false;
+        }
     }
 
     /**
@@ -407,6 +499,3 @@ export class ConversationModal {
         return div.innerHTML;
     }
 }
-
-// Export singleton instance
-export const conversationModal = new ConversationModal();

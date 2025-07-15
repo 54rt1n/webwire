@@ -3,7 +3,7 @@ import { ConversationsPanel } from './panel.js';
 import { WebWireClientCore } from '../js/client/webwire-client-core.js';
 import { PanelEventHandlers } from '../js/client/panel-event-handlers.js';
 import { EventBus } from '../js/core/event-bus.js';
-import { conversationModal } from './components/conversation-modal.js';
+import { ConversationModal } from './components/conversation-modal.js';
 
 /**
  * ConversationsPanelApp
@@ -16,6 +16,7 @@ class ConversationsPanelApp {
         this.core = new WebWireClientCore(this.eventBus);
         this.panelEventHandlers = null;
         this.panel = new ConversationsPanel(this.eventBus);
+        this.conversationModal = new ConversationModal(this.core.stateService, this.eventBus);
         
         this.setupEventListeners();
     }
@@ -33,7 +34,8 @@ class ConversationsPanelApp {
         // Set up state service for conversations management
         if (this.core.stateService) {
             this.panel.setStateService(this.core.stateService);
-            conversationModal.setStateService(this.core.stateService);
+            this.conversationModal.setStateService(this.core.stateService);
+            this.conversationModal.setEventBus(this.eventBus);
         }
 
         // Setup UI event handlers
@@ -145,7 +147,7 @@ class ConversationsPanelApp {
         console.log(`[ConversationsApp] Viewing conversation ${conversation.threadId}...`);
         
         // Open the conversation modal
-        conversationModal.open(
+        this.conversationModal.open(
             conversation,
             null, // onClose callback
             (threadId) => this.setActiveConversation(threadId) // onSetActive callback
@@ -159,6 +161,11 @@ class ConversationsPanelApp {
     async setActiveConversation(threadId) {
         if (!this.core.stateService || !this.core.stateService.conversation) {
             console.error('[ConversationsApp] No conversation state service available');
+            return;
+        }
+
+        if (!threadId) {
+            console.error('[ConversationsApp] Cannot set active conversation: threadId is null or undefined');
             return;
         }
 
@@ -186,7 +193,7 @@ class ConversationsPanelApp {
             console.log(`[ConversationsApp] Conversation ${threadId} ${isAlreadyActive ? 'completed' : 'set as active'}`);
             
             // Close modal
-            conversationModal.close();
+            this.conversationModal.close();
             
             // Refresh the list to update status display
             await this.refreshConversations();
