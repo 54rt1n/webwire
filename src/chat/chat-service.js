@@ -103,7 +103,7 @@ export class ChatService {
 
             this.panel.setPageContentCheckboxState(this.stateService.ui.getIncludePageContent() || false);
 
-            this.sendGetOrCreateThread();
+            await this.sendGetOrCreateThread();
 
             console.log('[ChatService] Initialization complete');
         } catch (error) {
@@ -773,13 +773,25 @@ export class ChatService {
     /**
      * Load current conversation on startup
      */
-    sendGetOrCreateThread() {
+    async sendGetOrCreateThread() {
         console.log('[ChatService] Requesting current conversation from host...');
         
         // Request the current conversation from the host
-        this.eventBus.emit(EVENTS.CHAT.GET_OR_CREATE_THREAD, {
+        const result = await this.eventBus.emitAsync(EVENTS.CHAT.GET_OR_CREATE_THREAD, {
             ...this.pageUtils.getPageLocation()
         }, { target: EVENT_CONTEXT.BACKGROUND });
+
+        console.log('[ChatService] Current conversation loaded:', result);
+
+        // Handle the conversation result
+        if (result && result.success && result.result) {
+            const conversationData = result.result;
+            
+            // Trigger the conversation loaded handler to update the panel
+            await this.handleConversationLoaded({ conversation: conversationData });
+        } else {
+            console.warn('[ChatService] Failed to load conversation or no conversation returned:', result);
+        }
     }
 
     /**
