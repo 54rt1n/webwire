@@ -221,7 +221,7 @@ export class ConversationStatePlugin {
         // Mark target conversation as active
         this.updateConversationStatus(threadId, 'active');
         
-        console.log(`Set active conversation to ${threadId}`);
+        console.log(`[StateService::ConversationState] Set active conversation to ${threadId}`);
         this.eventBus.emit(EVENTS.CONVERSATION.ACTIVATED, { threadId });
     }
 
@@ -262,19 +262,6 @@ export class ConversationStatePlugin {
                 console.log(`[ConversationState] Reactivated newest conversation: ${threadId}`);
                 return threadId;
             }
-            
-            // Sort all conversations by newest first (endTime or startTime)
-            const sortedConversations = allConversations.sort((a, b) => {
-                const timeA = a.endTime || a.startTime || 0;
-                const timeB = b.endTime || b.startTime || 0;
-                return timeB - timeA;
-            });
-            
-            // Reactivate the newest conversation
-            threadId = sortedConversations[0].threadId;
-            this.setActiveConversation(threadId);
-            console.log(`[ConversationState] Reactivated newest conversation: ${threadId}`);
-            return threadId;
         }
         
         return null;
@@ -431,5 +418,58 @@ export class ConversationStatePlugin {
         
         console.log('[ConversationState] Hard reset completed - all conversations cleared');
         this.eventBus.emit(EVENTS.CONVERSATION.HARD_RESET, {});
+    }
+
+    /**
+     * Patch conversation state from over-the-wire data (e.g., from background script)
+     * This allows syncing local conversation state with the authoritative state
+     * @param {object} conversationData - Conversation data from background
+     * @param {string} conversationData.threadId - Thread ID
+     * @param {object} conversationData.metadata - Conversation metadata
+     * @param {array} conversationData.messages - Array of messages
+     * @param {boolean} [conversationData.isActive] - Whether this is the active conversation
+     */
+    patchConversation(conversationData) {
+        const { threadId, metadata, messages, isActive } = conversationData;
+        
+        if (!threadId) {
+            console.error('[ConversationState] patchConversation: threadId is required');
+            return;
+        }
+
+        const state = this.stateService.state.conversation;
+        
+        console.log(`[ConversationState] Patching conversation ${threadId} with ${messages?.length || 0} messages`);
+        
+        // Update conversation metadata
+        if (metadata) {
+            state.metadata[threadId] = {
+                ...metadata,
+                threadId: threadId  // Ensure threadId is set
+            };
+        }
+        
+        // Update conversation messages if provided
+        if (messages && Array.isArray(messages)) {
+            state.history[threadId] = messages;
+        }
+        
+        // If this is marked as active, ensure it's the only active conversation
+        if (isActive) {
+            // Mark other conversations as inactive
+            Object.values(state.metadata).forEach(meta => {
+                if (meta.threadId !== threadId && meta.status === 'active') {
+                    meta.status = 'completed';
+                }
+            });
+            
+            // Ensure this conversation is marked as active
+            if (state.metadata[threadId]) {
+                state.metadata[threadId].status = 'active';
+            }
+        }
+        
+        console.log(`[ConversationState] Successfully patched conversation ${threadId}`);
+        this.eventBus.emit(EVENTS.CONVERSATION.UPDATED, { threadId });
     }
 }

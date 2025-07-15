@@ -202,7 +202,6 @@ const notifications = validTabs.map(async (tab) => {
 #### Debugging Support:
 - Comprehensive logging with context
 - Debug statistics via getStats()
-- Global webwireBackground export for console access
 
 ### Common Operations
 

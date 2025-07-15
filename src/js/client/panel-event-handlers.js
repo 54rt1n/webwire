@@ -158,9 +158,9 @@ export class PanelEventHandlers {
      * Setup chat listeners
      */
     setupChatListeners() {
-        this.eventBus.on(EVENTS.CHAT.CREATE_NEW_THREAD, this.handleCreateNewThread.bind(this));
-        this.eventBus.on(EVENTS.CHAT.EXECUTE_TOOL, this.handleExecuteTool.bind(this));
-        this.eventBus.on(EVENTS.CHAT.CANCEL_TOOL, this.handleCancelTool.bind(this));
+        this.eventBus.onAsync(EVENTS.CHAT.CREATE_NEW_THREAD, this.handleCreateNewThread.bind(this));
+        this.eventBus.onAsync(EVENTS.CHAT.EXECUTE_TOOL, this.handleExecuteTool.bind(this));
+        this.eventBus.onAsync(EVENTS.CHAT.CANCEL_TOOL, this.handleCancelTool.bind(this));
     }
 
     /**
@@ -183,6 +183,10 @@ export class PanelEventHandlers {
                 metadata: this.stateService.state.conversation.metadata[threadId]
             }
         });
+        return {
+            success: true,
+            threadId: threadId
+        };
     }
 
     /**
@@ -203,6 +207,13 @@ export class PanelEventHandlers {
 
             // Emit event to notify listeners (e.g., chat panel) of tool result
             this.eventBus.emit(EVENTS.CHAT.TOOL_RESULT, { threadId, messageId, callId, toolResult });
+            return {
+                success: true,
+                threadId: threadId,
+                messageId: messageId,
+                callId: callId,
+                toolResult: toolResult
+            };
         } catch (error) {
             console.error('[MCPApp] Failed to execute tool:', error);
         }
@@ -213,6 +224,12 @@ export class PanelEventHandlers {
      */
     async handleCancelTool(data) {
         console.log('[MCPApp] Handling cancel tool event:', data);
+        return {
+            success: true,
+            threadId: data.threadId,
+            messageId: data.messageId,
+            callId: data.callId
+        };
     }
 
 }

@@ -87,8 +87,6 @@ export class ChatService {
      */
     async initialize(aiClient, mcpConnector, stateService) {
         console.log('[ChatService] Starting initialization...');
-        // show full stack
-        console.trace();
 
         if (this.initialized) {
             throw new Error('[ChatService] Already initialized');
@@ -162,7 +160,7 @@ export class ChatService {
             const threadId = this.stateService.conversation.getActiveThreadId();
 
             if (!threadId) {
-                console.log('[ChatService] No active thread found');
+                console.log('[ChatService] No active thread found', this.stateService);
                 this.panel.displayError('No active thread found. Please create a new conversation.');
                 return;
             }
@@ -795,20 +793,18 @@ export class ChatService {
         console.log('[ChatService] Requesting current conversation from host...');
         
         // Request the current conversation from the host
-        const result = await this.eventBus.emitAsync(EVENTS.CHAT.GET_OR_CREATE_THREAD, {
+        const conversationData = await this.eventBus.emitAsync(EVENTS.CHAT.GET_OR_CREATE_THREAD, {
             ...this.pageUtils.getPageLocation()
         }, { target: EVENT_CONTEXT.BACKGROUND });
 
-        console.log('[ChatService] Current conversation loaded:', result);
+        console.log('[ChatService] Current conversation loaded:', conversationData);
 
         // Handle the conversation result
-        if (result && result.success && result.result) {
-            const conversationData = result.result;
-            
+        if (conversationData) {
             // Trigger the conversation loaded handler to update the panel
             await this.handleConversationLoaded({ conversation: conversationData });
         } else {
-            console.warn('[ChatService] Failed to load conversation or no conversation returned:', result);
+            console.warn('[ChatService] Failed to load conversation or no conversation returned:', conversationData);
         }
     }
 

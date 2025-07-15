@@ -7,10 +7,7 @@ import { WebWireClientCore } from '../js/client/webwire-client-core.js';
 import { setupDebugMethods, setupGlobalDebugAccess } from './debug.js';
 import {
     BACKGROUND_ACTIONS,
-    BACKGROUND_HANDLERS,
-    PANEL_ACTIONS,
-    PANEL_MESSAGE_TYPES,
-    MESSAGE_ROLES,
+    CONTENT_ACTIONS,
     KEYBOARD_SHORTCUTS,
     DOM_READY_STATES
 } from '../chat/chat-constants.js';
@@ -72,6 +69,17 @@ class WebWireContentHost {
         this.eventBus.onAsync(EVENTS.CHAT.EXECUTE_TOOL, this.handleExecuteTool.bind(this));
         this.eventBus.onAsync(EVENTS.CHAT.CREATE_NEW_THREAD, this.handleCreateNewThread.bind(this));
         this.eventBus.onAsync(EVENTS.CHAT.UPDATE_SETTINGS, this.handleUpdateSettings.bind(this));
+        
+        // Handle content actions from background script
+        this.eventBus.onAsync(CONTENT_ACTIONS.INJECT_WEBWIRE_PANEL, this.handleInjectPanel.bind(this));
+        this.eventBus.onAsync(CONTENT_ACTIONS.TOGGLE_WEBWIRE_PANEL, this.handleTogglePanel.bind(this));
+        this.eventBus.onAsync(CONTENT_ACTIONS.GET_WEBWIRE_STATE, this.handleGetWebwireState.bind(this));
+        this.eventBus.onAsync(CONTENT_ACTIONS.SETTINGS_CHANGED, this.handleSettingsChanged.bind(this));
+        this.eventBus.onAsync(CONTENT_ACTIONS.CONVERSATION_UPDATED, this.handleConversationUpdated.bind(this));
+        this.eventBus.onAsync(CONTENT_ACTIONS.CAPTURE_PAGE_CONTENT, this.handleCapturePageContent.bind(this));
+        this.eventBus.onAsync(CONTENT_ACTIONS.AI_CHAT_REQUEST, this.handleAIChatRequest.bind(this));
+        this.eventBus.onAsync(CONTENT_ACTIONS.MCP_CONNECT_REQUEST, this.handleMCPConnectRequest.bind(this));
+        this.eventBus.onAsync(CONTENT_ACTIONS.PING, this.handlePing.bind(this));
     }
 
     /**
@@ -111,10 +119,23 @@ class WebWireContentHost {
             console.log('[WebWireContentHost] handleGetOrCreateThread', response);
             
             // Emit conversation loaded event for ChatService
-            if (response.success && response.thread) {
+            if (response.success && response.result) {
+                // CRITICAL: Update local conversation state from background data
+                if (this.core.stateService && this.core.stateService.conversation) {
+                    console.log('[WebWireContentHost] Syncing thread state from background:', response.result.threadId);
+                    this.core.stateService.conversation.patchConversation({
+                        threadId: response.result.threadId,
+                        metadata: response.result.metadata,
+                        messages: response.result.messages,
+                        isActive: true  // This is the current active thread
+                    });
+                }
+                
                 this.eventBus.emit(EVENTS.CHAT.CONVERSATION_LOADED, {
-                    conversation: response.thread
+                    conversation: response.result
                 });
+            } else {
+                console.error('[WebWireContentHost] Failed to get/create thread:', response.error);
             }
             
             return response;
@@ -193,6 +214,17 @@ class WebWireContentHost {
             if (response.success && response.thread) {
                 this.currentThreadId = response.thread.threadId;
                 
+                // CRITICAL: Update local conversation state from background data
+                if (this.core.stateService && this.core.stateService.conversation) {
+                    console.log('[WebWireContentHost] Syncing new thread state from background:', response.thread.threadId);
+                    this.core.stateService.conversation.patchConversation({
+                        threadId: response.thread.threadId,
+                        metadata: response.thread.metadata,
+                        messages: response.thread.messages || [],
+                        isActive: true  // This is the new active thread
+                    });
+                }
+                
                 // Emit conversation loaded event for ChatService
                 this.eventBus.emit(EVENTS.CHAT.CONVERSATION_LOADED, {
                     conversation: response.thread
@@ -250,30 +282,12 @@ class WebWireContentHost {
         await this.chatService.initialize(this.core.aiClient, this.core.mcpConnector, this.core.stateService);
         console.log('[WebWireContentHost] ChatService initialized');
         
-        // Set up Chrome extension communication
-        if (typeof chrome !== 'undefined' && chrome.runtime) {
-            this.setupExtensionCommunication();
-            console.log('[WebWireContentHost] Extension communication set up');
-        } else {
-            console.warn('[WebWireContentHost] Chrome runtime not available - running in non-extension context');
-        }
+        console.log('[WebWireContentHost] Extension communication ready via EventDispatcher');
         
-        // Set up panel communication (DOM/window events)
-        this.setupPanelCommunication();
-        console.log('[WebWireContentHost] Panel communication set up');
         
         // Set up keyboard shortcuts and injection listeners
         this.setupUIListeners();
         console.log('[WebWireContentHost] UI listeners set up');
-        
-        // Load settings and initialize ChatService
-        try {
-            // Initialize the ChatService
-            await this.chatService.initialize(this.core.aiClient, this.core.mcpConnector, this.core.stateService);
-            console.log('[WebWireContentHost] ChatService initialized');
-        } catch (error) {
-            console.error('[WebWireContentHost] Settings loading failed:', error);
-        }
         
         // Handle auto-inject and panel restoration
         try {
@@ -334,6 +348,17 @@ class WebWireContentHost {
                 if (threadResponse.success) {
                     const { threadId, metadata, messages } = threadResponse.thread;
                     this.currentThreadId = threadId;
+                    
+                    // CRITICAL: Update local conversation state from background data
+                    if (this.core.stateService && this.core.stateService.conversation) {
+                        console.log('[WebWireContentHost] Syncing thread state from background dispatch:', threadId);
+                        this.core.stateService.conversation.patchConversation({
+                            threadId,
+                            metadata,
+                            messages,
+                            isActive: true  // This is the current active thread
+                        });
+                    }
                     
                     // Send conversation history back to ChatService
                     this.eventBus.emit(EVENTS.CHAT.CONVERSATION_LOADED, {
@@ -424,29 +449,7 @@ class WebWireContentHost {
         }
     }
 
-    /**
-     * Setup Chrome extension communication
-     */
-    setupExtensionCommunication() {
-        chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-            return this.handleBackgroundMessage(message, sender, sendResponse);
-        });
-    }
 
-    /**
-     * Setup panel communication (window/DOM events)
-     */
-    setupPanelCommunication() {
-        window.addEventListener('message', (event) => {
-            if (event.source !== window) return;
-            
-            if (event.data.type === PANEL_MESSAGE_TYPES.WEBWIRE_PANEL_MESSAGE) {
-                this.handlePanelMessage(event.data);
-            } else if (event.data.type === PANEL_MESSAGE_TYPES.WEBWIRE_PANEL_READY) {
-                this.sendInitialStateToPanel();
-            }
-        });
-    }
 
     /**
      * Setup UI listeners (keyboard shortcuts, etc.)
@@ -469,141 +472,7 @@ class WebWireContentHost {
         });
     }
 
-    /**
-     * Handle messages from the panel UI
-     */
-    async handlePanelMessage(message) {
-        const { action, data } = message;
 
-        try {
-            switch (action) {
-                case PANEL_ACTIONS.SEND_CHAT_MESSAGE:
-                    // Delegate to ChatService
-                    this.eventBus.emit(EVENTS.CHAT.SEND_MESSAGE, { message: data.message });
-                    break;
-                    
-                case PANEL_ACTIONS.ANALYZE_PAGE_CONTENT:
-                    // Delegate to ChatService
-                    this.eventBus.emit(EVENTS.CHAT.ANALYZE_PAGE, {});
-                    break;
-                    
-                case PANEL_ACTIONS.CONNECT_MCP:
-                    // Update settings and notify ChatService
-                    this.currentSettings.mcp = { ...this.currentSettings.mcp, serverUrl: data.url };
-                    this.eventBus.emit(EVENTS.CHAT.UPDATE_SETTINGS, { settings: this.currentSettings });
-                    break;
-                    
-                case PANEL_ACTIONS.DISCONNECT_MCP:
-                    // Update settings and notify ChatService
-                    this.currentSettings.mcp = { ...this.currentSettings.mcp, serverUrl: '' };
-                    this.eventBus.emit(EVENTS.CHAT.UPDATE_SETTINGS, { settings: this.currentSettings });
-                    break;
-                    
-                case PANEL_ACTIONS.GET_PAGE_CONTENT:
-                    // This is a host responsibility
-                    const content = this.pageUtils.getCurrentPageContent();
-                    // Send response directly to panel (if needed)
-                    break;
-                    
-                case PANEL_ACTIONS.GET_STATE:
-                    // Build state and send to ChatService
-                    await this.sendInitialStateToPanel();
-                    break;
-                    
-                case PANEL_ACTIONS.SAVE_SETTINGS:
-                    try {
-                        const response = await chrome.runtime.sendMessage({
-                            action: BACKGROUND_ACTIONS.SAVE_WEBWIRE_SETTINGS,
-                            settings: data.settings
-                        });
-                        // Update local settings and notify ChatService
-                        if (response.success) {
-                            this.currentSettings = data.settings;
-                            this.eventBus.emit(EVENTS.CHAT.UPDATE_SETTINGS, { settings: this.currentSettings });
-                        }
-                    } catch (error) {
-                        console.error('[WebWireContentHost] Failed to save settings:', error);
-                    }
-                    break;
-                    
-                default:
-                    console.warn('[WebWireContentHost] Unknown panel message action:', action);
-            }
-        } catch (error) {
-            console.error('[WebWireContentHost] Error handling panel message:', error);
-        }
-    }
-
-    /**
-     * Handle messages from background script
-     */
-    handleBackgroundMessage(message, sender, sendResponse) {
-        console.log('[WebWireContentHost] Received background message:', message.action);
-        
-        try {
-            switch (message.action) {
-                case BACKGROUND_HANDLERS.INJECT_WEBWIRE_PANEL:
-                    this.injectPanel()
-                        .then(() => sendResponse({ success: true }))
-                        .catch(error => sendResponse({ success: false, error: error.message }));
-                    return true;
-                    
-                case BACKGROUND_HANDLERS.TOGGLE_WEBWIRE_PANEL:
-                    this.chatService.togglePanel();
-                    sendResponse({ success: true });
-                    return false;
-                    
-                case BACKGROUND_HANDLERS.GET_WEBWIRE_STATE:
-                    try {
-                        sendResponse({
-                            success: true,
-                            state: {
-                                panelInjected: this.chatService.isReady(),
-                                mcpConnected: false, // ChatService would need to expose this
-                                aiClientConfigured: false // ChatService would need to expose this
-                            }
-                        });
-                    } catch (error) {
-                        console.error('[WebWireContentHost] Error getting state:', error);
-                        sendResponse({
-                            success: true,
-                            state: {
-                                panelInjected: false,
-                                mcpConnected: false,
-                                aiClientConfigured: false
-                            }
-                        });
-                    }
-                    return false;
-                    
-                case BACKGROUND_HANDLERS.SETTINGS_CHANGED:
-                    // Settings have been updated - notify ChatService
-                    this.currentSettings = message.data.settings || {};
-                    this.eventBus.emit(EVENTS.CHAT.UPDATE_SETTINGS, { settings: this.currentSettings });
-                    sendResponse({ success: true });
-                    return false;
-                    
-                case BACKGROUND_HANDLERS.CONVERSATION_UPDATED:
-                    // Conversation has been updated - notify ChatService
-                    this.eventBus.emit(EVENTS.CHAT.CONVERSATION_LOADED, { conversation: message.data.conversation });
-                    sendResponse({ success: true });
-                    return false;
-                    
-                case BACKGROUND_HANDLERS.PING:
-                    sendResponse({ success: true, status: 'ready' });
-                    return false;
-                    
-                default:
-                    console.warn('[WebWireContentHost] Unknown background message action:', message.action);
-                    sendResponse({ success: false, error: 'Unknown action' });
-                    return false;
-            }
-        } catch (error) {
-            console.error('[WebWireContentHost] Error handling background message:', error);
-            sendResponse({ success: false, error: error.message });
-            return false;
-        }
-    }
 
     /**
      * Check if auto-inject is enabled
@@ -645,11 +514,24 @@ class WebWireContentHost {
             // Get current thread from background if available
             let currentThread = null;
             try {
-                const threadResponse = await chrome.runtime.sendMessage({
-                    action: BACKGROUND_ACTIONS.GET_ACTIVE_THREAD
-                });
+                const threadResponse = await this.core.dispatcher.dispatch(
+                    BACKGROUND_ACTIONS.GET_ACTIVE_THREAD,
+                    {},
+                    { target: 'background' }
+                );
                 if (threadResponse.success) {
                     currentThread = threadResponse.thread;
+                    
+                    // CRITICAL: Update local conversation state from background data
+                    if (this.core.stateService && this.core.stateService.conversation && currentThread) {
+                        console.log('[WebWireContentHost] Syncing active thread state during panel init:', currentThread.threadId);
+                        this.core.stateService.conversation.patchConversation({
+                            threadId: currentThread.threadId,
+                            metadata: currentThread.metadata,
+                            messages: currentThread.messages,
+                            isActive: true  // This is the active thread
+                        });
+                    }
                 }
             } catch (error) {
                 console.warn('[WebWireContentHost] Could not get active thread:', error);
@@ -681,6 +563,147 @@ class WebWireContentHost {
             await this.chatService.sendInitialState(fallbackState);
         }
     }
+
+    /**
+     * Handle content action: inject panel
+     */
+    async handleInjectPanel(data) {
+        try {
+            await this.injectPanel();
+            return { success: true };
+        } catch (error) {
+            console.error('[WebWireContentHost] Failed to inject panel:', error);
+            return { success: false, error: error.message };
+        }
+    }
+
+    /**
+     * Handle content action: toggle panel
+     */
+    async handleTogglePanel(data) {
+        try {
+            this.chatService.togglePanel();
+            return { success: true };
+        } catch (error) {
+            console.error('[WebWireContentHost] Failed to toggle panel:', error);
+            return { success: false, error: error.message };
+        }
+    }
+
+    /**
+     * Handle content action: get webwire state
+     */
+    async handleGetWebwireState(data) {
+        try {
+            return {
+                success: true,
+                state: {
+                    panelInjected: this.chatService.isReady(),
+                    mcpConnected: false, // ChatService would need to expose this
+                    aiClientConfigured: false // ChatService would need to expose this
+                }
+            };
+        } catch (error) {
+            console.error('[WebWireContentHost] Error getting state:', error);
+            return {
+                success: true,
+                state: {
+                    panelInjected: false,
+                    mcpConnected: false,
+                    aiClientConfigured: false
+                }
+            };
+        }
+    }
+
+    /**
+     * Handle content action: settings changed
+     */
+    async handleSettingsChanged(data) {
+        try {
+            this.currentSettings = data.settings || {};
+            this.eventBus.emit(EVENTS.CHAT.UPDATE_SETTINGS, { settings: this.currentSettings });
+            return { success: true };
+        } catch (error) {
+            console.error('[WebWireContentHost] Failed to handle settings change:', error);
+            return { success: false, error: error.message };
+        }
+    }
+
+    /**
+     * Handle content action: conversation updated
+     */
+    async handleConversationUpdated(data) {
+        try {
+            // The data IS the conversation update data from notifyTabsOfConversationUpdate
+            const { conversation } = data;
+            
+            // CRITICAL: Update local conversation state from background data
+            if (this.core.stateService && this.core.stateService.conversation && conversation) {
+                console.log('[WebWireContentHost] Syncing conversation state from background:', conversation.threadId);
+                this.core.stateService.conversation.patchConversation(conversation);
+            }
+            
+            // Forward to ChatService for UI updates
+            this.eventBus.emit(EVENTS.CHAT.CONVERSATION_LOADED, { conversation });
+            return { success: true };
+        } catch (error) {
+            console.error('[WebWireContentHost] Failed to handle conversation update:', error);
+            return { success: false, error: error.message };
+        }
+    }
+
+    /**
+     * Handle content action: capture page content
+     */
+    async handleCapturePageContent(data) {
+        try {
+            const content = this.pageUtils.getCurrentPageContent();
+            return { success: true, data: content };
+        } catch (error) {
+            console.error('[WebWireContentHost] Failed to capture page content:', error);
+            return { success: false, error: error.message };
+        }
+    }
+
+    /**
+     * Handle content action: AI chat request
+     */
+    async handleAIChatRequest(data) {
+        try {
+            // Delegate to ChatService - emit the appropriate event for processing
+            this.eventBus.emit(EVENTS.CHAT.SEND_MESSAGE, { message: data.message || data });
+            return { success: true, message: 'AI chat request processed' };
+        } catch (error) {
+            console.error('[WebWireContentHost] Failed to handle AI chat request:', error);
+            return { success: false, error: error.message };
+        }
+    }
+
+    /**
+     * Handle content action: MCP connect request
+     */
+    async handleMCPConnectRequest(data) {
+        try {
+            // Delegate to MCP system - connect to the MCP server
+            if (this.core.mcpConnector) {
+                await this.core.mcpConnector.connect(data.url || data.serverUrl);
+                return { success: true, message: 'MCP connection initiated' };
+            } else {
+                return { success: false, error: 'MCP connector not available' };
+            }
+        } catch (error) {
+            console.error('[WebWireContentHost] Failed to handle MCP connect request:', error);
+            return { success: false, error: error.message };
+        }
+    }
+
+    /**
+     * Handle content action: ping
+     */
+    async handlePing(data) {
+        return { success: true, status: 'ready' };
+    }
 }
 
 // Global instance
@@ -688,15 +711,15 @@ let webwireContentHost = null;
 
 // Wait for DOM to be ready
 if (document.readyState === DOM_READY_STATES.LOADING) {
-    document.addEventListener('DOMContentLoaded', initialize);
+    document.addEventListener('DOMContentLoaded', factory);
 } else {
-    initialize();
+    factory();
 }
 
 /**
  * Initialize the WebWire content host
  */
-async function initialize() {
+async function factory() {
     console.log('[WebWireContentHost] Initializing...');
     
     try {

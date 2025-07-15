@@ -1,7 +1,7 @@
 import { EVENT_TYPES, EVENT_CONTEXT } from '../js/core/events.js';
 import { initializeContext } from '../js/context/context-init.js';
 import { EventBus } from '../js/core/event-bus.js';
-import { BACKGROUND_ACTIONS } from '../chat/chat-constants.js';
+import { BACKGROUND_ACTIONS, CONTENT_ACTIONS } from '../chat/chat-constants.js';
 
 /**
  * WebWire Extension Background Script
@@ -17,8 +17,6 @@ class WebWireBackground {
         this.extensionSettings = {};
         this.dispatcher = null;
         this.errorBoundary = null;
-        
-        this.initialize();
     }
 
     async initialize() {
@@ -45,12 +43,12 @@ class WebWireBackground {
      */
     setupEventBusListeners() {
         // Handle state and settings requests
-        this.eventBus.on('GET_WEBWIRE_SETTINGS', (data, options) => {
+        this.eventBus.on(BACKGROUND_ACTIONS.GET_WEBWIRE_SETTINGS, (data, options) => {
             const settings = this.stateService?.state?.settings || {};
             return { success: true, settings: settings };
         });
 
-        this.eventBus.onAsync('SAVE_WEBWIRE_SETTINGS', async (data, options) => {
+        this.eventBus.onAsync(BACKGROUND_ACTIONS.SAVE_WEBWIRE_SETTINGS, async (data, options) => {
             if (this.stateService?.state && this.stateService?.settings) {
                 this.stateService.state.settings = { ...this.stateService.state.settings, ...data.settings };
                 await this.stateService.settings.saveToStorage();
@@ -60,14 +58,14 @@ class WebWireBackground {
             }
         });
 
-        this.eventBus.onAsync('GET_WEBWIRE_STATE', async (data, options) => {
+        this.eventBus.onAsync(BACKGROUND_ACTIONS.GET_WEBWIRE_STATE, async (data, options) => {
             const { sender } = options;
             const tabId = await this.resolveTabId(sender, data);
             const state = await this.getWebWireState(tabId);
             return state;
         });
 
-        this.eventBus.onAsync('SAVE_WEBWIRE_STATE', async (data, options) => {
+        this.eventBus.onAsync(BACKGROUND_ACTIONS.SAVE_WEBWIRE_STATE, async (data, options) => {
             const success = await this.saveState(data.state);
             return { success };
         });
@@ -94,7 +92,27 @@ class WebWireBackground {
             return currentThreadData;
         });
 
-        this.eventBus.onAsync('SAVE_THREAD_MESSAGE', async (data, options) => {
+        this.eventBus.onAsync(BACKGROUND_ACTIONS.GET_ACTIVE_THREAD, async (data, options) => {
+            const threadId = this.stateService.conversation.getActiveThreadId();
+            if (threadId) {
+                const messages = this.stateService.conversation.getConversationMessages(threadId);
+                return {
+                    success: true,
+                    thread: {
+                        threadId: threadId,
+                        metadata: this.stateService.state.conversation.metadata[threadId],
+                        messages: messages
+                    }
+                };
+            } else {
+                return {
+                    success: false,
+                    error: 'No active thread'
+                };
+            }
+        });
+
+        this.eventBus.onAsync(BACKGROUND_ACTIONS.SAVE_THREAD_MESSAGE, async (data, options) => {
             this.stateService.conversation.storeMessage(
                 data.threadId,
                 data.userMessage,
@@ -116,7 +134,7 @@ class WebWireBackground {
             console.log('[WebWireBackground] SAVE_THREAD_MESSAGE', completeConversationState, data);
             
             await this.notifyTabsOfConversationUpdate(data.threadId, {
-                action: 'CONVERSATION_UPDATED',
+                action: CONTENT_ACTIONS.CONVERSATION_UPDATED,
                 conversation: completeConversationState,
                 timestamp: Date.now()
             });
@@ -124,12 +142,12 @@ class WebWireBackground {
             return { success: true };
         });
 
-        this.eventBus.onAsync('SAVE_PANEL_VISIBILITY', async (data, options) => {
+        this.eventBus.onAsync(BACKGROUND_ACTIONS.SAVE_PANEL_VISIBILITY, async (data, options) => {
             await this.savePanelVisibilityState(data.visible);
             return { success: true };
         });
 
-        this.eventBus.on('PING', (data, options) => {
+        this.eventBus.on(BACKGROUND_ACTIONS.PING, (data, options) => {
             return { 
                 success: true, 
                 status: 'ready',
@@ -275,9 +293,11 @@ class WebWireBackground {
         
         try {
             // Toggle WebWire panel in the active tab
-            await this.sendToContentScript(tab.id, {
-                action: 'TOGGLE_WEBWIRE_PANEL'
-            });
+            await this.dispatcher.dispatch(
+                CONTENT_ACTIONS.TOGGLE_WEBWIRE_PANEL,
+                {},
+                { target: 'content', tabId: tab.id }
+            );
         } catch (error) {
             console.error('Failed to toggle panel:', error);
             // If content script isn't loaded, inject it first
@@ -359,9 +379,11 @@ class WebWireBackground {
         
         try {
             // First try to toggle the panel if content script is already loaded
-            await this.sendToContentScript(tabId, {
-                action: 'TOGGLE_WEBWIRE_PANEL'
-            });
+            await this.dispatcher.dispatch(
+                CONTENT_ACTIONS.TOGGLE_WEBWIRE_PANEL,
+                {},
+                { target: 'content', tabId: tabId }
+            );
             
             return { success: true };
         } catch (error) {
@@ -531,15 +553,20 @@ class WebWireBackground {
             const notifications = validTabs.map(async (tab) => {
                 try {
                     // First ping to check if content script is available
-                    await this.pingContentScriptSilent(tab.id);
+                    await this.dispatcher.dispatch(
+                        CONTENT_ACTIONS.PING,
+                        {},
+                        { target: 'content', tabId: tab.id }
+                    );
                     
                     // If ping succeeds, send the settings update
-                    await this.sendToContentScriptSilent(tab.id, {
-                        action: 'SETTINGS_CHANGED',
-                        data: {
+                    await this.dispatcher.dispatch(
+                        CONTENT_ACTIONS.SETTINGS_CHANGED,
+                        {
                             settings: this.stateService?.state?.settings || {}
-                        }
-                    });
+                        },
+                        { target: 'content', tabId: tab.id }
+                    );
                     
                     successCount++;
                     return { success: true, tabId: tab.id, url: tab.url };
@@ -578,13 +605,18 @@ class WebWireBackground {
             const notifications = validTabs.map(async (tab) => {
                 try {
                     // First ping to check if content script is available
-                    await this.pingContentScriptSilent(tab.id);
+                    await this.dispatcher.dispatch(
+                        CONTENT_ACTIONS.PING,
+                        {},
+                        { target: 'content', tabId: tab.id }
+                    );
                     
                     // If ping succeeds, send the conversation update
-                    await this.sendToContentScriptSilent(tab.id, {
-                        action: 'CONVERSATION_UPDATED',
-                        data: updateData
-                    });
+                    await this.dispatcher.dispatch(
+                        CONTENT_ACTIONS.CONVERSATION_UPDATED,
+                        updateData,
+                        { target: 'content', tabId: tab.id }
+                    );
                     
                     successCount++;
                     return { success: true, tabId: tab.id, url: tab.url };
@@ -619,12 +651,18 @@ class WebWireBackground {
     async injectPanel(tabId) {
         try {
             // Check if content script is already loaded and responsive
-            await this.pingContentScript(tabId);
+            await this.dispatcher.dispatch(
+                CONTENT_ACTIONS.PING,
+                {},
+                { target: 'content', tabId: tabId }
+            );
             
             // Content script is available, inject panel
-            await this.sendToContentScript(tabId, {
-                action: 'INJECT_WEBWIRE_PANEL'
-            });
+            await this.dispatcher.dispatch(
+                CONTENT_ACTIONS.INJECT_WEBWIRE_PANEL,
+                {},
+                { target: 'content', tabId: tabId }
+            );
             
         } catch (error) {
             // Content script not available, inject it first
@@ -635,61 +673,23 @@ class WebWireBackground {
             await this.waitForContentScript(tabId);
             
             // Now inject the panel
-            await this.sendToContentScript(tabId, {
-                action: 'INJECT_WEBWIRE_PANEL'
-            });
+            await this.dispatcher.dispatch(
+                CONTENT_ACTIONS.INJECT_WEBWIRE_PANEL,
+                {},
+                { target: 'content', tabId: tabId }
+            );
         }
     }
 
-    async sendToContentScript(tabId, message) {
-        try {
-            const response = await chrome.tabs.sendMessage(tabId, message);
-            return response;
-        } catch (error) {
-            console.error('Failed to send message to content script:', tabId, message, error);
-            throw error;
-        }
-    }
-
-    async sendToContentScriptSilent(tabId, message) {
-        try {
-            const response = await chrome.tabs.sendMessage(tabId, message);
-            return response;
-        } catch (error) {
-            // Silent version - don't log errors as they're expected for tabs without content scripts
-            throw error;
-        }
-    }
-
-    async pingContentScript(tabId) {
-        try {
-            const response = await chrome.tabs.sendMessage(tabId, { action: 'PING' });
-            if (response && response.success) {
-                return true;
-            }
-            throw new Error('Content script ping failed');
-        } catch (error) {
-            throw new Error('Content script not responsive');
-        }
-    }
-
-    async pingContentScriptSilent(tabId) {
-        try {
-            const response = await chrome.tabs.sendMessage(tabId, { action: 'PING' });
-            if (response && response.success) {
-                return true;
-            }
-            throw new Error('Content script ping failed');
-        } catch (error) {
-            // Silent version - don't log, just throw for caller to handle
-            throw new Error('Content script not responsive');
-        }
-    }
 
     async waitForContentScript(tabId, maxAttempts = 10) {
         for (let attempt = 1; attempt <= maxAttempts; attempt++) {
             try {
-                await this.pingContentScript(tabId);
+                await this.dispatcher.dispatch(
+                    CONTENT_ACTIONS.PING,
+                    {},
+                    { target: 'content', tabId: tabId }
+                );
                 console.log(`Content script ready after ${attempt} attempts`);
                 return;
             } catch (error) {
@@ -733,10 +733,16 @@ class WebWireBackground {
 
             // Try to get additional state from content script if available
             try {
-                await this.pingContentScript(tabId);
-                const response = await this.sendToContentScript(tabId, {
-                    action: 'GET_WEBWIRE_STATE'
-                });
+                await this.dispatcher.dispatch(
+                    CONTENT_ACTIONS.PING,
+                    {},
+                    { target: 'content', tabId: tabId }
+                );
+                const response = await this.dispatcher.dispatch(
+                    CONTENT_ACTIONS.GET_WEBWIRE_STATE,
+                    {},
+                    { target: 'content', tabId: tabId }
+                );
                 
                 if (response.success && response.state) {
                     state.panelInjected = response.state.panelInjected || false;
@@ -787,8 +793,12 @@ class WebWireBackground {
                     return await this.handleMCPConnectRequest(message.data, tabId);
                     
                 default:
-                    // Forward to content script
-                    return await this.sendToContentScript(tabId, message);
+                    // Forward to content script via EventDispatcher
+                    return await this.dispatcher.dispatch(
+                        'FORWARD_TO_CONTENT',
+                        message,
+                        { target: 'content', tabId: tabId }
+                    );
             }
         } catch (error) {
             console.error('Failed to handle panel message:', error);
@@ -802,26 +812,30 @@ class WebWireBackground {
     async handleAIChatRequest(data, tabId) {
         // For now, delegate to content script
         // In a full implementation, this could handle AI requests directly
-        return await this.sendToContentScript(tabId, {
-            action: 'AI_CHAT_REQUEST',
-            data
-        });
+        return await this.dispatcher.dispatch(
+            CONTENT_ACTIONS.AI_CHAT_REQUEST,
+            data,
+            { target: 'content', tabId: tabId }
+        );
     }
 
     async handleMCPConnectRequest(data, tabId) {
         // For now, delegate to content script
         // In a full implementation, this could manage MCP connections centrally
-        return await this.sendToContentScript(tabId, {
-            action: 'MCP_CONNECT_REQUEST',
-            data
-        });
+        return await this.dispatcher.dispatch(
+            CONTENT_ACTIONS.MCP_CONNECT_REQUEST,
+            data,
+            { target: 'content', tabId: tabId }
+        );
     }
 
     async capturePageContent(tabId) {
         try {
-            const response = await this.sendToContentScript(tabId, {
-                action: 'CAPTURE_PAGE_CONTENT'
-            });
+            const response = await this.dispatcher.dispatch(
+                CONTENT_ACTIONS.CAPTURE_PAGE_CONTENT,
+                {},
+                { target: 'content', tabId: tabId }
+            );
             
             return response.data;
         } catch (error) {
@@ -871,8 +885,16 @@ class WebWireBackground {
     }
 }
 
-// Initialize the background script
-const webwireBackground = new WebWireBackground();
+async function factory() {
+    // Initialize the background script
+    const webwireBackground = new WebWireBackground();
+    await webwireBackground.initialize();
 
-// Export for debugging
-self.webwireBackground = webwireBackground;
+    return webwireBackground;
+}
+
+factory().then(webwireBackground => {
+    self.webwireBackground = webwireBackground;
+}, (error) => {
+    console.error('Failed to initialize background script:', error);
+});
