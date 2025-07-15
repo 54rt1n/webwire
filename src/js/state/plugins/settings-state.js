@@ -88,6 +88,36 @@ export class SettingsStatePlugin {
     }
 
     /**
+     * Patch settings - merge new settings into existing settings
+     * @param {Object} settingsPatch - Partial settings object to merge
+     */
+    patchSettings(settingsPatch) {
+        console.log('[StateService::SettingsState] Patching settings:', settingsPatch);
+        
+        // Deep merge the patch into existing settings
+        this.stateService.state.settings = this.deepMerge(this.stateService.state.settings || {}, settingsPatch);
+        
+        console.log('[StateService::SettingsState] Settings after patch:', this.stateService.state.settings);
+    }
+
+    /**
+     * Deep merge helper function
+     */
+    deepMerge(target, source) {
+        const result = { ...target };
+        
+        for (const key in source) {
+            if (source[key] && typeof source[key] === 'object' && !Array.isArray(source[key])) {
+                result[key] = this.deepMerge(result[key] || {}, source[key]);
+            } else {
+                result[key] = source[key];
+            }
+        }
+        
+        return result;
+    }
+
+    /**
      * Get model config
      */
     getModelConfig(type = null) {

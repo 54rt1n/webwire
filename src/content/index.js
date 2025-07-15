@@ -68,6 +68,7 @@ class WebWireContentHost {
         this.eventBus.onAsync(EVENTS.CHAT.SAVE_PANEL_VISIBILITY, this.handleSavePanelVisibility.bind(this));
         this.eventBus.onAsync(EVENTS.CHAT.EXECUTE_TOOL, this.handleExecuteTool.bind(this));
         this.eventBus.onAsync(EVENTS.CHAT.CREATE_NEW_THREAD, this.handleCreateNewThread.bind(this));
+        this.eventBus.onAsync(EVENTS.CHAT.END_CONVERSATION, this.handleEndConversation.bind(this));
         this.eventBus.onAsync(EVENTS.CHAT.UPDATE_SETTINGS, this.handleUpdateSettings.bind(this));
         
         // Handle content actions from background script
@@ -194,6 +195,27 @@ class WebWireContentHost {
             }
         } catch (error) {
             console.error('[WebWireContentHost] Failed to execute tool:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Handle end conversation request from ChatService
+     */
+    async handleEndConversation(data) {
+        console.log('[WebWireContentHost] Handling end conversation request:', data);
+        
+        try {
+            const response = await this.core.dispatcher.dispatch(
+                BACKGROUND_ACTIONS.END_CONVERSATION,
+                data,
+                { target: 'background' }
+            );
+            
+            console.log('[WebWireContentHost] End conversation response:', response);
+            return response;
+        } catch (error) {
+            console.error('[WebWireContentHost] Failed to end conversation:', error);
             throw error;
         }
     }

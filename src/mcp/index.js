@@ -432,7 +432,7 @@ class MCPControlPanelApp {
         this.eventBus.onAsync(EVENTS.CHAT.SAVE_MESSAGE, this.handleSaveMessage.bind(this));
         this.eventBus.onAsync(EVENTS.CHAT.GET_OR_CREATE_THREAD, this.handleGetOrCreateThread.bind(this));
 
-        this.eventBus.on(EVENTS.CHAT.TOGGLE_PAGE_CONTENT, this.handlePageContentToggle.bind(this));
+        this.eventBus.on(EVENTS.CHAT.TOGGLE_UI_SETTING, this.handleUISettingsToggle.bind(this));
     }
 
 
@@ -530,15 +530,19 @@ class MCPControlPanelApp {
     }
 
     /**
-     * Handle page content toggle request from ChatService
+     * Handle UI settings toggle request from ChatService
      */
-    async handlePageContentToggle(data) {
-        console.log('[MCPApp] Handling page content toggle:', data);
-        // We need to get the includePageContent from the data
-        const { includePageContent } = data;
+    async handleUISettingsToggle(data) {
+        console.log('[MCPApp] Handling UI settings toggle:', data);
         
-        // Update settings
-        this.core.stateService.ui.setIncludePageContent(includePageContent);
+        // Update settings for each setting provided
+        if ('includePageContent' in data) {
+            this.core.stateService.ui.setIncludePageContent(data.includePageContent);
+        }
+        
+        if ('useMCP' in data) {
+            this.core.stateService.ui.setUseMCP(data.useMCP);
+        }
         
         // Persist to storage via background
         await this.core.stateService.settings.saveToStorage();

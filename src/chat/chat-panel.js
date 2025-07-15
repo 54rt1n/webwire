@@ -23,6 +23,7 @@ export class WebChatPanel {
         this.conversations = new Map();
         this.currentThreadId = null;
         this.isThinking = false;
+        this.isScrollSticky = true; // Default to true for auto-scroll
         
         // Message counter for unique IDs
         this.messageCounter = 0;
@@ -54,7 +55,7 @@ export class WebChatPanel {
      */
     createContainer() {
         this.container = document.createElement('div');
-        this.container.id = 'webwire-container';
+        this.container.id = 'ww-container';
     }
 
     /**
@@ -82,7 +83,8 @@ export class WebChatPanel {
             statusIndicator: this.container.querySelector('.status-indicator'),
             statusText: this.container.querySelector('.status-text'),
             conversationId: this.container.querySelector('.conversation-id'),
-            pageContentCheckbox: this.container.querySelector('.checkbox')
+            pageContentCheckbox: this.container.querySelector('.checkbox'),
+            mcpCheckbox: this.container.querySelector('.mcp-checkbox')
         };
     }
 
@@ -101,6 +103,9 @@ export class WebChatPanel {
         
         // Delegated listeners
         this.setupDelegatedListeners();
+        
+        // Scroll listeners
+        this.setupScrollListeners();
     }
 
     /**
@@ -159,6 +164,10 @@ export class WebChatPanel {
             this.handlePageContentToggle(e.target.checked);
         });
 
+        this.elements.mcpCheckbox?.addEventListener('change', (e) => {
+            this.handleMcpToggle(e.target.checked);
+        });
+
         this.elements.reparseBtn?.addEventListener('click', () => {
             this.handleReparseRequest();
         });
@@ -179,6 +188,27 @@ export class WebChatPanel {
             // Analyze page button (in welcome message)
             if (e.target.closest('#analyze-page-btn')) {
                 this.handlePageAnalysisRequest();
+            }
+        });
+    }
+
+    /**
+     * Setup scroll event listeners for sticky behavior
+     */
+    setupScrollListeners() {
+        if (!this.elements.chatContent) return;
+
+        this.elements.chatContent.addEventListener('scroll', () => {
+            if (!this.isScrollSticky) return;
+
+            const element = this.elements.chatContent;
+            const threshold = 5; // Allow small tolerance for precision issues
+            
+            // Check if user has scrolled away from bottom
+            const isAtBottom = element.scrollTop >= element.scrollHeight - element.clientHeight - threshold;
+            
+            if (!isAtBottom) {
+                this.isScrollSticky = false;
             }
         });
     }
@@ -498,6 +528,12 @@ export class WebChatPanel {
         }
     }
 
+    updateMcpSetting(useMcp) {
+        if (this.elements.mcpCheckbox) {
+            this.elements.mcpCheckbox.checked = useMcp;
+        }
+    }
+
     updateConversationIdDisplay(threadId) {
         if (!this.elements.conversationId) return;
 
@@ -545,7 +581,7 @@ export class WebChatPanel {
     }
 
     scrollToBottom() {
-        if (this.elements.chatContent) {
+        if (this.elements.chatContent && this.isScrollSticky) {
             this.elements.chatContent.scrollTop = this.elements.chatContent.scrollHeight;
         }
     }
@@ -556,6 +592,9 @@ export class WebChatPanel {
     handleSendMessage(predefinedMessage = null) {
         const message = predefinedMessage || this.elements.chatInput?.value.trim();
         if (!message) return;
+
+        // Re-enable sticky scroll when user sends a new message
+        this.isScrollSticky = true;
 
         if (!predefinedMessage && this.elements.chatInput) {
             this.elements.chatInput.value = '';
@@ -589,7 +628,16 @@ export class WebChatPanel {
 
     handlePageContentToggle(includeContent) {
         console.log('[WebChatPanel] Page content toggle:', includeContent);
-        this.eventBus.emit(EVENTS.CHAT.TOGGLE_PAGE_CONTENT, { includePageContent: includeContent });
+        this.eventBus.emit(EVENTS.CHAT.TOGGLE_UI_SETTING, { 
+            includePageContent: includeContent 
+        });
+    }
+
+    handleMcpToggle(useMcp) {
+        console.log('[WebChatPanel] MCP tools toggle:', useMcp);
+        this.eventBus.emit(EVENTS.CHAT.TOGGLE_UI_SETTING, { 
+            useMCP: useMcp 
+        });
     }
 
     handleInitialState(state) {
@@ -603,6 +651,10 @@ export class WebChatPanel {
 
         if (state.includePageContent !== undefined) {
             this.updatePageContentSetting(state.includePageContent);
+        }
+        
+        if (state.useMCP !== undefined) {
+            this.updateMcpSetting(state.useMCP);
         }
         
         if (state.currentThread?.messages) {
@@ -621,7 +673,7 @@ export class WebChatPanel {
         document.body.appendChild(notification.firstChild);
         
         setTimeout(() => {
-            const notif = document.querySelector('.ww-error-notification');
+            const notif = document.querySelector('.ww-notification');
             notif?.remove();
         }, 5000);
     }

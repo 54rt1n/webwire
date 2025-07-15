@@ -71,6 +71,19 @@ class WebWireBackground {
         });
 
         // Handle thread/conversation operations
+        this.eventBus.onAsync(BACKGROUND_ACTIONS.END_CONVERSATION, async (data, options) => {
+            const activeThreadId = this.stateService.conversation.getActiveThreadId();
+            if (activeThreadId) {
+                console.log('[WebWireBackground] Ending active conversation:', activeThreadId);
+                this.stateService.conversation.updateConversationStatus(activeThreadId, 'completed');
+                await this.stateService.disk.saveToStorage();
+                return { success: true, threadId: activeThreadId };
+            } else {
+                console.log('[WebWireBackground] No active conversation to end');
+                return { success: true, message: 'No active conversation' };
+            }
+        });
+
         this.eventBus.onAsync(BACKGROUND_ACTIONS.GET_OR_CREATE_CURRENT_THREAD, async (data, options) => {
             let threadId = this.stateService.conversation.getCurrentConversation();
             let reason = null;

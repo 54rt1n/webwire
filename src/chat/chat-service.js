@@ -40,8 +40,6 @@ export class ChatService {
         this.toolParser = new ToolParser();
         
         // State
-        this.currentSettings = {};
-        this.currentConversation = null; // Store current conversation for context
         this.streamingState = {
             isActive: false,
             currentContent: '',
@@ -52,8 +50,6 @@ export class ChatService {
         };
 
         this.initialized = false;
-
-        this.lastMessage = null;
         
         this.setupEventListeners();
         console.log('[ChatService] Initialized with event-driven architecture');
@@ -74,7 +70,7 @@ export class ChatService {
         this.eventBus.on(EVENTS.CHAT.REPLAY_LAST_TURN, this.handleReplayLastTurn.bind(this));
         this.eventBus.on(EVENTS.CHAT.REPARSE_MESSAGE, this.handleReparseMessage.bind(this));
         this.eventBus.on(EVENTS.CHAT.TOOL_RESULT, this.handleToolResult.bind(this));
-        this.eventBus.on(EVENTS.CHAT.TOGGLE_PAGE_CONTENT, this.handlePageContentToggle.bind(this));
+        this.eventBus.on(EVENTS.CHAT.TOGGLE_UI_SETTING, this.handleUISettingsToggle.bind(this));
         
         // Listen for AI streaming events
         this.eventBus.on(EVENTS.AI.STREAM_CHUNK, this.handleStreamingChunk.bind(this));
@@ -143,7 +139,7 @@ export class ChatService {
     /**
      * Handle user message event
      */
-    async handleUserMessage(payload, { autoExecuteTools = false } = {}) {
+    async handleUserMessage(payload, { autoExecuteTools = false, forcePageContent = false, customSystemPrompt = null } = {}) {
         console.log('[ChatService] Handling user message:', payload);
         
         const { message, silent = false } = payload;
@@ -173,6 +169,16 @@ export class ChatService {
                 timestamp: Date.now()
             };
 
+            // Store user message immediately in conversation state (part 1 of 2-part creation)
+            const location = typeof window !== 'undefined' ? window.location.href : undefined;
+            this.stateService.conversation.storePartialUserMessage(threadId, {
+                ...userMessage,
+                url: location,
+                title: document.title
+            }, {
+                ...this.stateService.aim.getAimMessageOptions()
+            });
+
             // Display user message in panel
             if (!silent) {
                 this.panel.displayMessage(userMessage, { autoScroll: true });
@@ -182,8 +188,8 @@ export class ChatService {
             let systemPrompts = ["You are a helpful assistant analyzing web pages and helping users."];
             let tools = [];
             
-            // Get MCP tools
-            if (this.mcpConnector && this.stateService) {
+            // Get MCP tools (only if useMCP setting is enabled)
+            if (this.mcpConnector && this.stateService && this.stateService.ui.getUseMCP()) {
                 try {
                     const mcpTools = this.stateService.mcp.getMcpTools();
                     if (mcpTools && mcpTools.length > 0) {
@@ -223,6 +229,12 @@ export class ChatService {
                 console.log(`[ChatService] Using ${tools.length} total tools (MCP + DOM) for system prompt`);
             }
 
+            // Add custom system prompt if provided
+            if (customSystemPrompt) {
+                systemPrompts.push(customSystemPrompt);
+                console.log(`[ChatService] Added custom system prompt for specialized analysis`);
+            }
+
 
             // Build messages array including conversation history
             let messagesForAPI = [];
@@ -250,8 +262,8 @@ export class ChatService {
                 syntheticSources.push('stash');
             }
 
-            // TODO this should be passed in. Getting it like this is unreliable.
-            if (this.currentSettings?.ui?.includePageContent !== false) {
+            // Include page content if forced or if setting is enabled
+            if (forcePageContent || this.stateService.ui.getIncludePageContent() !== false) {
                 syntheticMessages.push(this.pageUtils.buildPageContext());
                 syntheticSources.push('page');
             }
@@ -335,8 +347,6 @@ export class ChatService {
                 }
             }
             
-            const location = typeof window !== 'undefined' ? window.location.href : undefined;
-
             // Prepare messages for storage (original unenhanced content)
             const userMsg = { 
                 role: MESSAGE_ROLES.USER, 
@@ -359,8 +369,6 @@ export class ChatService {
             // Finalize the thinking message with the complete response
             this.finalizeStreamingMessage(thinkingMessage, assistantMsg);
 
-            this.lastMessage = message;
-
             console.log('[ChatService] Saving message:', userMsg, assistantMsg);
 
             // Request host to save conversation
@@ -369,10 +377,7 @@ export class ChatService {
                 userMessage: userMsg,
                 assistantMessage: assistantMsg,
                 options: {
-                    userName: this.currentSettings?.aim?.userName || MESSAGE_ROLES.USER,
-                    personaName: this.currentSettings?.aim?.personaName || MESSAGE_ROLES.ASSISTANT,
-                    mood: this.currentSettings?.aim?.mood || null,
-                    location: location,
+                    ...this.stateService.aim.getAimMessageOptions(),
                     url: location,
                     title: document.title,
                 }}, { target: EVENT_CONTEXT.BACKGROUND }
@@ -420,8 +425,17 @@ export class ChatService {
     async handlePageAnalysisRequest(payload) {
         console.log('[ChatService] Handling page analysis request');
         
-        const analysisRequest = this.pageUtils.buildAnalysisRequest();
-        await this.handleUserMessage({ message: analysisRequest });
+        // Import analysis prompt functions
+        const { buildMarkdownReportPrompt, buildMarkdownReportSystem } = await import('../js/prompts/analysis-prompt.js');
+        
+        const userMessage = buildMarkdownReportPrompt();
+        const systemPrompt = buildMarkdownReportSystem();
+        
+        // Force page content inclusion and add custom system prompt for analysis requests
+        await this.handleUserMessage({ message: userMessage }, { 
+            forcePageContent: true, 
+            customSystemPrompt: systemPrompt 
+        });
     }
 
     /**
@@ -431,29 +445,33 @@ export class ChatService {
         console.log('[ChatService] Handling settings update:', payload);
         
         const { settings } = payload;
-        this.currentSettings = settings;
+        this.stateService.settings.patchSettings(settings);
         console.log('[ChatService] Settings update processed successfully');
     }
 
     /**
-     * Handle page content toggle request
+     * Handle UI settings toggle request
      */
-    async handlePageContentToggle(data) {
-        console.log('[ChatService] Handling page content toggle:', data);
-        const { includePageContent } = data;
+    async handleUISettingsToggle(data) {
+        console.log('[ChatService] Handling UI settings toggle:', data);
         
-        // Update local state
-        this.stateService.ui.setIncludePageContent(includePageContent);
+        // Update local state for each setting provided
+        if ('includePageContent' in data) {
+            this.stateService.ui.setIncludePageContent(data.includePageContent);
+            this.panel.updatePageContentSetting(data.includePageContent);
+        }
         
-        // Send settings update to background for persistence
+        if ('useMCP' in data) {
+            this.stateService.ui.setUseMCP(data.useMCP);
+            this.panel.updateMcpSetting(data.useMCP);
+        }
+        
+        // Send unified settings update to background for persistence
         this.eventBus.emit(EVENTS.CHAT.UPDATE_SETTINGS, {
             settings: this.stateService.state.settings
         }, { target: EVENT_CONTEXT.BACKGROUND });
-
-        // Update the panel with the current state
-        this.panel.updatePageContentSetting(includePageContent);
         
-        console.log('[ChatService] Page content toggle processed successfully');
+        console.log('[ChatService] UI settings toggle processed successfully');
     }
 
     /**
@@ -488,13 +506,14 @@ export class ChatService {
     async handleNewConversationRequest(payload) {
         console.log('[ChatService] Handling new conversation request');
         
+        // Step 1: End the current conversation via backend
+        await this.eventBus.emitAsync(EVENTS.CHAT.END_CONVERSATION, {}, { target: EVENT_CONTEXT.BACKGROUND });
+        
         // Clear current conversation
         this.currentConversation = null;
         
-        // Request host to create new conversation
-        await this.eventBus.emit(EVENTS.CHAT.CREATE_NEW_THREAD, {
-            ...this.pageUtils.getPageLocation()
-        }, { target: EVENT_CONTEXT.BACKGROUND });
+        // Step 2: Request host to get or create new conversation
+        await this.sendGetOrCreateThread();
     }
 
     /**
@@ -503,8 +522,17 @@ export class ChatService {
     async handleReplayLastTurn() {
         console.log('[ChatService] Handling replay last turn request');
 
-        if (!this.lastMessage) {
-            console.log('[ChatService] No last message found');
+        const threadId = this.stateService.conversation.getActiveThreadId();
+        if (!threadId) {
+            console.log('[ChatService] No active thread found');
+            this.panel.displayError('No active thread found to replay');
+            return;
+        }
+
+        // Get the last user message from the conversation state
+        const lastUserMessage = this.stateService.conversation.getLastUserMessage(threadId);
+        if (!lastUserMessage) {
+            console.log('[ChatService] No last user message found');
             this.panel.displayError('No last message found to replay');
             return;
         }
@@ -523,7 +551,7 @@ export class ChatService {
         }
 
         // Re-send the message through the normal flow
-        await this.handleUserMessage({ message: this.lastMessage.trim(), silent: true });
+        await this.handleUserMessage({ message: lastUserMessage.content.trim(), silent: true });
     }
 
     /**
@@ -536,18 +564,6 @@ export class ChatService {
         
         // Store the current conversation for context in AI requests
         this.currentConversation = conversation;
-
-        // Set the last message to the last user message in the conversation
-        if (conversation && conversation.messages && conversation.messages.length > 0) {
-            const lastUserMessage = conversation.messages.find(msg => msg.role === MESSAGE_ROLES.USER);
-            if (lastUserMessage) {
-                this.lastMessage = lastUserMessage.content;
-            } else {
-                this.lastMessage = null;
-            }
-        } else {
-            this.lastMessage = null;
-        }
         
         if (conversation && this.panel.isReady()) {
             console.log(`[ChatService] Displaying conversation with ID: ${conversation.threadId}`);
@@ -718,11 +734,12 @@ export class ChatService {
      * Set current settings
      */
     setCurrentSettings(settings) {
-        this.currentSettings = settings;
+        this.stateService.settings.patchSettings(settings);
         
         // Update panel checkbox state
         if (this.panel.isReady()) {
-            this.panel.updatePageContentSetting(this.currentSettings.ui.includePageContent);
+            this.panel.updatePageContentSetting(this.stateService.ui.getIncludePageContent());
+            this.panel.updateMcpSetting(this.stateService.ui.getUseMCP());
         }
     }
 
@@ -773,7 +790,8 @@ export class ChatService {
         if (this.panel.isReady()) {
             const enhancedState = {
                 ...state,
-                includePageContent: this.currentSettings?.ui?.includePageContent !== false
+                includePageContent: this.stateService.ui.getIncludePageContent() !== false,
+                useMCP: this.stateService.ui.getUseMCP() !== false
             };
             this.panel.handleInitialState(enhancedState);
         }

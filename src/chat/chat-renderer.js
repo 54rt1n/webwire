@@ -179,6 +179,10 @@ export class ChatUIRenderer {
                         <input type="checkbox" class="checkbox">
                         <span class="text">Include page content</span>
                     </label>
+                    <label class="label">
+                        <input type="checkbox" class="checkbox mcp-checkbox">
+                        <span class="text">Use MCP</span>
+                    </label>
                 </div>
                 <div class="wrapper">
                     <textarea 
@@ -438,6 +442,6 @@ export class ChatUIRenderer {
      * Create error notification HTML
      */
     createErrorNotificationHTML(message) {
-        return `<div class="ww-error-notification">${this.escapeHTML(message)}</div>`;
+        return `<div class="ww-notification">${this.escapeHTML(message)}</div>`;
     }
 }

@@ -86,4 +86,18 @@ export class UiStatePlugin {
     setIncludePageContent(includePageContent) {
         this.stateService.state.settings.ui.includePageContent = includePageContent;
     }
+
+    /**
+     * Get use MCP setting
+     */
+    getUseMCP() {
+        return this.stateService.state.settings.ui.useMCP;
+    }
+
+    /**
+     * Set use MCP setting
+     */
+    setUseMCP(useMCP) {
+        this.stateService.state.settings.ui.useMCP = useMCP;
+    }
 } 

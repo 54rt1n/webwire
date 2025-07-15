@@ -53,10 +53,10 @@ export class AIMStatePlugin {
      */
     getAimMessageOptions() {
         return {
-            userName: this.stateService.state.settings.aim.userName,
-            personaName: this.stateService.state.settings.aim.personaName,
-            mood: this.stateService.state.aim.mood,
-            location: this.stateService.state.aim.location,
+            userName: this.stateService.state.settings?.aim?.userName,
+            personaName: this.stateService.state.settings?.aim?.personaName,
+            mood: this.stateService.state.aim?.mood,
+            location: this.stateService.state.aim?.location,
         };
     }
 

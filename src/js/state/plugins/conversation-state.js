@@ -26,6 +26,97 @@ export class ConversationStatePlugin {
     }
 
     /**
+     * Stores a partial user message in the state (first part of two-part message creation).
+     * @param {string} threadId
+     * @param {object} userMessage - { role, content, timestamp, title?, url?, model?, saved? }
+     * @param {object} options - { userName?, personaName?, mood?, location?, timestamp? }
+     */
+    storePartialUserMessage(threadId, userMessage, { userName, personaName, mood, location, timestamp, ...options } = {}) {
+        const state = this.stateService.state.conversation;
+        if (!timestamp) {
+            timestamp = Date.now();
+        }
+
+        // Ensure history for this conversation exists
+        if (!state.history[threadId]) {
+            state.history[threadId] = [];
+        }
+
+        // Add user message immediately
+        state.history[threadId].push({
+            messageId: generateMessageId(),
+            role: 'user',
+            content: userMessage.content,
+            timestamp,
+            ...userMessage
+        });
+
+        // Update metadata if it doesn't exist
+        if (!state.metadata[threadId]) {
+            state.metadata[threadId] = {
+                threadId: threadId,
+                userName: userName || 'User',
+                personaName: personaName || 'Default',
+                mood: mood,
+                location: location,
+                startTime: timestamp,
+                endTime: undefined,
+                duration: undefined,
+                status: 'active',
+                error: undefined,
+                errorCode: undefined,
+                errorType: undefined,
+            };
+        }
+
+        console.log(`Stored partial user message in conversation ${threadId}.`);
+        this.eventBus.emit(EVENTS.CONVERSATION.UPDATED, { threadId });
+    }
+
+    /**
+     * Stores an assistant message to complete the two-part message creation.
+     * @param {string} threadId
+     * @param {object} assistantMessage - { role, content, think?, timestamp, url?, title?, model?, saved? }
+     * @param {object} options - { userName?, personaName?, mood?, location?, timestamp?, toolResults?, toolCalls?, parseErrors? }
+     */
+    storeAssistantMessage(threadId, assistantMessage, { userName, personaName, mood, location, timestamp,
+        toolResults = [], toolCalls = [], parseErrors = [], ...options } = {}) {
+        const state = this.stateService.state.conversation;
+        if (!timestamp) {
+            timestamp = Date.now();
+        }
+
+        // Ensure history for this conversation exists
+        if (!state.history[threadId]) {
+            state.history[threadId] = [];
+        }
+
+        // Add assistant message
+        if (assistantMessage && assistantMessage.content) {
+            state.history[threadId].push({
+                messageId: generateMessageId(),
+                role: 'assistant',
+                content: assistantMessage.content,
+                timestamp: timestamp,
+                think: assistantMessage.think, // optional extracted thought content
+                toolResults: toolResults,
+                toolCalls: toolCalls,
+                parseErrors: parseErrors,
+                ...assistantMessage
+            });
+        }
+
+        // Update metadata
+        if (state.metadata[threadId]) {
+            state.metadata[threadId].endTime = timestamp;
+            state.metadata[threadId].duration = timestamp - state.metadata[threadId].startTime;
+        }
+
+        console.log(`Stored assistant message in conversation ${threadId}.`);
+        this.eventBus.emit(EVENTS.CONVERSATION.UPDATED, { threadId });
+    }
+
+    /**
      * Stores a message pair in the state.
      * @param {string} threadId
      * @param {object} userMessage - { role, content, timestamp, title?, url?, model?, saved? }
@@ -161,6 +252,23 @@ export class ConversationStatePlugin {
         
         for (let i = messages.length - 1; i >= 0; i--) {
             if (messages[i].role === 'assistant') {
+                return messages[i];
+            }
+        }
+        
+        return null;
+    }
+
+    /**
+     * Gets the last user message from a conversation.
+     * @param {string} threadId
+     * @returns {Object|null} The last user message, or null if none found
+     */
+    getLastUserMessage(threadId) {
+        const messages = this.getConversationMessages(threadId);
+        
+        for (let i = messages.length - 1; i >= 0; i--) {
+            if (messages[i].role === 'user') {
                 return messages[i];
             }
         }

@@ -5,6 +5,8 @@
  * Based on patterns from chatpanel but enhanced for WebWire
  */
 
+import { buildMarkdownReportPrompt } from '../prompts/analysis-prompt.js';
+
 export class PageContentExtractor {
     constructor() {
         this.maxTextLength = 10000; // 10KB limit for text content
@@ -54,7 +56,7 @@ export class PageContentExtractor {
         
         // Remove elements that don't contribute to meaningful content
         const elementsToRemove = tempDoc.querySelectorAll(
-            'script, style, nav, footer, aside, .sidebar, .navigation, .menu, .ad, .advertisement, .popup, .modal, .cookie-banner, .newsletter-signup'
+            'script, style, nav, footer, aside, .sidebar, .navigation, .menu, .ad, .advertisement, .popup, .modal, .cookie-banner, .newsletter-signup, #webwire-container, .ww-panel, .ww-fab, .ww-notification, .ww-error-notification, [class*="ww-"], [id*="webwire"]'
         );
         elementsToRemove.forEach(el => el.remove());
         
@@ -80,6 +82,9 @@ export class PageContentExtractor {
         
         selectors.forEach(selector => {
             document.querySelectorAll(selector).forEach(heading => {
+                // Skip WebWire elements
+                if (this.isWebWireElement(heading)) return;
+                
                 const text = heading.textContent.trim();
                 if (text && headings.length < this.maxHeadings) {
                     headings.push({
@@ -102,6 +107,9 @@ export class PageContentExtractor {
         const links = [];
         
         document.querySelectorAll('a[href]').forEach(link => {
+            // Skip WebWire elements
+            if (this.isWebWireElement(link)) return;
+            
             const href = link.getAttribute('href');
             const text = link.textContent.trim();
             
@@ -135,6 +143,9 @@ export class PageContentExtractor {
         
         document.querySelectorAll('img[src]').forEach(img => {
             if (images.length >= this.maxImages) return;
+            
+            // Skip WebWire elements
+            if (this.isWebWireElement(img)) return;
             
             const src = img.getAttribute('src');
             const alt = img.getAttribute('alt') || '';
@@ -337,7 +348,10 @@ export class PageContentExtractor {
         safeSelectors.forEach(selector => {
             try {
                 document.querySelectorAll(selector).forEach(element => {
-                    if (!foundElements.has(element) && this.isElementVisible(element) && elements.length < maxElements) {
+                    if (!foundElements.has(element) && 
+                        !this.isWebWireElement(element) && 
+                        this.isElementVisible(element) && 
+                        elements.length < maxElements) {
                         foundElements.add(element);
                         elements.push(this.analyzeInteractiveElement(element, elements.length));
                     }
@@ -359,7 +373,7 @@ export class PageContentExtractor {
                     element.hasAttribute('v-on:click.prevent') ||
                     element.hasAttribute('@click.prevent')) {
                     
-                    if (this.isElementVisible(element)) {
+                    if (!this.isWebWireElement(element) && this.isElementVisible(element)) {
                         foundElements.add(element);
                         elements.push(this.analyzeInteractiveElement(element, elements.length));
                     }
@@ -388,6 +402,38 @@ export class PageContentExtractor {
             style.display !== 'none' &&
             style.opacity !== '0'
         );
+    }
+
+    /**
+     * Check if element is part of WebWire's UI and should be excluded from page content
+     * @param {Element} element - Element to check
+     * @returns {boolean} True if element is WebWire UI
+     */
+    isWebWireElement(element) {
+        // Check if element is or is contained within WebWire container
+        if (element.closest('#webwire-container, #ww-container')) {
+            return true;
+        }
+        
+        // Check element ID
+        if (element.id && (element.id.includes('webwire') || element.id.includes('ww-'))) {
+            return true;
+        }
+        
+        // Check element classes
+        if (element.className && typeof element.className === 'string') {
+            const classes = element.className.toLowerCase();
+            if (classes.includes('ww-') || classes.includes('webwire')) {
+                return true;
+            }
+        }
+        
+        // Check for WebWire-specific attributes
+        if (element.hasAttribute('data-webwire') || element.hasAttribute('data-ww')) {
+            return true;
+        }
+        
+        return false;
     }
 
     /**
@@ -867,32 +913,8 @@ export class ContextBuilder {
      * @returns {string} Formatted analysis request
      */
     buildPageAnalysisRequest(pageContent) {
-        const sections = [];
-        
-        // Basic page info (following chatpanel pattern)
-        sections.push(`Please analyze this webpage:`);
-        sections.push(`URL: ${pageContent.url}`);
-        sections.push(`Title: ${pageContent.title}`);
-        
-        // Add description if available
-        if (pageContent.metadata.description) {
-            sections.push(`Description: ${pageContent.metadata.description}`);
-        }
-        
-        // Main content
-        if (pageContent.text) {
-            sections.push(`\nContent: ${pageContent.text}`);
-        }
-        
-        // Add structural information if meaningful
-        if (pageContent.headings.length > 0) {
-            sections.push(`\nPage Structure:`);
-            pageContent.headings.slice(0, 10).forEach(heading => {
-                sections.push(`${heading.tag}: ${heading.text}`);
-            });
-        }
-        
-        return sections.join('\n');
+        // Use the markdown report prompt for page analysis
+        return buildMarkdownReportPrompt();
     }
 
     /**

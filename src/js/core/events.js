@@ -31,6 +31,7 @@ export const EVENTS = {
         CONVERSATION_LOADED: 'chat:conversation-loaded',
         CONVERSATION_UPDATED: 'chat:conversation-updated',
         CREATE_NEW_THREAD: 'chat:create-new-thread',
+        END_CONVERSATION: 'chat:end-conversation',
         GET_OR_CREATE_THREAD: 'chat:get-or-create-thread',
         INJECT_PANEL: 'chat:inject-panel',
         REPLAY_LAST_TURN: 'chat:replay-last-turn',
@@ -41,7 +42,7 @@ export const EVENTS = {
         START_NEW_CONVERSATION: 'chat:start-new-conversation',
         UPDATE_MCP_STATUS: 'chat:update-mcp-status',
         UPDATE_SETTINGS: 'chat:update-settings',
-        TOGGLE_PAGE_CONTENT: 'chat:toggle-page-content',
+        TOGGLE_UI_SETTING: 'chat:toggle-ui-setting',
         EXECUTE_TOOL: 'chat:execute-tool',
         CANCEL_TOOL: 'chat:cancel-tool',
         TOOL_RESULT: 'chat:tool-result'
