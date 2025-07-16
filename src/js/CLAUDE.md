@@ -13,6 +13,10 @@ src/js
 │       ├── aistudio-client.js
 │       ├── featherless-client.js
 │       └── openai-client.js
+├── browser/                # Browser interaction utilities
+│   ├── dom-agent.js        # DOM manipulation agent
+│   ├── dom-connector.js    # DOM connection management
+│   └── page-utils.js       # Page content extraction
 ├── client/                 # Main application client logic
 │   ├── cmcp-helper.js
 │   ├── panel-event-handlers.js
@@ -30,6 +34,8 @@ src/js
 │   ├── mcp-connector.js
 │   ├── tool-formatter.js
 │   └── tool-parser.js
+├── prompts/                # AI prompt templates
+│   └── analysis-prompt.js  # Page analysis prompt generation
 ├── state/                  # State management system
 │   ├── plugins/            # Domain-specific state managers
 │   ├── state-container.js
@@ -184,7 +190,50 @@ const result = await connector.executeTool('list_files', { path: '/home' });
 - **tool-formatter.js** - Converts MCP tools to OpenAI format
 - **tool-parser.js** - Parses and validates tool responses
 
-### 6. Client Core (`client/`)
+### 6. Browser Interaction (`browser/`)
+
+Browser and DOM interaction utilities:
+
+#### DOMAgent (`dom-agent.js`)
+Handles DOM manipulation and interaction:
+```javascript
+const agent = new DOMAgent();
+agent.click(selector);
+agent.type(selector, text);
+agent.scroll(element);
+```
+
+#### DOMConnector (`dom-connector.js`)
+Manages connections between extension and page DOM:
+```javascript
+const connector = new DOMConnector();
+connector.inject();
+connector.establish();
+```
+
+#### PageUtils (`page-utils.js`)
+Utilities for extracting and processing page content:
+```javascript
+const content = PageUtils.getPageContent();
+const metadata = PageUtils.extractMetadata();
+const selection = PageUtils.getSelectedText();
+```
+
+### 7. Prompts (`prompts/`)
+
+AI prompt generation and templates:
+
+#### AnalysisPrompt (`analysis-prompt.js`)
+Generates structured prompts for page analysis:
+```javascript
+const prompt = AnalysisPrompt.generate({
+    pageContent,
+    userQuery,
+    context
+});
+```
+
+### 8. Client Core (`client/`)
 
 Main application coordination:
 
@@ -201,7 +250,7 @@ const content = await core.fetch('fs:///path/to/file');
 - **panel-event-handlers.js** - Panel-specific event coordination
 - **cmcp-helper.js** - MCP communication helpers
 
-### 7. Context System (`context/`)
+### 9. Context System (`context/`)
 
 Dependency injection and application context:
 
@@ -222,7 +271,7 @@ const context = ContextFactory.createContext({
 });
 ```
 
-### 8. Utilities (`utils/`)
+### 10. Utilities (`utils/`)
 
 Shared utility functions:
 - **id-generator.js** - UUID and session ID generation

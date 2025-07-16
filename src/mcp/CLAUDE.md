@@ -6,19 +6,21 @@ This file provides guidance for working with the WebWire MCP interface system.
 ```
 src/mcp
 ├── components/             # UI components and modals
-│   ├── document-modal.css # Styling for document modal
 │   ├── document-modal.js  # Document viewing modal component
+│   ├── document-modal.scss # Styling for document modal
 │   ├── graph-draw.js      # Knowledge base graph visualization
 │   ├── stash-button.js    # Stash functionality button component
-│   ├── stash-panel.css    # Styling for stash panel
 │   ├── stash-panel.js     # Floating stash viewer panel
+│   ├── stash-panel.scss   # Styling for stash panel
 │   ├── textview-modal.js  # Text content viewing modal
-│   └── textview.css       # Text viewer styling
+│   └── textview.scss      # Text viewer styling
 ├── index.html             # MCP interface HTML structure
 ├── index.js               # Main MCP app controller
 ├── panel.js               # MCP control panel UI management
-└── style.css              # Main MCP interface styling
+└── style.scss             # Main MCP interface styling
 ```
+
+Note: All styles use SCSS for enhanced styling capabilities, compiled to CSS during build.
 
 ## Overview
 

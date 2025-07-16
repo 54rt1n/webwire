@@ -9,10 +9,11 @@ src/chat
 ├── chat-panel.js        # UI management and interactions
 ├── chat-renderer.js     # HTML generation and DOM manipulation
 ├── chat-service.js      # Core chat logic and AI integration
-├── chat.css            # Chat styling
-├── message-utils.js     # Message formatting utilities
-└── page-utils.js       # Page content extraction and context building
+├── chat.scss           # Chat styling (SCSS)
+└── message-utils.js     # Message formatting utilities
 ```
+
+Note: Page content extraction utilities are located in `src/js/browser/page-utils.js`
 
 ## Overview
 
@@ -145,7 +146,7 @@ class ChatUIRenderer {
 - **Modular generation** - Separate functions for each UI component
 - **Tool visualization** - Specialized rendering for tool results
 
-### 4. PageUtils (`page-utils.js`)
+### 4. PageUtils (`src/js/browser/page-utils.js`)
 
 Sophisticated page content extraction providing:
 - Comprehensive content analysis
@@ -174,6 +175,8 @@ class ContextBuilder {
     buildStructuredContext()       // AI-ready context object
 }
 ```
+
+Note: These utilities are imported from the browser module as they're shared across multiple features.
 
 ### 5. MessageUtils (`message-utils.js`)
 
@@ -326,14 +329,18 @@ chatPanel.updateToolResult(callId, {
 });
 ```
 
-## Styling System (`chat.css`)
+## Styling System (`chat.scss`)
 
-Comprehensive CSS providing:
+Comprehensive SCSS styling providing:
 - Panel layout and positioning
 - Message styling and threading
 - Tool result visualization
 - Responsive design
 - Animation and transitions
+- Nested selectors for component organization
+- SCSS variables for theming
+
+Note: The SCSS is compiled to CSS during the build process.
 
 ## Development Patterns
 

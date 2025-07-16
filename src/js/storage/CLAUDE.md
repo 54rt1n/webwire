@@ -25,14 +25,32 @@ The StorageManager acts as a factory, creating specialized adapters:
 ```javascript
 // Creates adapters with clean interface
 this.storage = {
-    settings: new SettingsAdapter(),
-    state: new StateAdapter(), 
-    ui: new UiAdapter(),
-    stash: new StashAdapter()
+    settings: new SettingsAdapter({
+        storageKey: 'app-settings',
+        version: '1.0.0'
+    }, eventBus),
+    
+    state: new StateAdapter({
+        storageKey: 'app-state',
+        dbName: 'app-db',
+        storeName: 'saves',
+        version: '1.0.0',
+        maxSize: 5 * 1024 * 1024 // 5MB
+    }, new StateValidator(['session']), eventBus),
+    
+    ui: new UiAdapter({
+        storageKey: 'app-ui',
+        version: '1.0.0'
+    }, eventBus),
+    
+    stash: new StashAdapter({
+        storageKey: 'app-stash',
+        version: '1.0.0'
+    }, eventBus)
 };
 ```
 
-Each adapter is configured with storage keys and handles its own persistence logic.
+Each adapter is configured with storage keys, version info, and handles its own persistence logic. The StateAdapter includes a validator for ensuring data integrity.
 
 ## Storage Adapters
 
@@ -48,8 +66,11 @@ Each adapter is configured with storage keys and handles its own persistence log
 
 ### StateAdapter
 - General state storage with validation via StateValidator
-- Handles compression for large state objects
-- Includes backup/restore functionality
+- Prioritizes Chrome extension storage when available, falls back to localStorage
+- Handles size limits (default 5MB) with warnings for oversized state
+- Methods: `save()`, `load()`, `clear()`, `exists()`, `getMetadata()`
+- Emits events on state save/clear operations
+- Filters out settings and UI data before saving (handled by their own adapters)
 
 ### UiAdapter  
 - Lightweight UI state persistence
@@ -82,3 +103,21 @@ const adapter = storageManager.storage.settings;
 ```
 
 The adapters handle the complexity of storage backend selection, versioning, and error recovery while providing simple interfaces to the state management layer.
+
+## StateValidator
+
+The StateValidator class provides basic validation for state objects:
+
+```javascript
+const validator = new StateValidator(['session']); // Required fields
+validator.validate(state); // Returns true/false
+```
+
+It ensures state objects are valid and contain required fields before persistence.
+
+## Important Notes
+
+- StateAdapter automatically detects Chrome extension context and uses chrome.storage.local when available
+- All adapters pass eventBus for emitting storage-related events
+- Storage keys should be configured via the StorageManager constructor config
+- The StateAdapter filters out settings and UI data as those are handled by their respective adapters

@@ -69,6 +69,14 @@ WebWire is a Chrome extension providing AI-powered web page analysis with Model 
 - `events.js` - Event type definitions and constants
 - `error-boundary.js` - Error handling and recovery
 
+**Browser Interaction (`browser/`):**
+- `dom-agent.js` - DOM manipulation agent
+- `dom-connector.js` - DOM connection management
+- `page-utils.js` - Page content extraction utilities
+
+**Prompts (`prompts/`):**
+- `analysis-prompt.js` - Page analysis prompt generation
+
 **MCP Integration (`mcp/`):**
 - `mcp-connector.js` - Server-Sent Events connection to MCP servers
 - `tool-formatter.js` - Converts MCP tools to OpenAI format
@@ -94,9 +102,8 @@ WebWire is a Chrome extension providing AI-powered web page analysis with Model 
 - `chat-panel.js` - UI management and user interactions
 - `chat-renderer.js` - HTML generation and DOM manipulation
 - `message-utils.js` - Message formatting and processing
-- `page-utils.js` - Page content extraction and context building
 - `chat-constants.js` - Chat-related constants
-- `chat.css` - Chat styling
+- `chat.scss` - Chat styling (SCSS)
 
 ### UI Interfaces
 
@@ -207,3 +214,7 @@ WebWire is a Chrome extension providing AI-powered web page analysis with Model 
 - **Streaming AI responses** - Real-time message updates with tool execution
 - **Page content extraction** - Sophisticated content analysis for AI context
 - **Event-driven architecture** - Loose coupling via comprehensive event system
+- **SCSS Styling** - All styles use SCSS for enhanced capabilities, compiled during build
+- **Two-Part Message Pattern** - Conversation state supports incremental message building for streaming
+- **EventDispatcher System** - Modern cross-context communication via CROSS_CONTEXT_EVENT pattern
+- **Chrome Storage Priority** - State adapters prioritize chrome.storage.local when available

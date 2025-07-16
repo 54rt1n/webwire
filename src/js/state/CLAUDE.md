@@ -98,8 +98,8 @@ const initialState = {
         ai: {
             models: {
                 chat: {
-                    // model: string,        // AI model identifier
-                    // provider: string,     // Provider name
+                    // model: string,        // AI model identifier (commented out in initial state)
+                    // provider: string,     // Provider name (commented out in initial state)
                     samplerConfig: {
                         temperature: 0.8,
                         maxTokens: 2048,
@@ -143,7 +143,8 @@ const initialState = {
         },
         ui: {
             autoInject: false,           // Auto-inject panel
-            includePageContent: true     // Include page context
+            includePageContent: true,    // Include page context
+            useMCP: true                // Use MCP tools when available
         }
     },
 
@@ -228,9 +229,11 @@ Handles chat threads and message history:
 
 ```javascript
 class ConversationStatePlugin {
-    // Message management
+    // Message management (supports both two-part and single-call patterns)
     getConversationMessages(threadId)
     storeMessage(threadId, userMessage, assistantMessage, options)
+    storePartialUserMessage(threadId, userMessage, options)  // First part of two-part pattern
+    storeAssistantMessage(threadId, assistantMessage, options)  // Second part of two-part pattern
     
     // Thread operations
     createThreadId(userName, personaName)
@@ -645,3 +648,23 @@ expect(newStateService.state.settings.ai.temperature).toBe(0.9);
 - Use incremental saves for large domains
 - Implement storage quotas and cleanup
 - Handle storage failures gracefully
+
+## Important Implementation Notes
+
+### Two-Part Message Pattern
+The conversation plugin supports both single-call (`storeMessage`) and two-part patterns (`storePartialUserMessage` + `storeAssistantMessage`). The two-part pattern is useful for:
+- Storing user messages immediately before AI response
+- Handling streaming responses where the assistant message is built incrementally
+- Maintaining conversation state during long-running AI operations
+
+### State Initialization
+- Initial state includes a generated session ID via `generateSessionId()`
+- Model and provider fields in chat config are commented out in initial state (must be set by user)
+- All provider API keys are initially undefined (require user configuration)
+- The `useMCP` flag in UI settings defaults to `true`
+
+### Cross-Plugin Dependencies
+- Settings plugin may need to update when MCP connection status changes
+- UI plugin listens for conversation updates to refresh display
+- Disk plugin coordinates saves across all other plugins
+- Storage adapters are passed through from StateService to each plugin
