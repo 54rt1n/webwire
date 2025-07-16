@@ -88,6 +88,9 @@ export class ChatService {
         this.aiClient = aiClient;
         this.mcpConnector = mcpConnector;
         this.stateService = stateService;
+
+        this.setupEventListeners();
+        console.log('[ChatService] Event listeners set up');
         
         try {
             // Initialize the panel
@@ -103,9 +106,6 @@ export class ChatService {
             this.panel.setPageContentCheckboxState(this.stateService.ui.getIncludePageContent() || false);
 
             await this.sendGetOrCreateThread();
-
-            this.setupEventListeners();
-            console.log('[ChatService] Event listeners set up');
 
             console.log('[ChatService] Initialization complete');
         } catch (error) {

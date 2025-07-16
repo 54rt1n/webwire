@@ -270,8 +270,6 @@ export class ChatUIRenderer {
             contentHTML += this.createToolMessagesHTML(toolMessages, message.messageId);
         }
 
-        console.log('[ChatUIRenderer] Creating message HTML:', message, toolMessages, contentHTML);
-
         return `
             <div class="ww-content">${contentHTML}</div>
             <div class="ww-time">${time}</div>

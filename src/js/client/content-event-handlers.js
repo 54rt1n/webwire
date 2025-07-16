@@ -1,6 +1,6 @@
 // src/js/client/panel-event-handlers.js
 import { EVENTS } from '../core/events.js';
-import { CONTENT_ACTIONS } from '../core/cc-actions.js';
+import { CONTENT_ACTIONS, BACKGROUND_ACTIONS } from '../core/cc-actions.js';
 
 export class ContentEventHandlers {
     constructor(core) {

@@ -69,21 +69,18 @@ class WebWireContentHost {
             mcpConnector: !!this.core.mcpConnector
         });
         
-        // Initialize ChatService with the core services
-        await this.chatService.initialize(this.core.aiClient, this.core.mcpConnector, this.core.stateService);
-        console.log('[WebWireContentHost] ChatService initialized');
-        
         console.log('[WebWireContentHost] Extension communication ready via EventDispatcher');
 
         this.eventHandlers = new ContentEventHandlers(this.core, this.chatService, this.domAgent);
         this.eventHandlers.setupEventListeners();
 
-        // Set up content actions after core is initialized
-        this.setupContentActions();
-        
         // Set up keyboard shortcuts and injection listeners
         this.setupUIListeners();
         console.log('[WebWireContentHost] UI listeners set up');
+
+        // Initialize ChatService with the core services
+        await this.chatService.initialize(this.core.aiClient, this.core.mcpConnector, this.core.stateService);
+        console.log('[WebWireContentHost] ChatService initialized');
         
         // Handle auto-inject and panel restoration
         try {
@@ -174,8 +171,9 @@ class WebWireContentHost {
                     {},
                     { target: 'background' }
                 );
-                if (threadResponse.success) {
-                    currentThread = threadResponse.thread;
+                console.log('[WebWireContentHost] Thread response:', threadResponse);
+                if (threadResponse.success && threadResponse.result && threadResponse.result.thread) {
+                    currentThread = threadResponse.result.thread;
                     
                     // CRITICAL: Update local conversation state from background data
                     if (this.core.stateService && this.core.stateService.conversation && currentThread) {
