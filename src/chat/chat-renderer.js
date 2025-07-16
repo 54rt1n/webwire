@@ -306,11 +306,11 @@ export class ChatUIRenderer {
     /**
      * Create tool messages HTML
      */
-    createToolMessagesHTML(toolMessages) {
+    createToolMessagesHTML(toolMessages, parentMessageId) {
         let html = '<div class="ww-tool-messages">';
         
         for (const toolMessage of toolMessages) {
-            html += this.createToolMessageHTML(toolMessage);
+            html += this.createToolMessageHTML(toolMessage, parentMessageId);
         }
         
         html += '</div>';
@@ -320,7 +320,7 @@ export class ChatUIRenderer {
     /**
      * Create individual tool message HTML
      */
-    createToolMessageHTML(toolMessage) {
+    createToolMessageHTML(toolMessage, parentMessageId) {
         const { display, callId, error, executionTime, parameters, name, success, ...results } = toolMessage;
         
         switch (display) {
@@ -333,7 +333,7 @@ export class ChatUIRenderer {
             
             case 'pending':
             default:
-                return this.createToolPendingHTML(callId, {name, parameters});
+                return this.createToolPendingHTML(callId, {name, parameters, parentMessageId});
         }
     }
 
@@ -364,10 +364,11 @@ export class ChatUIRenderer {
     /**
      * Create tool pending HTML
      */
-    createToolPendingHTML(callId, {name, parameters}) {
+    createToolPendingHTML(callId, {name, parameters, parentMessageId}) {
         return `
             <div id="${callId}" class="ww-tool-message ww-pending" 
                  data-tool-name="${this.escapeHTML(name)}" 
+                 data-parent-message-id="${parentMessageId}"
                  >
                 <div class="ww-name">${this.escapeHTML(name)}</div>
                 <div class="ww-summary ww-pending">
@@ -400,11 +401,11 @@ export class ChatUIRenderer {
     /**
      * Update message to final state HTML
      */
-    createFinalizedMessageHTML(finalContent, toolMessages = []) {
+    createFinalizedMessageHTML(finalContent, toolMessages = [], parentMessageId) {
         let html = this.createMessageContentHTML(finalContent);
         
         if (toolMessages.length > 0) {
-            html += this.createToolMessagesHTML(toolMessages);
+            html += this.createToolMessagesHTML(toolMessages, parentMessageId);
         }
         
         return html;

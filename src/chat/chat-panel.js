@@ -189,7 +189,7 @@ export class WebChatPanel {
     setupDelegatedListeners() {
         this.elements.chatContent?.addEventListener('click', (e) => {
             // Tool button handling
-            const toolButton = e.target.closest('.tool-execute-btn, .tool-cancel-btn');
+            const toolButton = e.target.closest('.ww-tool-btn');
             if (toolButton) {
                 this.handleToolButtonClick(toolButton);
                 return;
@@ -230,7 +230,7 @@ export class WebChatPanel {
      * Handle tool button clicks
      */
     handleToolButtonClick(button) {
-        const toolMessage = button.closest('.tool-message');
+        const toolMessage = button.closest('.ww-tool-message');
         if (!toolMessage) return;
 
         const action = button.dataset.action;
@@ -343,7 +343,8 @@ export class WebChatPanel {
             console.log('[WebChatPanel] Updating message content:', finalContent, toolMessages);
             messageContent.innerHTML = this.renderer.createFinalizedMessageHTML(
                 finalContent, 
-                toolMessages
+                toolMessages,
+                messageId
             );
         }
         
