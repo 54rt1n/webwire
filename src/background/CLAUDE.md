@@ -55,7 +55,6 @@ The background script acts as a message router handling:
 - `INJECT_WEBWIRE_PANEL` - Injects chat panel into tab
 - `GET_WEBWIRE_STATE` - Returns current application state
 - `WEBWIRE_PANEL_MESSAGE` - Routes panel messages
-- `CAPTURE_PAGE_CONTENT` - Extracts page content
 - `TOGGLE_WEBWIRE_PANEL` - Shows/hides panel
 - `SETTINGS_UPDATED` - Handles settings change notifications
 - `PING` - Health check from other contexts

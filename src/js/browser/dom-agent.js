@@ -102,7 +102,7 @@ export class DOMAgent {
      * @param {string} toolName - Name of the tool.
      * @returns {boolean} True if it's a DOM tool.
      */
-    isDOMTool(toolName) {
+    isTool(toolName) {
         return this.tools.some(tool => tool.name === toolName);
     }
 
@@ -119,7 +119,7 @@ export class DOMAgent {
         console.log(`[DOMAgent] Executing tool: ${toolName}`, parameters);
 
         try {
-            if (!this.isDOMTool(toolName)) {
+            if (!this.isTool(toolName)) {
                 throw new Error(`Unknown DOM tool: ${toolName}`);
             }
 

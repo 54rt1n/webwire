@@ -382,11 +382,6 @@ class WebWireBackground {
         return this.getWebWireState(tabId);
     }
 
-    async handleCaptureContent(message, sender) {
-        const tabId = await this.resolveTabId(sender, message);
-        return this.capturePageContent(tabId);
-    }
-
     async handleTogglePanel(message, sender) {
         const tabId = await this.resolveTabId(sender, message);
         
@@ -783,77 +778,6 @@ class WebWireBackground {
                 aiClientConfigured: false,
                 frameworkReady: false
             };
-        }
-    }
-
-    async handlePanelMessage(message, sender) {
-        // Forward panel messages to appropriate handlers
-        try {
-            // Handle settings updates that don't need tab context
-            if (message.type === 'SETTINGS_UPDATE') {
-                await this.saveSettings(message.data.settings);
-                return { success: true };
-            }
-            
-            // For other messages, resolve tab ID
-            const tabId = await this.resolveTabId(sender, message);
-            
-            switch (message.type) {
-                case 'AI_CHAT_REQUEST':
-                    return await this.handleAIChatRequest(message.data, tabId);
-                    
-                case 'MCP_CONNECT_REQUEST':
-                    return await this.handleMCPConnectRequest(message.data, tabId);
-                    
-                default:
-                    // Forward to content script via EventDispatcher
-                    return await this.dispatcher.dispatch(
-                        'FORWARD_TO_CONTENT',
-                        message,
-                        { target: 'content', tabId: tabId }
-                    );
-            }
-        } catch (error) {
-            console.error('Failed to handle panel message:', error);
-            return { 
-                success: false, 
-                error: error.message 
-            };
-        }
-    }
-
-    async handleAIChatRequest(data, tabId) {
-        // For now, delegate to content script
-        // In a full implementation, this could handle AI requests directly
-        return await this.dispatcher.dispatch(
-            CONTENT_ACTIONS.AI_CHAT_REQUEST,
-            data,
-            { target: 'content', tabId: tabId }
-        );
-    }
-
-    async handleMCPConnectRequest(data, tabId) {
-        // For now, delegate to content script
-        // In a full implementation, this could manage MCP connections centrally
-        return await this.dispatcher.dispatch(
-            CONTENT_ACTIONS.MCP_CONNECT_REQUEST,
-            data,
-            { target: 'content', tabId: tabId }
-        );
-    }
-
-    async capturePageContent(tabId) {
-        try {
-            const response = await this.dispatcher.dispatch(
-                CONTENT_ACTIONS.CAPTURE_PAGE_CONTENT,
-                {},
-                { target: 'content', tabId: tabId }
-            );
-            
-            return response.data;
-        } catch (error) {
-            console.error('Failed to capture page content:', error);
-            throw error;
         }
     }
 

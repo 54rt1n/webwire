@@ -167,6 +167,15 @@ export class MCPStatePlugin {
         this.setMcpTools([]);
     }
 
+    /**
+     * Is the tool available?
+     * @param {string} toolName - Name of the tool
+     * @returns {boolean} True if the tool is available
+     */
+    isTool(toolName) {
+      return this.stateService.state.mcp.tools.some(tool => tool.name === toolName);
+    }
+
     // Request Management Methods
 
     /**

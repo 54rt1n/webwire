@@ -46,13 +46,6 @@ export const CONTENT_ACTIONS = {
     SETTINGS_CHANGED: 'SETTINGS_CHANGED',
     CONVERSATION_UPDATED: 'CONVERSATION_UPDATED',
     
-    // Content extraction
-    CAPTURE_PAGE_CONTENT: 'CAPTURE_PAGE_CONTENT',
-    
-    // Delegated requests
-    AI_CHAT_REQUEST: 'AI_CHAT_REQUEST',
-    MCP_CONNECT_REQUEST: 'MCP_CONNECT_REQUEST',
-    
     // Health check
     PING: 'PING'
 };

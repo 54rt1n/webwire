@@ -50,9 +50,6 @@ export class ChatService {
         };
 
         this.initialized = false;
-        
-        this.setupEventListeners();
-        console.log('[ChatService] Initialized with event-driven architecture');
     }
 
     /**
@@ -74,8 +71,6 @@ export class ChatService {
         
         // Listen for AI streaming events
         this.eventBus.on(EVENTS.AI.STREAM_CHUNK, this.handleStreamingChunk.bind(this));
-        
-        console.log('[ChatService] Event listeners set up');
     }
 
     /**
@@ -108,6 +103,9 @@ export class ChatService {
             this.panel.setPageContentCheckboxState(this.stateService.ui.getIncludePageContent() || false);
 
             await this.sendGetOrCreateThread();
+
+            this.setupEventListeners();
+            console.log('[ChatService] Event listeners set up');
 
             console.log('[ChatService] Initialization complete');
         } catch (error) {
@@ -585,6 +583,42 @@ export class ChatService {
     }
 
     /**
+     * Handle tool execution request from ChatService
+     */
+    async handleExecuteTool(data) {
+        console.log('[WebWireContentHost] Handling execute tool request:', data);
+        
+        const { toolName, parameters } = data;
+        
+        // List of DOM tools that should be handled locally
+        const domTools = ['navigate_to_url', 'click_element', 'form_fill', 'extract_elements', 'scroll_to', 'wait_for_element'];
+        
+        try {
+            if (domTools.includes(toolName)) {
+                // Handle DOM tools locally using the DOM agent
+                console.log('[WebWireContentHost] Executing DOM tool locally:', toolName);
+                const result = await this.domAgent.executeTool(toolName, parameters);
+                console.log('[WebWireContentHost] DOM tool execution result:', result);
+                return result;
+            } else {
+                // Handle MCP tools using the MCP connector
+                if (!this.core.mcpConnector) {
+                    console.error('[WebWireContentHost] No MCP connector available for tool execution');
+                    throw new Error('MCP connector not available');
+                }
+                
+                console.log('[WebWireContentHost] Executing MCP tool:', toolName);
+                const result = await this.core.mcpConnector.executeTool(toolName, parameters);
+                console.log('[WebWireContentHost] MCP tool execution result:', result);
+                return result;
+            }
+        } catch (error) {
+            console.error('[WebWireContentHost] Failed to execute tool:', error);
+            throw error;
+        }
+    }
+
+    /**
      * Handle execute tool call event
      */
     async handleExecuteToolCall(payload) {
@@ -594,13 +628,13 @@ export class ChatService {
         try {
             // Check if it's a DOM tool first
             let toolResponse;
-            if (this.domConnector.isDOMTool(toolCall.name)) {
+            if (this.domConnector.isTool(toolCall.name)) {
                 console.log(`[ChatService] Executing DOM tool: ${toolCall.name}`);
                 toolResponse = await this.domConnector.executeTool(
                     toolCall.name, 
                     toolCall.parameters
                 );
-            } else {
+            } else if (this.mcpConnector && this.mcpConnector.isTool(toolCall.name)) {
                 // Fallback to MCP connector for external tools
                 console.log(`[ChatService] Executing MCP tool: ${toolCall.name}`);
                 toolResponse = await this.mcpConnector.executeTool(

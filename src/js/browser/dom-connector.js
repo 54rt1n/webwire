@@ -167,7 +167,7 @@ export class DOMConnector {
 
         try {
             // Validate tool exists
-            if (!this.isDOMTool(toolName)) {
+            if (!this.isTool(toolName)) {
                 throw new Error(`Unknown DOM tool: ${toolName}`);
             }
 
@@ -264,7 +264,7 @@ export class DOMConnector {
      * @param {string} toolName - Name of the tool
      * @returns {boolean} True if it's a DOM tool
      */
-    isDOMTool(toolName) {
+    isTool(toolName) {
         return this.tools.some(tool => tool.name === toolName);
     }
 

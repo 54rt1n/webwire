@@ -74,13 +74,13 @@ async handleUpdateSettings(data) {
 - `EVENTS.CHAT.UPDATE_SETTINGS` → `BACKGROUND_ACTIONS.SAVE_WEBWIRE_SETTINGS`
 - `EVENTS.CHAT.SAVE_PANEL_VISIBILITY` → `BACKGROUND_ACTIONS.SAVE_PANEL_VISIBILITY`
 
-#### Pattern 2: Direct Dispatch (via handleBackgroundDispatch)
+#### Pattern 2: Direct Dispatch (via handleBackgroundDispatch) *NOTE This pattern is removed*
 
-For events that bypass ChatService and go directly to background:
+For events that bypass ChatService and go directly to background: 
 
 ```javascript
 // 1. Event emitted with outbound dispatch
-this.eventBus.emit('dispatch:outbound', {
+this.eventBus.emit('dispatch:outbound', { *REMOVED*
     target: 'background',
     event: EVENTS.THREADS.GET_OR_CREATE,
     data: threadData

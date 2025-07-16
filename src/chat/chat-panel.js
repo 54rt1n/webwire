@@ -15,6 +15,7 @@ export class WebChatPanel {
         this.container = null;
         this.isInjected = false;
         this.isVisible = false;
+        this.toolStash = {};
         
         // UI Elements
         this.elements = {};
@@ -234,25 +235,18 @@ export class WebChatPanel {
         if (!toolMessage) return;
 
         const action = button.dataset.action;
-        const toolName = toolMessage.dataset.toolName;
-        const parentMessageId = toolMessage.dataset.parentMessageId;
-        const callId = toolMessage.id;
+        const name = toolMessage.dataset.toolName;
+        const messageId = toolMessage.dataset.messageId;
+        const callId = toolMessage.dataset.callId;
+        const parameters = this.toolStash?.[callId]?.parameters;
 
         const eventName = action === 'execute' 
             ? EVENTS.CHAT.EXECUTE_TOOL 
             : EVENTS.CHAT.CANCEL_TOOL;
 
-        console.log('[WebChatPanel] handleToolButtonClick:', eventName, {
-            messageId: parentMessageId,
-            callId,
-            name: toolName
-        });
+        console.log('[WebChatPanel] handleToolButtonClick:', eventName, { messageId, callId, name, parameters });
 
-        this.eventBus.emit(eventName, {
-            messageId: parentMessageId,
-            callId,
-            name: toolName
-        });
+        this.eventBus.emit(eventName, { messageId, callId, name, parameters });
     }
 
     /**
@@ -413,7 +407,15 @@ export class WebChatPanel {
             if (message.role === 'system') return;
 
             const toolMessages = buildToolMessages(message.toolCalls, message.toolResults);
-            
+            console.log('[WebChatPanel] displayConversation:', toolMessages);
+
+            this.toolStash = {
+                ...this.toolStash,
+                ...toolMessages.reduce((acc, msg) => {
+                    acc[msg.callId] = msg;
+                    return acc;
+                }, {})
+            }
             this.displayMessage(message, {
                 renderTools: toolMessages.length > 0,
                 toolMessages
@@ -438,6 +440,15 @@ export class WebChatPanel {
         conversation.messages.forEach(message => {
             if (message.role === 'system') return;
             const toolMessages = buildToolMessages(message.toolCalls, message.toolResults);
+            console.log('[WebChatPanel] loadConversation:', toolMessages);
+
+            this.toolStash = {
+                ...this.toolStash,
+                ...toolMessages.reduce((acc, msg) => {
+                    acc[msg.callId] = msg;
+                    return acc;
+                }, {})
+            }
 
             this.displayMessage(message, {
                 renderTools: renderTools && toolMessages.length > 0,

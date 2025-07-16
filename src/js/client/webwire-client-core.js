@@ -2,9 +2,9 @@ import { initializeContext } from '../context/context-init.js';
 import { MCPConnector } from '../mcp/mcp-connector.js';
 
 /**
- * MCPControlPanelApp
- * The main controller for the MCP Control Panel. This class wires together the
- * MCPConnector (data/business logic) and the MCPControlPanel (UI/view logic).
+ * WebWireClientCore
+ * The main controller for the WebWire Client. This class wires together the
+ * MCPConnector (data/business logic) and the WebWireClient (UI/view logic).
  */
 export class WebWireClientCore {
     constructor(eventBus) {

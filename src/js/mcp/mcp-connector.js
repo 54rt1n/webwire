@@ -294,7 +294,7 @@ export class MCPConnector {
   
       return tools;
     }
-  
+
     /**
      * Execute a specific tool with given parameters
      * @param {string} toolName - Name of the tool to execute
