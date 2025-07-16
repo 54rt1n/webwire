@@ -5,14 +5,14 @@
  * finds elements on the page and performs actions like clicking, filling forms,
  * and navigating. It is the final executor for local browser automation tasks.
  */
-import { PageContentExtractor } from './page-utils.js';
+import { SemanticPageExtractor } from './page-utils.js';
 import { generateUUID } from '../utils/id-generator.js';
 
 export class DOMAgent {
     constructor(eventBus) {
         // EventBus is kept for potential future use (e.g., logging) but is no longer used for core actions.
         this.eventBus = eventBus;
-        this.pageExtractor = new PageContentExtractor();
+        this.pageExtractor = new SemanticPageExtractor();
         this.sessionId = generateUUID();
         
         // Available DOM tools
