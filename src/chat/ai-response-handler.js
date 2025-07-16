@@ -123,15 +123,6 @@ export class AIResponseHandler {
             this.streamingState.abortController.abort();
             this.streamingState.abortController = null;
             this.streamingState.isActive = false;
-            
-            // Clean up the thinking message
-            if (this.streamingState.currentMessage) {
-                this.panel.finalizeThinkingMessage(
-                    this.streamingState.currentMessage.messageId,
-                    this.streamingState.streamingText + '\n\n*[Response cancelled by user]*',
-                    []
-                );
-            }
         }
     }
 

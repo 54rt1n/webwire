@@ -247,6 +247,27 @@ export class ChatService {
 
         } catch (error) {
             const streamingState = this.responseHandler.getStreamingState();
+            
+            // Handle request cancellation
+            if (error.message === 'Request cancelled') {
+                console.log('[ChatService] Request cancelled by user');
+                if (streamingState.currentMessage) {
+                    // Append cancellation message to existing content
+                    const cancelledContent = streamingState.streamingText + '\n\n[Request Cancelled By User]';
+                    this.panel.updateStreamingMessage(
+                        streamingState.currentMessage.messageId,
+                        cancelledContent
+                    );
+                    // Finalize the message with the cancelled content
+                    this.panel.finalizeThinkingMessage(
+                        streamingState.currentMessage.messageId,
+                        cancelledContent,
+                        []
+                    );
+                }
+                return; // Don't show error for cancelled requests
+            }
+            
             if (error.message.includes("Error: Empty response from AI provider")) {
                 console.log('[ChatService] Empty response from AI provider, skipping');
                 this.panel.displayError(error.message, streamingState.currentMessage?.messageId);
