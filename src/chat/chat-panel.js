@@ -81,6 +81,7 @@ export class WebChatPanel {
             chatInput: this.container.querySelector('.ww-input'),
             reparseBtn: this.container.querySelector('.ww-reparse-button'),
             sendBtn: this.container.querySelector('.ww-send-button'),
+            cancelBtn: this.container.querySelector('.ww-cancel-button'),
             statusIndicator: this.container.querySelector('.status-indicator'),
             statusText: this.container.querySelector('.status-text'),
             conversationId: this.container.querySelector('.ww-conversation-id'),
@@ -137,6 +138,8 @@ export class WebChatPanel {
      */
     setupInputListeners() {
         this.elements.sendBtn?.addEventListener('click', () => this.handleSendMessage());
+        
+        this.elements.cancelBtn?.addEventListener('click', () => this.handleCancelRequest());
         
         this.elements.chatInput?.addEventListener('input', () => {
             this.updateSendButton();
@@ -297,6 +300,9 @@ export class WebChatPanel {
         this.elements.chatContent.appendChild(messageEl);
         this.scrollToBottom();
         
+        // Show cancel button during streaming
+        this.showCancelButton();
+        
         return messageEl;
     }
 
@@ -343,6 +349,9 @@ export class WebChatPanel {
         }
         
         this.scrollToBottom();
+        
+        // Hide cancel button when streaming is complete
+        this.hideCancelButton();
     }
 
     /**
@@ -368,6 +377,9 @@ export class WebChatPanel {
             content: error,
             timestamp: Date.now()
         });
+        
+        // Hide cancel button on error
+        this.hideCancelButton();
     }
 
     /**
@@ -539,6 +551,20 @@ export class WebChatPanel {
             this.elements.sendBtn.disabled = !hasText;
         }
     }
+    
+    showCancelButton() {
+        if (this.elements.cancelBtn) {
+            this.elements.cancelBtn.style.display = 'flex';
+            this.elements.sendBtn.style.display = 'none';
+        }
+    }
+    
+    hideCancelButton() {
+        if (this.elements.cancelBtn) {
+            this.elements.cancelBtn.style.display = 'none';
+            this.elements.sendBtn.style.display = 'flex';
+        }
+    }
 
     updateReparseButton(visible) {
         if (this.elements.reparseBtn) {
@@ -640,6 +666,12 @@ export class WebChatPanel {
 
         this.updateSendButton();
         this.eventBus.emit(EVENTS.CHAT.SEND_MESSAGE, { message });
+    }
+    
+    handleCancelRequest() {
+        console.log('[WebChatPanel] Cancel request');
+        this.eventBus.emit(EVENTS.CHAT.CANCEL_STREAM, {});
+        this.hideCancelButton();
     }
 
     handlePageAnalysisRequest() {

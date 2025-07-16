@@ -383,6 +383,30 @@
         opacity: 0.5;
       }
     }
+    
+    .ww-cancel-button {
+      width: 44px;
+      height: 44px;
+      border: none;
+      border-radius: var(--radius-md);
+      background: var(--color-error-500);
+      color: white;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all var(--transition-normal);
+      flex-shrink: 0;
+      
+      svg {
+        width: 20px;
+        height: 20px;
+      }
+      
+      &:hover {
+        background: var(--color-error-600);
+      }
+    }
   }
 }
 

@@ -66,6 +66,7 @@ export class ChatService {
         this.eventBus.on(EVENTS.CHAT.REPARSE_MESSAGE, this.handleReparseMessage.bind(this));
         this.eventBus.on(EVENTS.CHAT.TOOL_RESULT, this.handleToolResult.bind(this));
         this.eventBus.on(EVENTS.CHAT.TOGGLE_UI_SETTING, this.handleUISettingsToggle.bind(this));
+        this.eventBus.on(EVENTS.CHAT.CANCEL_STREAM, this.cancelStreamingResponse.bind(this));
         
         // Listen for AI streaming events
         this.eventBus.on(EVENTS.AI.STREAM_CHUNK, this.handleStreamingChunk.bind(this));
@@ -624,6 +625,13 @@ export class ChatService {
      */
     isReady() {
         return this.panel.isReady();
+    }
+    
+    /**
+     * Cancel the current streaming response
+     */
+    cancelStreamingResponse() {
+        this.responseHandler.cancelStreaming();
     }
 
     /**

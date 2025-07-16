@@ -16,7 +16,8 @@ export class AIResponseHandler {
             messageId: null,
             currentMessage: null,
             streamingText: '',
-            messageCounter: 0
+            messageCounter: 0,
+            abortController: null
         };
     }
 
@@ -45,7 +46,6 @@ export class AIResponseHandler {
         
         // Set up exclusive stream handler for this request
         const unsubscribeStream = this.eventBus.onExclusive(EVENTS.AI.STREAM_CHUNK, (data) => {
-            this.streamingState.streamingText += data.chunk;
             this.handleStreamingChunk(data.chunk, thinkingMessage);
         });
         
@@ -88,6 +88,9 @@ export class AIResponseHandler {
      * Handle AI response generation with streaming
      */
     async generateAIResponse(aiClient, enhancedUserMessage, messagesForAPI, systemPrompt) {
+        // Create abort controller for this request
+        this.streamingState.abortController = new AbortController();
+        
         // Create thinking message
         const thinkingMessage = this.addThinkingMessage();
         
@@ -97,7 +100,8 @@ export class AIResponseHandler {
         try {
             const response = await aiClient.generateTurn(enhancedUserMessage, messagesForAPI, { 
                 systemPrompt,
-                maxHistory: 100
+                maxHistory: 100,
+                abortController: this.streamingState.abortController
             });
 
             if (!response) {
@@ -107,6 +111,27 @@ export class AIResponseHandler {
             return { response, thinkingMessage };
         } finally {
             unsubscribeStream();
+            this.streamingState.abortController = null;
+        }
+    }
+
+    /**
+     * Cancel the current streaming request
+     */
+    cancelStreaming() {
+        if (this.streamingState.abortController) {
+            this.streamingState.abortController.abort();
+            this.streamingState.abortController = null;
+            this.streamingState.isActive = false;
+            
+            // Clean up the thinking message
+            if (this.streamingState.currentMessage) {
+                this.panel.finalizeThinkingMessage(
+                    this.streamingState.currentMessage.messageId,
+                    this.streamingState.streamingText + '\n\n*[Response cancelled by user]*',
+                    []
+                );
+            }
         }
     }
 

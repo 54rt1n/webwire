@@ -222,11 +222,12 @@ export class AbstractAIClient {
      * @param {Object} [options.apiHeaders={}] - Additional HTTP headers
      * @param {Object} [options.metadata={}] - Metadata to include with request
      * @param {Array} [options.tools=[]] - Available tools for the AI to use
+     * @param {AbortController} [options.abortController] - Optional abort controller for cancellation
      * @returns {Promise<string>} Promise resolving to the complete AI response
      * @throws {Error} If the request fails or times out
      */
-    async streamChatCompletion(messages, { onChunk = null, apiArgs = {}, apiHeaders = {}, metadata = {}, tools = [], ...options } = {}) {
-        const controller = new AbortController();
+    async streamChatCompletion(messages, { onChunk = null, apiArgs = {}, apiHeaders = {}, metadata = {}, tools = [], abortController = null, ...options } = {}) {
+        const controller = abortController || new AbortController();
         const timeoutId = setTimeout(() => {
             controller.abort();
         }, this.config.requestTimeout);
@@ -273,7 +274,7 @@ export class AbstractAIClient {
             clearTimeout(timeoutId);
             
             if (error.name === 'AbortError') {
-                throw new Error('Request timed out');
+                throw new Error('Request cancelled');
             }
             
             throw error;

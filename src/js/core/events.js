@@ -45,7 +45,8 @@ export const EVENTS = {
         TOGGLE_UI_SETTING: 'chat:toggle-ui-setting',
         EXECUTE_TOOL: 'chat:execute-tool',
         CANCEL_TOOL: 'chat:cancel-tool',
-        TOOL_RESULT: 'chat:tool-result'
+        TOOL_RESULT: 'chat:tool-result',
+        CANCEL_STREAM: 'chat:cancel-stream'
     },
     AIM: {
         THOUGHT_TOGGLED: 'aim:thought_toggled',
