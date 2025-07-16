@@ -30,9 +30,10 @@
 .ww-panel {
   /* Extension-specific positioning adjustments if needed */
   
-  .header .icon {
-    width: var(--space-8);
+  .ww-header .ww-header-icon {
+    width: auto;
     height: var(--space-8);
+    padding: var(--space-2);
     border: none;
     background: transparent;
     border-radius: var(--radius-md);
@@ -42,6 +43,13 @@
     cursor: pointer;
     color: var(--color-text-secondary);
     transition: all var(--transition-normal);
+    
+    svg {
+      width: auto;
+      height: 100%;
+      max-width: 16px;
+      max-height: 16px;
+    }
     
     &:hover {
       background: var(--color-border);

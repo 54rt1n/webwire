@@ -76,14 +76,14 @@ export class WebChatPanel {
             replayTurnBtn: this.container.querySelector('#replay-turn'),
             analyzePageBtn: this.container.querySelector('#analyze-page-btn'),
             newConversationBtn: this.container.querySelector('#new-conversation'),
-            chatContent: this.container.querySelector('.content'),
-            chatInput: this.container.querySelector('.input'),
-            reparseBtn: this.container.querySelector('.reparse-button'),
-            sendBtn: this.container.querySelector('.send-button'),
+            chatContent: this.container.querySelector('.ww-content'),
+            chatInput: this.container.querySelector('.ww-input'),
+            reparseBtn: this.container.querySelector('.ww-reparse-button'),
+            sendBtn: this.container.querySelector('.ww-send-button'),
             statusIndicator: this.container.querySelector('.status-indicator'),
             statusText: this.container.querySelector('.status-text'),
-            conversationId: this.container.querySelector('.conversation-id'),
-            pageContentCheckbox: this.container.querySelector('.checkbox'),
+            conversationId: this.container.querySelector('.ww-conversation-id'),
+            pageContentCheckbox: this.container.querySelector('.ww-checkbox'),
             mcpCheckbox: this.container.querySelector('.mcp-checkbox')
         };
     }
@@ -199,15 +199,18 @@ export class WebChatPanel {
         if (!this.elements.chatContent) return;
 
         this.elements.chatContent.addEventListener('scroll', () => {
-            if (!this.isScrollSticky) return;
-
             const element = this.elements.chatContent;
             const threshold = 5; // Allow small tolerance for precision issues
             
-            // Check if user has scrolled away from bottom
+            // Check if user is at the bottom
             const isAtBottom = element.scrollTop >= element.scrollHeight - element.clientHeight - threshold;
             
-            if (!isAtBottom) {
+            // Update sticky state based on scroll position
+            if (isAtBottom) {
+                // Re-enable sticky when user scrolls to bottom
+                this.isScrollSticky = true;
+            } else if (this.isScrollSticky) {
+                // Disable sticky when user scrolls away from bottom
                 this.isScrollSticky = false;
             }
         });
@@ -303,7 +306,7 @@ export class WebChatPanel {
             return;
         }
 
-        const streamingContent = messageEl.querySelector('.streaming-content');
+        const streamingContent = messageEl.querySelector('.ww-streaming-content');
         this.renderer.updateStreamingContent(streamingContent, content);
         this.scrollToBottom();
     }
@@ -321,11 +324,11 @@ export class WebChatPanel {
         }
 
         // Update classes
-        messageEl.classList.remove('thinking');
-        messageEl.classList.add('assistant');
+        messageEl.classList.remove('ww-thinking');
+        messageEl.classList.add('ww-assistant');
         
         // Update content
-        const messageContent = messageEl.querySelector('.content');
+        const messageContent = messageEl.querySelector('.ww-content');
         if (messageContent) {
             console.log('[WebChatPanel] Updating message content:', finalContent, toolMessages);
             messageContent.innerHTML = this.renderer.createFinalizedMessageHTML(
@@ -458,7 +461,7 @@ export class WebChatPanel {
      * Remove welcome message
      */
     removeWelcomeMessage() {
-        const welcome = this.elements.chatContent?.querySelector('.welcome-message');
+        const welcome = this.elements.chatContent?.querySelector('.ww-welcome-message');
         welcome?.remove();
     }
 
@@ -466,7 +469,7 @@ export class WebChatPanel {
      * Remove error messages
      */
     removeErrorMessages() {
-        const errors = this.elements.chatContent?.querySelectorAll('.message.error');
+        const errors = this.elements.chatContent?.querySelectorAll('.ww-message.ww-error');
         errors?.forEach(error => error.remove());
     }
 
@@ -710,7 +713,7 @@ export class WebChatPanel {
      * Get last chat message element
      */
     getLastChatMessageElement() {
-        const chatMessages = this.container.querySelectorAll('.message');
+        const chatMessages = this.container.querySelectorAll('.ww-message');
         if (chatMessages.length > 0) {
             return chatMessages[chatMessages.length - 1];
         }

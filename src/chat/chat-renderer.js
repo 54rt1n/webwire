@@ -8,17 +8,17 @@ export class ChatUIRenderer {
         // Store templates for reusability
         this.templates = {
             icons: {
-                replay: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                replay: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <path d="M1 4v6h6"/>
                     <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/>
                 </svg>`,
                 
-                plus: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                plus: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <line x1="12" y1="5" x2="12" y2="19"/>
                     <line x1="5" y1="12" x2="19" y2="12"/>
                 </svg>`,
                 
-                close: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                close: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <line x1="18" y1="6" x2="6" y2="18"/>
                     <line x1="6" y1="6" x2="18" y2="18"/>
                 </svg>`,
@@ -75,7 +75,7 @@ export class ChatUIRenderer {
      */
     createHeaderHTML() {
         return `
-            <div class="header">
+            <div class="ww-header">
                 ${this.createHeaderTopHTML()}
                 ${this.createConnectionStatusHTML()}
             </div>
@@ -87,12 +87,12 @@ export class ChatUIRenderer {
      */
     createHeaderTopHTML() {
         return `
-            <div class="top">
-                <div class="agent-info">
-                    <span class="name">WebWire Assistant</span>
-                    <span class="conversation-id">Ready for conversation</span>
+            <div class="ww-top">
+                <div class="ww-agent-info">
+                    <span class="ww-name">WebWire Assistant</span>
+                    <span class="ww-conversation-id">Ready for conversation</span>
                 </div>
-                <div class="actions">
+                <div class="ww-actions">
                     ${this.createHeaderButton('replay-turn', 'Replay Last Turn', this.templates.icons.replay)}
                     ${this.createHeaderButton('new-conversation', 'New Conversation', this.templates.icons.plus)}
                     ${this.createHeaderButton('close-panel', 'Close', this.templates.icons.close)}
@@ -106,7 +106,7 @@ export class ChatUIRenderer {
      */
     createHeaderButton(id, title, iconSvg) {
         return `
-            <button class="icon" id="${id}" title="${title}">
+            <button class="ww-header-icon" id="${id}" title="${title}">
                 ${iconSvg}
             </button>
         `;
@@ -117,7 +117,7 @@ export class ChatUIRenderer {
      */
     createConnectionStatusHTML() {
         return `
-            <div class="connection-status">
+            <div class="ww-connection-status">
                 <span class="status-indicator"></span>
                 <span class="status-text">Ready</span>
             </div>
@@ -129,10 +129,10 @@ export class ChatUIRenderer {
      */
     createPageContentToggleHTML() {
         return `
-            <div class="page-content-toggle">
-                <label class="label">
-                    <input type="checkbox" class="checkbox">
-                    <span class="text">Include page content</span>
+            <div class="ww-page-content-toggle">
+                <label class="ww-label">
+                    <input type="checkbox" class="ww-checkbox">
+                    <span class="ww-text">Include page content</span>
                 </label>
             </div>
         `;
@@ -143,7 +143,7 @@ export class ChatUIRenderer {
      */
     createChatContentHTML() {
         return `
-            <div class="content ww-chat">
+            <div class="ww-content ww-chat">
                 ${this.createWelcomeHTML()}
             </div>
         `;
@@ -154,12 +154,12 @@ export class ChatUIRenderer {
      */
     createWelcomeHTML() {
         return `
-            <div class="welcome-message">
-                <div class="icon">🤖</div>
+            <div class="ww-welcome-message">
+                <div class="ww-welcome-icon">🤖</div>
                 <h3>WebWire Assistant</h3>
                 <p>I can analyze this webpage and help you with questions. I also have access to various tools through MCP integration.</p>
-                <div class="quick-actions">
-                    <button class="btn" id="analyze-page-btn">
+                <div class="ww-quick-actions">
+                    <button class="ww-btn" id="analyze-page-btn">
                         ${this.templates.icons.analyze}
                         Analyze This Page
                     </button>
@@ -173,26 +173,26 @@ export class ChatUIRenderer {
      */
     createInputContainerHTML() {
         return `
-            <div class="input-container">
-                <div class="page-content-toggle">
-                    <label class="label">
-                        <input type="checkbox" class="checkbox">
-                        <span class="text">Include page content</span>
+            <div class="ww-input-container">
+                <div class="ww-page-content-toggle">
+                    <label class="ww-label">
+                        <input type="checkbox" class="ww-checkbox">
+                        <span class="ww-text">Include page content</span>
                     </label>
-                    <label class="label">
-                        <input type="checkbox" class="checkbox mcp-checkbox">
-                        <span class="text">Use MCP</span>
+                    <label class="ww-label">
+                        <input type="checkbox" class="ww-checkbox mcp-checkbox">
+                        <span class="ww-text">Use MCP</span>
                     </label>
                 </div>
-                <div class="wrapper">
+                <div class="ww-wrapper">
                     <textarea 
-                        class="input" 
+                        class="ww-input" 
                         placeholder="Ask me anything about this page or use tools..."
                     ></textarea>
-                    <button class="reparse-button" disabled title="Reparse with tools">
+                    <button class="ww-reparse-button" disabled title="Reparse with tools">
                         ${this.templates.icons.reparse}
                     </button>
-                    <button class="send-button" disabled title="Send message">
+                    <button class="ww-send-button" disabled title="Send message">
                         ${this.templates.icons.send}
                     </button>
                 </div>
@@ -222,7 +222,7 @@ export class ChatUIRenderer {
         } = options;
 
         const messageEl = document.createElement('div');
-        messageEl.className = `message ${isThinking ? 'thinking' : message.role}`;
+        messageEl.className = `ww-message ${isThinking ? 'ww-thinking' : 'ww-' + message.role}`;
         
         if (message.messageId || message.id) {
             messageEl.id = message.messageId || message.id;
@@ -265,8 +265,8 @@ export class ChatUIRenderer {
         console.log('[ChatUIRenderer] Creating message HTML:', message, toolMessages, contentHTML);
 
         return `
-            <div class="content">${contentHTML}</div>
-            <div class="time">${time}</div>
+            <div class="ww-content">${contentHTML}</div>
+            <div class="ww-time">${time}</div>
         `;
     }
 
@@ -275,9 +275,9 @@ export class ChatUIRenderer {
      */
     createThinkingContentHTML() {
         return `
-            <span class="thinking-indicator">💭</span>
-            <span class="streaming-content"></span>
-            <span class="cursor">▊</span>
+            <span class="ww-thinking-indicator">💭</span>
+            <span class="ww-streaming-content"></span>
+            <span class="ww-cursor">▊</span>
         `;
     }
 
@@ -285,7 +285,7 @@ export class ChatUIRenderer {
      * Create error content HTML
      */
     createErrorContentHTML(content) {
-        return `<span class="error-icon">❌</span><span class="error-text">${content}</span>`;
+        return `<span class="ww-error-icon">❌</span><span class="ww-error-text">${content}</span>`;
     }
 
     /**
@@ -299,7 +299,7 @@ export class ChatUIRenderer {
      * Create tool messages HTML
      */
     createToolMessagesHTML(toolMessages) {
-        let html = '<div class="tool-messages">';
+        let html = '<div class="ww-tool-messages">';
         
         for (const toolMessage of toolMessages) {
             html += this.createToolMessageHTML(toolMessage);
@@ -334,9 +334,9 @@ export class ChatUIRenderer {
      */
     createToolSuccessHTML(callId, {name, result}) {
         return `
-            <div id="${callId}" class="tool-message success">
-                <div class="name">${this.escapeHTML(name)}</div>
-                <div class="summary tool-success">${this.escapeHTML(result)}</div>
+            <div id="${callId}" class="ww-tool-message ww-success">
+                <div class="ww-name">${this.escapeHTML(name)}</div>
+                <div class="ww-summary tool-success">${this.escapeHTML(result)}</div>
             </div>
         `;
     }
@@ -346,9 +346,9 @@ export class ChatUIRenderer {
      */
     createToolErrorHTML(callId, {name, error}) {
         return `
-            <div id="${callId}" class="tool-message error">
-                <div class="name">${this.escapeHTML(name)}</div>
-                <div class="summary tool-error">${this.escapeHTML(error)}</div>
+            <div id="${callId}" class="ww-tool-message ww-error">
+                <div class="ww-name">${this.escapeHTML(name)}</div>
+                <div class="ww-summary tool-error">${this.escapeHTML(error)}</div>
             </div>
         `;
     }
@@ -358,11 +358,11 @@ export class ChatUIRenderer {
      */
     createToolPendingHTML(callId, {name, parameters}) {
         return `
-            <div id="${callId}" class="tool-message pending" 
+            <div id="${callId}" class="ww-tool-message ww-pending" 
                  data-tool-name="${this.escapeHTML(name)}" 
                  >
-                <div class="name">${this.escapeHTML(name)}</div>
-                <div class="summary tool-pending">
+                <div class="ww-name">${this.escapeHTML(name)}</div>
+                <div class="ww-summary tool-pending">
                     <button class="tool-execute-btn" data-action="execute">✅ Execute</button>
                     <button class="tool-cancel-btn" data-action="cancel">❌ Cancel</button>
                 </div>
@@ -375,8 +375,8 @@ export class ChatUIRenderer {
      */
     createWelcomeElement() {
         const welcomeEl = document.createElement('div');
-        welcomeEl.className = 'welcome-message';
-        welcomeEl.innerHTML = this.createWelcomeHTML().match(/<div class="welcome-message">([\s\S]*)<\/div>/)[1];
+        welcomeEl.className = 'ww-welcome-message';
+        welcomeEl.innerHTML = this.createWelcomeHTML().match(/<div class="ww-welcome-message">([\s\S]*)<\/div>/)[1];
         return welcomeEl;
     }
 
