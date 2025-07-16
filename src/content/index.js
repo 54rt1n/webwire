@@ -10,7 +10,7 @@ import {
     CONTENT_ACTIONS,
     KEYBOARD_SHORTCUTS,
     DOM_READY_STATES
-} from '../chat/chat-constants.js';
+} from '../js/core/cc-actions.js';
 import '../shared/global.scss';
 import '../chat/chat.scss';
 

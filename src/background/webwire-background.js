@@ -1,7 +1,7 @@
 import { EVENT_TYPES, EVENT_CONTEXT } from '../js/core/events.js';
 import { initializeContext } from '../js/context/context-init.js';
 import { EventBus } from '../js/core/event-bus.js';
-import { BACKGROUND_ACTIONS, CONTENT_ACTIONS } from '../chat/chat-constants.js';
+import { BACKGROUND_ACTIONS, CONTENT_ACTIONS } from '../js/core/cc-actions.js';
 
 /**
  * WebWire Extension Background Script

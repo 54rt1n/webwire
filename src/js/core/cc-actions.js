@@ -1,5 +1,5 @@
 /**
- * WebWire Content Script Constants
+ * WebWire Cross-Context Actions
  * 
  * All message action types and constants used for communication between
  * content script, background script, and panel components.
@@ -89,4 +89,4 @@ export const DOM_READY_STATES = {
     LOADING: 'loading',
     INTERACTIVE: 'interactive',
     COMPLETE: 'complete'
-}; 
+};
