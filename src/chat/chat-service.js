@@ -6,6 +6,9 @@ import { PageUtils } from '../js/browser/page-utils.js';
 import { DOMConnector } from '../js/browser/dom-connector.js';
 import { generateMessageId } from '../js/utils/id-generator.js';
 import { buildToolMessages } from './message-utils.js';
+import { MessageBuilder } from './message-builder.js';
+import { ToolExecutor } from './tool-executor.js';
+import { AIResponseHandler } from './ai-response-handler.js';
 
 /**
  * WebWire Chat Service - Platform-Agnostic Core
@@ -39,15 +42,10 @@ export class ChatService {
         this.stateService = null;
         this.toolParser = new ToolParser();
         
-        // State
-        this.streamingState = {
-            isActive: false,
-            currentContent: '',
-            messageId: null,
-            currentMessage: null,
-            streamingText: '',
-            messageCounter: 0
-        };
+        // Service Components
+        this.messageBuilder = new MessageBuilder(this.pageUtils);
+        this.toolExecutor = null; // Initialized after stateService is set
+        this.responseHandler = new AIResponseHandler(this.eventBus, this.panel);
 
         this.initialized = false;
     }
@@ -88,6 +86,14 @@ export class ChatService {
         this.aiClient = aiClient;
         this.mcpConnector = mcpConnector;
         this.stateService = stateService;
+        
+        // Initialize tool executor with dependencies
+        this.toolExecutor = new ToolExecutor(
+            this.toolParser,
+            this.mcpConnector,
+            this.domConnector,
+            this.stateService
+        );
 
         this.setupEventListeners();
         console.log('[ChatService] Event listeners set up');
@@ -120,20 +126,7 @@ export class ChatService {
      * Parse the response for tool calls
      */
     async parseToolsFromResponse(response, tools) {
-        // Parse for tool calls if MCP is connected
-        let toolCalls = [];
-        let parseErrors = [];
-        
-        if (this.mcpConnector && tools.length > 0) {
-            const parseResult = this.toolParser.parseResponse(response);
-            if (parseResult.success && parseResult.toolCalls.length > 0) {
-                toolCalls = parseResult.toolCalls;
-            } else if (parseResult.errors && parseResult.errors.length > 0) {
-                parseErrors = parseResult.errors;
-            }
-        }
-
-        return { toolCalls, parseErrors };
+        return this.toolExecutor.parseToolsFromResponse(response, tools);
     }
 
     /**
@@ -184,171 +177,32 @@ export class ChatService {
                 this.panel.displayMessage(userMessage, { autoScroll: true });
             }
 
-            // Create system prompt with tools (MCP + DOM tools)
-            let systemPrompts = ["You are a helpful assistant analyzing web pages and helping users."];
-            let tools = [];
-            
-            // Get MCP tools (only if useMCP setting is enabled)
-            if (this.mcpConnector && this.stateService && this.stateService.ui.getUseMCP()) {
-                try {
-                    const mcpTools = this.stateService.mcp.getMcpTools();
-                    if (mcpTools && mcpTools.length > 0) {
-                        tools.push(...mcpTools);
-                        console.log(`[ChatService] Found ${mcpTools.length} MCP tools`);
-                    }
-                } catch (error) {
-                    console.warn('[ChatService] Failed to get MCP tools:', error);
-                }
-            }
-            
-            // Get DOM tools and convert to OpenAI format
-            if (this.domConnector && this.stateService.ui.getUseBrowserTools()) {
-                try {
-                    const domTools = this.domConnector.getAvailableTools();
-                    if (domTools && domTools.length > 0) {
-                        // Convert DOM tools to OpenAI format to match MCP tools
-                        const formattedDomTools = domTools.map(tool => ({
-                            type: 'function',
-                            function: {
-                                name: tool.name,
-                                description: tool.description,
-                                parameters: tool.parameters
-                            }
-                        }));
-                        tools.push(...formattedDomTools);
-                        console.log(`[ChatService] Found ${domTools.length} DOM tools`);
-                    }
-                } catch (error) {
-                    console.warn('[ChatService] Failed to get DOM tools:', error);
-                }
-            }
-            
-            // Generate system prompt with all tools using existing ToolFormatter
-            if (tools.length > 0) {
-                systemPrompts.push(ToolFormatter.generateSystemPrompt(tools));
-                console.log(`[ChatService] Using ${tools.length} total tools (MCP + DOM) for system prompt`);
-            }
-
-            // Add custom system prompt if provided
-            if (customSystemPrompt) {
-                systemPrompts.push(customSystemPrompt);
-                console.log(`[ChatService] Added custom system prompt for specialized analysis`);
-            }
+            // Get available tools and build system prompt
+            const tools = this.toolExecutor.getAvailableTools();
+            const systemPrompts = this.buildSystemPrompts(tools, customSystemPrompt);
 
 
-            // Build messages array including conversation history
-            let messagesForAPI = [];
-            
-            // Include conversation history if available
-            const messages = this.stateService.conversation.getConversationMessages(threadId);
-            if (messages) {
-                // Add existing messages (excluding system messages)
-                messagesForAPI = messages
-                    .filter(msg => msg.role !== MESSAGE_ROLES.SYSTEM)
-                    .map(msg => ({
-                        role: msg.role,
-                        content: msg.content,
-                        timestamp: msg.timestamp
-                    }));
-                
-                console.log(`[ChatService] Using ${messagesForAPI.length} messages from conversation history`);
-            } else {
-                console.log('[ChatService] No messages found for conversation history');
-            }
-            
-            let syntheticMessages = [];
-            let syntheticSources = [];
-            let syntheticPlayerHeader = [];
-            const stashContent = this.buildStashContext();
-            if (stashContent) {
-                syntheticMessages.push(stashContent);
-                syntheticSources.push('stash');
-            }
+            // Build page context and prepare messages
+            const pageContext = this.messageBuilder.buildPageContext(this.stateService, forcePageContent);
+            const { messagesForAPI, enhancedUserMessage } = this.messageBuilder.prepareMessagesForAPI(
+                threadId,
+                message,
+                this.stateService,
+                pageContext,
+                this.currentConversation
+            );
 
-            // Include page content if forced or if setting is enabled
-            if (forcePageContent || this.stateService.ui.getIncludePageContent() !== false) {
-                syntheticMessages.push(this.pageUtils.buildPageContext());
-                syntheticSources.push('page');
-            }
+            // Generate AI response with streaming
+            const { response, thinkingMessage } = await this.responseHandler.generateAIResponse(
+                this.aiClient,
+                enhancedUserMessage,
+                messagesForAPI,
+                systemPrompts
+            );
 
-            // Enhance first user message with page context
-            const firstUserIndex = messagesForAPI.findIndex(msg => msg.role === MESSAGE_ROLES.USER);
-            if (firstUserIndex !== -1) {
-                const firstUserMessage = messagesForAPI[firstUserIndex];
-                messagesForAPI[firstUserIndex] = {
-                    ...firstUserMessage,
-                    content: syntheticMessages.join('\n\n') + '\n\n' + firstUserMessage.content
-                };
-                console.log(`[ChatService] Enhanced first user message with ${syntheticSources.join(', ')} sources for API`);
-            } else {
-                for (const syntheticMessage of syntheticMessages) {
-                    syntheticPlayerHeader.push(syntheticMessage);
-                }
-                console.log(`[ChatService] Enhanced current user message with ${syntheticSources.join(', ')} sources for API`);
-            }
-
-            // Add any tool calls and responses (a toolMessage) from the last assistant message and add them as a prefix to the user message
-            if (this.currentConversation && this.currentConversation.messages && this.currentConversation.messages.length > 0) {
-                const lastAssistantMessage = this.currentConversation.messages[this.currentConversation.messages.length - 1];
-                if (lastAssistantMessage && lastAssistantMessage.toolCalls?.length > 0) {
-                    const toolMessages = buildToolMessages(lastAssistantMessage.toolCalls, lastAssistantMessage.toolResults);
-                    console.log('[ChatService] Tool messages:', toolMessages, lastAssistantMessage);
-                    const toolMessagesString = toolMessages.map(toolMessage => {
-                        const { callId, display, error, executionTime, name, parameters, success, ...results } = toolMessage;
-                        if (error) {
-                            return `|tool_error|\n\n${name}: ${error}\n\n|end_tool_error|`;
-                        } else {
-                            const resultString = JSON.stringify(results, null, 2);
-                            return `|tool_response|\n\n${name}: ${resultString}\n\n|end_tool_response|`;
-                        }
-                    }).join('\n\n');
-                    console.log('[ChatService] Tool messages string:', toolMessagesString);
-                    syntheticPlayerHeader.push(toolMessagesString);
-                } else {
-                    console.log('[ChatService] No tool messages found');
-                }
-            }
-
-            // Create thinking message with unique ID
-            const thinkingMessage = this.addThinkingMessage('Thinking...');
-            this.streamingState.currentMessage = thinkingMessage;
-            let streamingText = '';
-
-            // Set up exclusive stream handler for this request
-            const unsubscribeStream = this.eventBus.onExclusive(EVENTS.AI.STREAM_CHUNK, (data) => {
-                streamingText += data.chunk;
-                this.handleStreamingChunk(data.chunk, thinkingMessage);
-            });
-
-            const enchancedUserMessage = syntheticPlayerHeader.join('\n\n') + '\n\n' + userMessage.content;
-
-            let response = null;
-            try {
-                const totalMessagesLength = messagesForAPI.reduce((acc, msg) => acc + msg.content.length, 0);
-                console.log('[ChatService] Generating AI response...', enchancedUserMessage.length, totalMessagesLength);
-                response = await this.aiClient.generateTurn(enchancedUserMessage, messagesForAPI, { 
-                    systemPrompt: systemPrompts.join('\n\n'),
-                    maxHistory: 100, 
-                });
-
-                if (!response) {
-                    throw new Error('No response received from AI client');
-                }
-                console.log('[ChatService] AI response received:', response);
-            } finally {
-                unsubscribeStream();
-            }
-
-            const { toolCalls, parseErrors } = await this.parseToolsFromResponse(response, tools);
-
-            let toolResults = null;
-            if (autoExecuteTools || this.stateService.ui.getAutoExecuteTools()) {
-                toolResults = [];
-                for (const toolCall of toolCalls) {
-                    const result = await this.handleExecuteToolCall({ toolCall });
-                    toolResults.push(result);
-                }
-            }
+            // Parse and execute tools
+            const { toolCalls, parseErrors } = await this.toolExecutor.parseToolsFromResponse(response, tools);
+            const toolResults = await this.toolExecutor.executeTools(toolCalls, autoExecuteTools);
             
             // Prepare messages for storage (original unenhanced content)
             const userMsg = { 
@@ -370,7 +224,7 @@ export class ChatService {
             };
 
             // Finalize the thinking message with the complete response
-            this.finalizeStreamingMessage(thinkingMessage, assistantMsg);
+            this.responseHandler.finalizeStreamingMessage(thinkingMessage, assistantMsg);
 
             console.log('[ChatService] Saving message:', userMsg, assistantMsg);
 
@@ -391,12 +245,13 @@ export class ChatService {
             this.panel.updateReparseButton(true);
 
         } catch (error) {
+            const streamingState = this.responseHandler.getStreamingState();
             if (error.message.includes("Error: Empty response from AI provider")) {
                 console.log('[ChatService] Empty response from AI provider, skipping');
-                this.panel.displayError(error.message, this.streamingState.currentMessage?.messageId);
+                this.panel.displayError(error.message, streamingState.currentMessage?.messageId);
             } else {
                 console.error('[ChatService] Error handling user message:', error);
-                this.panel.displayError(error.message, this.streamingState.currentMessage?.messageId);
+                this.panel.displayError(error.message, streamingState.currentMessage?.messageId);
             }
         }
     }
@@ -632,48 +487,7 @@ export class ChatService {
     async handleExecuteToolCall(payload) {
         console.log('[ChatService] Handling execute tool call:', payload);
         const { toolCall } = payload;
-        const result = null;
-        try {
-            // Check if it's a DOM tool first
-            let toolResponse;
-            if (this.domConnector.isTool(toolCall.name)) {
-                console.log(`[ChatService] Executing DOM tool: ${toolCall.name}`);
-                toolResponse = await this.domConnector.executeTool(
-                    toolCall.name, 
-                    toolCall.parameters
-                );
-            } else if (this.mcpConnector && this.mcpConnector.isTool(toolCall.name)) {
-                // Fallback to MCP connector for external tools
-                console.log(`[ChatService] Executing MCP tool: ${toolCall.name}`);
-                toolResponse = await this.mcpConnector.executeTool(
-                    toolCall.name, 
-                    toolCall.parameters
-                );
-            }
-
-            result = {
-                callId: toolCall.callId,
-                name: toolCall.name,
-                parameters: toolCall.parameters,
-                result: toolResponse,
-                success: result.success,
-                executionTime: result.executionTime
-            };
-
-            console.log(`[ChatService] Tool ${toolCall.name} executed successfully`);
-
-        } catch (error) {
-            console.error(`[ChatService] Tool ${toolCall.name} execution failed:`, error);
-            result = {
-                callId: toolCall.callId,
-                name: toolCall.name,
-                parameters: toolCall.parameters,
-                success: false,
-                error: error.message
-            };
-        }
-
-        return result;
+        return this.toolExecutor.executeTool(toolCall);
     }
 
     /**
@@ -720,66 +534,27 @@ export class ChatService {
     }
 
     /**
-     * Build stash context
+     * Build system prompts
      */
-    buildStashContext() {
-        const stashContent = this.stateService.stash.getAllEntries();
-        if (stashContent.length === 0) {
-            return null;
+    buildSystemPrompts(tools, customSystemPrompt) {
+        const systemPrompts = ["You are a helpful assistant analyzing web pages and helping users."];
+        
+        if (tools.length > 0) {
+            systemPrompts.push(ToolFormatter.generateSystemPrompt(tools));
         }
 
-        const stashContentString = stashContent.map(entry => `${entry.key}: ${entry.value}`).join('\n');
-        return `Stash content:\n${stashContentString}`;
+        if (customSystemPrompt) {
+            systemPrompts.push(customSystemPrompt);
+        }
+
+        return systemPrompts.join('\n\n');
     }
 
     /**
-     * Add a thinking message and return handle for streaming updates
-     */
-    addThinkingMessage(message, messageId) {
-        if (!messageId) {
-            messageId = generateMessageId();
-        }
-        
-        // Display thinking message in panel
-        this.panel.displayThinkingMessage({
-            messageId: messageId,
-            content: message,
-            role: MESSAGE_ROLES.ASSISTANT
-        });
-        
-        return { messageId: messageId };
-    }
-    
-    /**
-     * Handle streaming chunks for a specific message
+     * Handle streaming chunks (delegate to response handler)
      */
     handleStreamingChunk(chunk, messageHandle) {
-        if (!this.streamingState.isActive) {
-            this.streamingState.isActive = true;
-            this.streamingState.streamingText = '';
-            this.streamingState.currentMessage = messageHandle;
-        }
-        
-        this.streamingState.streamingText += chunk;
-
-        //console.log('[ChatService] Streaming chunk to panel:', chunk.length, messageHandle);
-        
-        // Update panel directly
-        this.panel.updateStreamingMessage(messageHandle.messageId, this.streamingState.streamingText);
-    }
-        
-    /**
-     * Finalize streaming and clean up the thinking message
-     */
-    finalizeStreamingMessage(messageHandle, { content, toolCalls, toolResults, parseErrors, ...assistantMsg } = {}) {
-        this.streamingState.isActive = false;
-        this.streamingState.currentMessage = null;
-        this.streamingState.streamingText = '';
-
-        const toolMessages = buildToolMessages(toolCalls, toolResults);
-
-        // Finalize in panel
-        this.panel.finalizeThinkingMessage(messageHandle.messageId, content, toolMessages);
+        this.responseHandler.handleStreamingChunk(chunk, messageHandle);
     }
 
     /**
