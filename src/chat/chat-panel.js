@@ -84,7 +84,9 @@ export class WebChatPanel {
             statusText: this.container.querySelector('.status-text'),
             conversationId: this.container.querySelector('.ww-conversation-id'),
             pageContentCheckbox: this.container.querySelector('.ww-checkbox'),
-            mcpCheckbox: this.container.querySelector('.mcp-checkbox')
+            mcpCheckbox: this.container.querySelector('.mcp-checkbox'),
+            browserToolsCheckbox: this.container.querySelector('.browser-tools-checkbox'),
+            autoExecuteCheckbox: this.container.querySelector('.auto-execute-checkbox')
         };
     }
 
@@ -166,6 +168,14 @@ export class WebChatPanel {
 
         this.elements.mcpCheckbox?.addEventListener('change', (e) => {
             this.handleMcpToggle(e.target.checked);
+        });
+
+        this.elements.browserToolsCheckbox?.addEventListener('change', (e) => {
+            this.handleBrowserToolsToggle(e.target.checked);
+        });
+
+        this.elements.autoExecuteCheckbox?.addEventListener('change', (e) => {
+            this.handleAutoExecuteToggle(e.target.checked);
         });
 
         this.elements.reparseBtn?.addEventListener('click', () => {
@@ -537,6 +547,18 @@ export class WebChatPanel {
         }
     }
 
+    updateBrowserToolsSetting(useBrowserTools) {
+        if (this.elements.browserToolsCheckbox) {
+            this.elements.browserToolsCheckbox.checked = useBrowserTools;
+        }
+    }
+
+    updateAutoExecuteSetting(autoExecuteTools) {
+        if (this.elements.autoExecuteCheckbox) {
+            this.elements.autoExecuteCheckbox.checked = autoExecuteTools;
+        }
+    }
+
     updateConversationIdDisplay(threadId) {
         if (!this.elements.conversationId) return;
 
@@ -643,6 +665,20 @@ export class WebChatPanel {
         });
     }
 
+    handleBrowserToolsToggle(useBrowserTools) {
+        console.log('[WebChatPanel] Browser tools toggle:', useBrowserTools);
+        this.eventBus.emit(EVENTS.CHAT.TOGGLE_UI_SETTING, { 
+            useBrowserTools: useBrowserTools 
+        });
+    }
+
+    handleAutoExecuteToggle(autoExecuteTools) {
+        console.log('[WebChatPanel] Auto-execute tools toggle:', autoExecuteTools);
+        this.eventBus.emit(EVENTS.CHAT.TOGGLE_UI_SETTING, { 
+            autoExecuteTools: autoExecuteTools 
+        });
+    }
+
     handleInitialState(state) {
         console.log('[WebChatPanel] Handling initial state:', state);
         
@@ -658,6 +694,14 @@ export class WebChatPanel {
         
         if (state.useMCP !== undefined) {
             this.updateMcpSetting(state.useMCP);
+        }
+
+        if (state.useBrowserTools !== undefined) {
+            this.updateBrowserToolsSetting(state.useBrowserTools);
+        }
+
+        if (state.autoExecuteTools !== undefined) {
+            this.updateAutoExecuteSetting(state.autoExecuteTools);
         }
         
         if (state.currentThread?.messages) {

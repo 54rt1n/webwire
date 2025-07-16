@@ -202,7 +202,7 @@ export class ChatService {
             }
             
             // Get DOM tools and convert to OpenAI format
-            if (this.domConnector) {
+            if (this.domConnector && this.stateService.ui.getUseBrowserTools()) {
                 try {
                     const domTools = this.domConnector.getAvailableTools();
                     if (domTools && domTools.length > 0) {
@@ -339,7 +339,7 @@ export class ChatService {
             const { toolCalls, parseErrors } = await this.parseToolsFromResponse(response, tools);
 
             let toolResults = null;
-            if (autoExecuteTools) {
+            if (autoExecuteTools || this.stateService.ui.getAutoExecuteTools()) {
                 toolResults = [];
                 for (const toolCall of toolCalls) {
                     const result = await this.handleExecuteToolCall({ toolCall });
@@ -464,6 +464,16 @@ export class ChatService {
         if ('useMCP' in data) {
             this.stateService.ui.setUseMCP(data.useMCP);
             this.panel.updateMcpSetting(data.useMCP);
+        }
+
+        if ('useBrowserTools' in data) {
+            this.stateService.ui.setUseBrowserTools(data.useBrowserTools);
+            this.panel.updateBrowserToolsSetting(data.useBrowserTools);
+        }
+
+        if ('autoExecuteTools' in data) {
+            this.stateService.ui.setAutoExecuteTools(data.autoExecuteTools);
+            this.panel.updateAutoExecuteSetting(data.autoExecuteTools);
         }
         
         // Send unified settings update to background for persistence

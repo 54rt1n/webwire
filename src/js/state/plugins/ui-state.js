@@ -100,4 +100,32 @@ export class UiStatePlugin {
     setUseMCP(useMCP) {
         this.stateService.state.settings.ui.useMCP = useMCP;
     }
+
+    /**
+     * Get use browser tools setting
+     */
+    getUseBrowserTools() {
+        return this.stateService.state.settings.ui.useBrowserTools;
+    }
+
+    /**
+     * Set use browser tools setting
+     */
+    setUseBrowserTools(useBrowserTools) {
+        this.stateService.state.settings.ui.useBrowserTools = useBrowserTools;
+    }
+
+    /**
+     * Get auto execute tools setting
+     */
+    getAutoExecuteTools() {
+        return this.stateService.state.settings.ui.autoExecuteTools;
+    }
+
+    /**
+     * Set auto execute tools setting
+     */
+    setAutoExecuteTools(autoExecuteTools) {
+        this.stateService.state.settings.ui.autoExecuteTools = autoExecuteTools;
+    }
 } 

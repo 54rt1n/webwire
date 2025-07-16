@@ -118,8 +118,8 @@ export class ChatUIRenderer {
     createConnectionStatusHTML() {
         return `
             <div class="ww-connection-status">
-                <span class="status-indicator"></span>
-                <span class="status-text">Ready</span>
+                <span class="ww-status-indicator"></span>
+                <span class="ww-status-text">Ready</span>
             </div>
         `;
     }
@@ -182,6 +182,14 @@ export class ChatUIRenderer {
                     <label class="ww-label">
                         <input type="checkbox" class="ww-checkbox mcp-checkbox">
                         <span class="ww-text">Use MCP</span>
+                    </label>
+                    <label class="ww-label">
+                        <input type="checkbox" class="ww-checkbox browser-tools-checkbox">
+                        <span class="ww-text">Use browser tools</span>
+                    </label>
+                    <label class="ww-label">
+                        <input type="checkbox" class="ww-checkbox auto-execute-checkbox">
+                        <span class="ww-text">Auto-execute tools</span>
                     </label>
                 </div>
                 <div class="ww-wrapper">
@@ -336,7 +344,7 @@ export class ChatUIRenderer {
         return `
             <div id="${callId}" class="ww-tool-message ww-success">
                 <div class="ww-name">${this.escapeHTML(name)}</div>
-                <div class="ww-summary tool-success">${this.escapeHTML(result)}</div>
+                <div class="ww-summary ww-success">${this.escapeHTML(result)}</div>
             </div>
         `;
     }
@@ -348,7 +356,7 @@ export class ChatUIRenderer {
         return `
             <div id="${callId}" class="ww-tool-message ww-error">
                 <div class="ww-name">${this.escapeHTML(name)}</div>
-                <div class="ww-summary tool-error">${this.escapeHTML(error)}</div>
+                <div class="ww-summary ww-error">${this.escapeHTML(error)}</div>
             </div>
         `;
     }
@@ -362,9 +370,9 @@ export class ChatUIRenderer {
                  data-tool-name="${this.escapeHTML(name)}" 
                  >
                 <div class="ww-name">${this.escapeHTML(name)}</div>
-                <div class="ww-summary tool-pending">
-                    <button class="tool-execute-btn" data-action="execute">✅ Execute</button>
-                    <button class="tool-cancel-btn" data-action="cancel">❌ Cancel</button>
+                <div class="ww-summary ww-pending">
+                    <button class="ww-tool-btn" data-action="execute">✅ Execute</button>
+                    <button class="ww-tool-btn" data-action="cancel">❌ Cancel</button>
                 </div>
             </div>
         `;

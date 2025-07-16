@@ -77,6 +77,8 @@ export function createInitialState() {
                 autoInject: false,
                 includePageContent: true,
                 useMCP: true,
+                useBrowserTools: true,
+                autoExecuteTools: true,
             }
         },
 
