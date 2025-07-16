@@ -37,8 +37,6 @@ class WebWireContentHost {
         this.chatService = new ChatService(this.eventBus);
         
         // Host state
-        this.currentSettings = {};
-        this.currentThreadId = null;
         this.pageUtils = new PageUtils();
         this.domAgent = new DOMAgent(this.eventBus);
 
@@ -147,6 +145,7 @@ class WebWireContentHost {
         try {
             // The ChatService handles its own panel initialization
             if (!this.chatService.isReady()) {
+                console.log('[WebWireContentHost] ChatService not ready, initializing...');
                 await this.chatService.initialize();
             }
             
@@ -163,40 +162,20 @@ class WebWireContentHost {
      */
     async sendInitialStateToPanel() {
         try {
-            // Get current thread from background if available
-            let currentThread = null;
-            try {
-                const threadResponse = await this.core.dispatcher.dispatch(
-                    BACKGROUND_ACTIONS.GET_ACTIVE_THREAD,
-                    {},
-                    { target: 'background' }
-                );
-                console.log('[WebWireContentHost] Thread response:', threadResponse);
-                if (threadResponse.success && threadResponse.result && threadResponse.result.thread) {
-                    currentThread = threadResponse.result.thread;
-                    
-                    // CRITICAL: Update local conversation state from background data
-                    if (this.core.stateService && this.core.stateService.conversation && currentThread) {
-                        console.log('[WebWireContentHost] Syncing active thread state during panel init:', currentThread.threadId);
-                        this.core.stateService.conversation.patchConversation({
-                            threadId: currentThread.threadId,
-                            metadata: currentThread.metadata,
-                            messages: currentThread.messages,
-                            isActive: true  // This is the active thread
-                        });
-                    }
-                }
-            } catch (error) {
-                console.warn('[WebWireContentHost] Could not get active thread:', error);
-            }
+            const stateService = this.core.stateService;
             
+            // Get active thread directly from state service
+            const currentThread = stateService.conversation.getActiveThread();
+            
+            // Get connection states directly from services
             const state = {
                 currentThread: currentThread,
-                mcpConnected: false, // Would need to get from ChatService
-                aiClientConfigured: false, // Would need to get from ChatService
-                settings: this.currentSettings,
-                panelInjected: this.chatService.isReady(),
-                frameworkReady: true
+                mcpConnected: stateService.mcp.isMcpConnected() || false,
+                aiClientConfigured: !!this.core.aiClient,
+                includePageContent: stateService.ui.getIncludePageContent() !== false,
+                useMCP: stateService.ui.getUseMCP() !== false,
+                useBrowserTools: stateService.ui.getUseBrowserTools() !== false,
+                autoExecuteTools: stateService.ui.getAutoExecuteTools() !== false
             };
             
             // Send to ChatService
@@ -205,15 +184,6 @@ class WebWireContentHost {
             console.log('[WebWireContentHost] Initial state sent to ChatService');
         } catch (error) {
             console.error('[WebWireContentHost] Failed to send initial state:', error);
-            const fallbackState = {
-                currentThread: null,
-                mcpConnected: false,
-                aiClientConfigured: false,
-                settings: {},
-                panelInjected: this.chatService.isReady(),
-                frameworkReady: false
-            };
-            await this.chatService.sendInitialState(fallbackState);
         }
     }
 }

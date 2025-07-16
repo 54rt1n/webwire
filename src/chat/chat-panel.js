@@ -407,7 +407,7 @@ export class WebChatPanel {
             if (message.role === 'system') return;
 
             const toolMessages = buildToolMessages(message.toolCalls, message.toolResults);
-            console.log('[WebChatPanel] displayConversation:', toolMessages);
+            console.log('[WebChatPanel] displayConversation toolMessages:', message.role, toolMessages);
 
             this.toolStash = {
                 ...this.toolStash,

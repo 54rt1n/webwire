@@ -105,7 +105,9 @@ export class ChatService {
 
             this.panel.setPageContentCheckboxState(this.stateService.ui.getIncludePageContent() || false);
 
-            await this.sendGetOrCreateThread();
+            if (!this.stateService.conversation.getActiveThreadId()) {
+                await this.sendGetOrCreateThread();
+            }
 
             console.log('[ChatService] Initialization complete');
         } catch (error) {
@@ -238,9 +240,10 @@ export class ChatService {
             let messagesForAPI = [];
             
             // Include conversation history if available
-            if (this.currentConversation && this.currentConversation.messages) {
+            const messages = this.stateService.conversation.getConversationMessages(threadId);
+            if (messages) {
                 // Add existing messages (excluding system messages)
-                messagesForAPI = this.currentConversation.messages
+                messagesForAPI = messages
                     .filter(msg => msg.role !== MESSAGE_ROLES.SYSTEM)
                     .map(msg => ({
                         role: msg.role,
@@ -249,6 +252,8 @@ export class ChatService {
                     }));
                 
                 console.log(`[ChatService] Using ${messagesForAPI.length} messages from conversation history`);
+            } else {
+                console.log('[ChatService] No messages found for conversation history');
             }
             
             let syntheticMessages = [];
@@ -402,7 +407,9 @@ export class ChatService {
     async handleReparseMessage(payload) {
         console.log('[ChatService] Handling reparse message:', payload);
         const tools = this.stateService.mcp.getMcpTools();
-        const lastAssistantMessage = this.currentConversation.messages[this.currentConversation.messages.length - 1];
+        const threadId = this.stateService.conversation.getActiveThreadId();
+        const messages = this.stateService.conversation.getConversationMessages(threadId);
+        const lastAssistantMessage = messages[messages.length - 1];
         const { toolCalls, parseErrors } = await this.parseToolsFromResponse(lastAssistantMessage.content, tools);
         this.stateService.conversation.updateToolCalls(lastAssistantMessage.messageId, toolCalls);
 
@@ -517,9 +524,6 @@ export class ChatService {
         // Step 1: End the current conversation via backend
         await this.eventBus.emitAsync(EVENTS.CHAT.END_CONVERSATION, {}, { target: EVENT_CONTEXT.BACKGROUND });
         
-        // Clear current conversation
-        this.currentConversation = null;
-        
         // Step 2: Request host to get or create new conversation
         await this.sendGetOrCreateThread();
     }
@@ -547,13 +551,14 @@ export class ChatService {
 
         // Remove the last assistant message from the conversation ONLY if the assistant
         // was actually the last message in the conversation (not if last message was user message with error)
-        if (this.currentConversation && this.currentConversation.messages && this.currentConversation.messages.length > 0) {
-            const lastMessage = this.currentConversation.messages[this.currentConversation.messages.length - 1];
+        const conversation = this.stateService.conversation.getConversation(threadId);
+        if (conversation && conversation.messages && conversation.messages.length > 0) {
+            const lastMessage = conversation.messages[conversation.messages.length - 1];
             if (lastMessage.role === MESSAGE_ROLES.ASSISTANT) {
-                this.currentConversation.messages.pop();
+                conversation.messages.pop();
                 // Update the panel
                 if (this.panel.isReady()) {
-                    this.panel.updateConversation(this.currentConversation);
+                    this.panel.updateConversation(conversation);
                 }
             }
         }
@@ -568,10 +573,13 @@ export class ChatService {
     async handleConversationLoaded(payload) {
         console.log('[ChatService] Handling conversation loaded:', payload);
         
-        const { conversation } = payload;
+        let { conversation } = payload;
+        if (conversation && conversation.result) {
+            conversation = conversation.result;
+        }
         
         // Store the current conversation for context in AI requests
-        this.currentConversation = conversation;
+        //this.currentConversation = conversation;
         
         if (conversation && this.panel.isReady()) {
             console.log(`[ChatService] Displaying conversation with ID: ${conversation.threadId}`);
@@ -832,12 +840,7 @@ export class ChatService {
      */
     async sendInitialState(state) {
         if (this.panel.isReady()) {
-            const enhancedState = {
-                ...state,
-                includePageContent: this.stateService.ui.getIncludePageContent() !== false,
-                useMCP: this.stateService.ui.getUseMCP() !== false
-            };
-            this.panel.handleInitialState(enhancedState);
+            this.panel.handleInitialState(state);
         }
     }
 

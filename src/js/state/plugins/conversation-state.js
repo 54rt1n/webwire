@@ -26,6 +26,32 @@ export class ConversationStatePlugin {
     }
 
     /**
+     * Get a conversation by thread ID
+     * @param {string} threadId
+     * @returns {object} Conversation object
+     */
+    getConversation(threadId) {
+        const state = this.stateService.state.conversation;
+        return {
+            threadId: threadId,
+            messages: state.history[threadId],
+            metadata: state.metadata[threadId]
+        };
+    }
+
+    /**
+     * Get active thread
+     * @returns {object} Conversation object
+     */
+    getActiveThread() {
+        const threadId = this.getActiveThreadId();
+        if (threadId) {
+            return this.getConversation(threadId);
+        }
+        return null;
+    }
+
+    /**
      * Stores a partial user message in the state (first part of two-part message creation).
      * @param {string} threadId
      * @param {object} userMessage - { role, content, timestamp, title?, url?, model?, saved? }
