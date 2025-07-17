@@ -223,10 +223,10 @@
   .ww-content {
     flex: 1;
     overflow-y: auto;
-    padding: var(--space-3) var(--space-3) var(--space-2) var(--space-3);
+    padding: var(--space-2) var(--space-2) var(--space-2) var(--space-2);
     display: flex;
     flex-direction: column;
-    gap: var(--space-2);
+    gap: var(--space-1);
   }
   
   
@@ -881,26 +881,30 @@
   .ww-message {
     display: flex;
     flex-direction: column;
-    max-width: 85%;
+    max-width: 95%;
     padding: var(--space-2) var(--space-3);
     border-radius: var(--radius-lg);
     animation: messageSlideIn var(--transition-slow) ease-out;
     word-wrap: break-word;
     font-size: var(--font-size-sm);
     line-height: var(--line-height-normal);
+    margin-bottom: var(--space-2);
+    position: relative;
     
     &.ww-user {
       background: var(--color-primary-100);
       align-self: flex-end;
       border-bottom-right-radius: var(--radius-sm);
       color: var(--color-text-primary);
+      box-shadow: inset 3px 0 0 var(--color-primary-300), inset 0 1px 0 var(--color-primary-300);
     }
     
     &.ww-assistant {
-      background: var(--color-primary-50);
+      background: var(--color-gray-50);
       align-self: flex-start;
       border-bottom-left-radius: var(--radius-sm);
       color: var(--color-text-primary);
+      box-shadow: inset -3px 0 0 var(--color-gray-300), inset 0 -1px 0 var(--color-gray-300);
     }
     
     &.ww-thinking {
@@ -909,6 +913,7 @@
       align-self: flex-start;
       opacity: 0.8;
       color: var(--color-gray-700);
+      box-shadow: inset -3px 0 0 var(--color-gray-300), inset 0 -1px 0 var(--color-gray-300);
     }
     
     &.ww-error {
@@ -916,6 +921,16 @@
       border: 1px solid var(--color-error-200);
       color: var(--color-error-600);
       align-self: flex-start;
+      box-shadow: inset -3px 0 0 var(--color-error-300), inset 0 -1px 0 var(--color-error-300);
+    }
+
+    .ww-sender {
+      font-size: var(--font-size-xs);
+      font-weight: var(--font-weight-semibold);
+      color: var(--color-text-secondary);
+      margin-bottom: var(--space-1);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
     }
     
     .ww-content {
@@ -929,11 +944,18 @@
       font-size: var(--font-size-xs);
       color: var(--color-text-muted);
       align-self: flex-end;
+      margin-top: var(--space-1);
+    }
+
+    .ww-thinking-line {
+      display: flex;
+      align-items: center;
+      gap: var(--space-1);
     }
     
     .ww-thinking-indicator {
-      margin-right: var(--space-2);
       animation: pulse 2s infinite;
+      flex-shrink: 0;
     }
     
     .ww-thinking-text {
@@ -942,13 +964,14 @@
     
     .ww-streaming-content {
       font-style: normal;
+      flex: 1;
     }
     
     .ww-cursor {
       animation: blink 1s infinite;
       color: var(--color-primary-500);
       font-weight: var(--font-weight-bold);
-      margin-left: var(--space-1);
+      flex-shrink: 0;
     }
     
     .ww-error-icon {

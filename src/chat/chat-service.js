@@ -195,17 +195,18 @@ export class ChatService {
 
             // Store user message immediately in conversation state (part 1 of 2-part creation)
             const location = typeof window !== 'undefined' ? window.location.href : undefined;
+            const persona = this.stateService.aim.getAimMessageOptions();
             this.stateService.conversation.storePartialUserMessage(threadId, {
                 ...userMessage,
                 url: location,
                 title: document.title
             }, {
-                ...this.stateService.aim.getAimMessageOptions()
+                ...persona
             });
 
             // Display user message in panel
             if (!silent) {
-                this.panel.displayMessage(userMessage, { autoScroll: true });
+                this.panel.displayMessage(userMessage, { autoScroll: true, ...persona });
             }
 
             // Generate AI response with streaming
@@ -469,7 +470,7 @@ export class ChatService {
         // Store the current conversation for context in AI requests
         if (conversation && this.panel.isReady()) {
             console.log(`[ChatService] Displaying conversation with ID: ${conversation.threadId}`);
-            this.panel.displayConversation(conversation);
+            this.panel.displayConversation(conversation, this.stateService.aim.getAimMessageOptions());
             console.log(`[ChatService] Loaded conversation with ${conversation.messages?.length || 0} messages`);
         } else {
             console.warn('[ChatService] Cannot display conversation - panel not ready or no conversation data');

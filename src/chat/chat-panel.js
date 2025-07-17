@@ -11,7 +11,6 @@ export class WebChatPanel {
     constructor(eventBus) {
         this.eventBus = eventBus;
         this.renderer = new ChatUIRenderer();
-        this.currentSettings = null;
         this.container = null;
         this.isInjected = false;
         this.isVisible = false;
@@ -276,7 +275,7 @@ export class WebChatPanel {
     /**
      * Display a message
      */
-    displayMessage(message, {autoScroll = false, renderTools = false, toolMessages = [], ...options} = {}) {
+    displayMessage(message, {autoScroll = false, ...options} = {}) {
         console.log('[WebChatPanel] displayMessage:', message, options);
 
         this.prepareForMessage();
@@ -292,10 +291,7 @@ export class WebChatPanel {
         }
 
         // Create and append message element
-        const messageEl = this.renderer.createMessageElement(message, {
-            renderTools,
-            toolMessages
-        });
+        const messageEl = this.renderer.createMessageElement(message, options);
 
         this.elements.chatContent.appendChild(messageEl);
         
@@ -309,14 +305,13 @@ export class WebChatPanel {
     /**
      * Display a thinking message
      */
-    displayThinkingMessage(message) {
+    displayThinkingMessage(message, options) {
         console.log('[WebChatPanel] displayThinkingMessage:', message);
         
         this.prepareForMessage();
 
-        const messageEl = this.renderer.createMessageElement(message, {
-            isThinking: true
-        });
+        options.isThinking = true;
+        const messageEl = this.renderer.createMessageElement(message, options);
 
         this.elements.chatContent.appendChild(messageEl);
         this.scrollToBottom();
@@ -431,7 +426,7 @@ export class WebChatPanel {
     /**
      * Display a conversation
      */
-    displayConversation(conversation) {
+    displayConversation(conversation, options = {}) {
         if (!conversation?.messages) return;
 
         this.clearMessages();
@@ -451,7 +446,8 @@ export class WebChatPanel {
             }
             this.displayMessage(message, {
                 renderTools: toolMessages.length > 0,
-                toolMessages
+                toolMessages,
+                ...options
             });
         });
 
@@ -462,6 +458,7 @@ export class WebChatPanel {
 
     /**
      * Load conversation with options
+     * @deprecated
      */
     loadConversation(conversation, options = {}) {
         const { renderTools = true } = options;
@@ -486,7 +483,8 @@ export class WebChatPanel {
 
             this.displayMessage(message, {
                 renderTools: renderTools && toolMessages.length > 0,
-                toolMessages
+                toolMessages,
+                ...options
             });
         });
 

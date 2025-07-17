@@ -6,10 +6,11 @@ import { EVENTS } from '../js/core/events.js';
  * Extracted from ChatService streaming logic
  */
 export class AIResponseHandler {
-    constructor(eventBus, panel) {
+    constructor(eventBus, stateService, panel) {
         this.eventBus = eventBus;
         this.panel = panel;
-        
+        this.stateService = stateService;
+
         this.streamingState = {
             isActive: false,
             currentContent: '',
@@ -32,7 +33,7 @@ export class AIResponseHandler {
             messageId: messageId,
             content: message,
             role: 'assistant'
-        });
+        }, this.stateService.aim.getAimMessageOptions());
         
         return { messageId };
     }

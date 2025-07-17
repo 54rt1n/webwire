@@ -250,8 +250,6 @@ export class ChatUIRenderer {
     createMessageElement(message, options = {}) {
         const {
             isThinking = false,
-            toolMessages = [],
-            renderTools = true
         } = options;
 
         const messageEl = document.createElement('div');
@@ -261,11 +259,7 @@ export class ChatUIRenderer {
             messageEl.id = message.messageId || message.id;
         }
 
-        messageEl.innerHTML = this.createMessageHTML(message, {
-            isThinking,
-            toolMessages,
-            renderTools
-        });
+        messageEl.innerHTML = this.createMessageHTML(message, options);
 
         return messageEl;
     }
@@ -274,12 +268,24 @@ export class ChatUIRenderer {
      * Create message HTML
      */
     createMessageHTML(message, options = {}) {
-        const { isThinking, toolMessages, renderTools } = options;
+        const { isThinking, toolMessages, renderTools, userName, personaName } = options;
 
         const time = new Date(message.timestamp || Date.now()).toLocaleTimeString([], {
             hour: '2-digit',
             minute: '2-digit'
         });
+
+        // Generate sender name using persona names if available
+        let senderName = '';
+        if (isThinking) {
+            senderName = personaName || 'Assistant';
+        } else if (message.role === 'user') {
+            senderName = userName || 'You';
+        } else if (message.role === 'assistant') {
+            senderName = personaName || 'Assistant';
+        } else if (message.role === 'error') {
+            senderName = 'Error';
+        }
 
         let contentHTML = '';
         
@@ -296,6 +302,7 @@ export class ChatUIRenderer {
         }
 
         return `
+            <div class="ww-sender">${senderName}</div>
             <div class="ww-content">${contentHTML}</div>
             <div class="ww-time">${time}</div>
         `;
@@ -306,9 +313,11 @@ export class ChatUIRenderer {
      */
     createThinkingContentHTML() {
         return `
-            <span class="ww-thinking-indicator">💭</span>
-            <span class="ww-streaming-content"></span>
-            <span class="ww-cursor">▊</span>
+            <span class="ww-thinking-line">
+                <span class="ww-thinking-indicator">💭</span>
+                <span class="ww-streaming-content"></span>
+                <span class="ww-cursor">▊</span>
+            </span>
         `;
     }
 
