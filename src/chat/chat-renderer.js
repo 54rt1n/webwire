@@ -179,27 +179,40 @@ export class ChatUIRenderer {
     createInputContainerHTML() {
         return `
             <div class="ww-input-container">
-                <div class="ww-page-content-toggle">
-                    <div class="ww-left-column">
-                        <label class="ww-label">
-                            <input type="checkbox" class="ww-checkbox">
-                            <span class="ww-text">Include page content</span>
-                        </label>
-                        <label class="ww-label">
-                            <input type="checkbox" class="ww-checkbox mcp-checkbox">
-                            <span class="ww-text">Use MCP</span>
-                        </label>
-                        <label class="ww-label">
-                            <input type="checkbox" class="ww-checkbox browser-tools-checkbox">
-                            <span class="ww-text">Use browser tools</span>
-                        </label>
-                        <label class="ww-label">
-                            <input type="checkbox" class="ww-checkbox auto-execute-checkbox">
-                            <span class="ww-text">Auto-execute tools</span>
-                        </label>
+                <div class="ww-settings-drawer">
+                    <div class="ww-drawer-handle">
+                        <div class="ww-drawer-summary">
+                            <span class="ww-drawer-summary-text">Enabled: Page Content</span>
+                        </div>
+                        <button class="ww-drawer-toggle" title="Toggle settings">
+                            <svg class="ww-chevron-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M6 9l6 6 6-6"/>
+                            </svg>
+                        </button>
                     </div>
-                    <div class="ww-right-column">
-                        <button class="ww-retry-button" title="Retry last message">Retry</button>
+                    <div class="ww-drawer-content">
+                        <div class="ww-settings-grid">
+                            <label class="ww-label">
+                                <input type="checkbox" class="ww-checkbox ww-page-content-checkbox" checked>
+                                <span class="ww-text">Include page content</span>
+                            </label>
+                            <label class="ww-label">
+                                <input type="checkbox" class="ww-checkbox ww-mcp-checkbox">
+                                <span class="ww-text">Use MCP</span>
+                            </label>
+                            <label class="ww-label">
+                                <input type="checkbox" class="ww-checkbox ww-browser-tools-checkbox">
+                                <span class="ww-text">Use browser tools</span>
+                            </label>
+                            <label class="ww-label">
+                                <input type="checkbox" class="ww-checkbox ww-auto-execute-checkbox">
+                                <span class="ww-text">Auto-execute tools</span>
+                            </label>
+                        </div>
+                        <div class="ww-drawer-actions">
+                            <button class="ww-reparse-button" title="Reparse with tools">Reparse</button>
+                            <button class="ww-retry-button" title="Retry last message">Retry</button>
+                        </div>
                     </div>
                 </div>
                 <div class="ww-wrapper">
@@ -207,9 +220,6 @@ export class ChatUIRenderer {
                         class="ww-input" 
                         placeholder="Ask me anything about this page or use tools..."
                     ></textarea>
-                    <button class="ww-reparse-button" disabled title="Reparse with tools">
-                        ${this.templates.icons.reparse}
-                    </button>
                     <button class="ww-send-button" disabled title="Send message">
                         ${this.templates.icons.send}
                     </button>

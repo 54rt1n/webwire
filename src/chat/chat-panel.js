@@ -44,6 +44,9 @@ export class WebChatPanel {
         this.cacheElements();
         this.setupEventListeners();
         
+        // Initialize drawer state
+        this.initializeDrawerState();
+        
         // Add to DOM
         document.body.appendChild(this.container);
         this.isInjected = true;
@@ -86,11 +89,15 @@ export class WebChatPanel {
             statusIndicatorMcp: this.container.querySelector('.ww-status-indicator-mcp'),
             statusText: this.container.querySelector('.ww-status-text'),
             conversationId: this.container.querySelector('.ww-conversation-id'),
-            pageContentCheckbox: this.container.querySelector('.ww-checkbox'),
+            pageContentCheckbox: this.container.querySelector('.ww-page-content-checkbox'),
             mcpCheckbox: this.container.querySelector('.ww-mcp-checkbox'),
             browserToolsCheckbox: this.container.querySelector('.ww-browser-tools-checkbox'),
             autoExecuteCheckbox: this.container.querySelector('.ww-auto-execute-checkbox'),
-            retryBtn: this.container.querySelector('.ww-retry-button')
+            retryBtn: this.container.querySelector('.ww-retry-button'),
+            drawerToggle: this.container.querySelector('.ww-drawer-toggle'),
+            drawerContent: this.container.querySelector('.ww-drawer-content'),
+            drawerSummary: this.container.querySelector('.ww-drawer-summary-text'),
+            chevronIcon: this.container.querySelector('.ww-chevron-icon')
         };
     }
 
@@ -168,20 +175,28 @@ export class WebChatPanel {
             this.handleResync();
         });
 
+        this.elements.drawerToggle?.addEventListener('click', () => {
+            this.toggleDrawer();
+        });
+
         this.elements.pageContentCheckbox?.addEventListener('change', (e) => {
             this.handlePageContentToggle(e.target.checked);
+            this.updateDrawerSummary();
         });
 
         this.elements.mcpCheckbox?.addEventListener('change', (e) => {
             this.handleMcpToggle(e.target.checked);
+            this.updateDrawerSummary();
         });
 
         this.elements.browserToolsCheckbox?.addEventListener('change', (e) => {
             this.handleBrowserToolsToggle(e.target.checked);
+            this.updateDrawerSummary();
         });
 
         this.elements.autoExecuteCheckbox?.addEventListener('change', (e) => {
             this.handleAutoExecuteToggle(e.target.checked);
+            this.updateDrawerSummary();
         });
 
         this.elements.reparseBtn?.addEventListener('click', () => {
@@ -782,6 +797,9 @@ export class WebChatPanel {
             this.updateAutoExecuteSetting(state.autoExecuteTools);
         }
         
+        // Update drawer summary after setting initial state
+        this.updateDrawerSummary();
+        
         if (state.currentThread?.messages) {
             this.displayConversation(state.currentThread);
         }
@@ -848,5 +866,62 @@ export class WebChatPanel {
     updateConversation(conversation) {
         this.clearMessages();
         this.displayConversation(conversation);
+    }
+
+    /**
+     * Initialize drawer in collapsed state
+     */
+    initializeDrawerState() {
+        if (this.elements.drawerContent) {
+            this.elements.drawerContent.classList.add('collapsed');
+        }
+        this.updateDrawerSummary();
+    }
+
+    /**
+     * Toggle the settings drawer
+     */
+    toggleDrawer() {
+        if (!this.elements.drawerContent || !this.elements.chevronIcon) return;
+        
+        const isOpen = !this.elements.drawerContent.classList.contains('collapsed');
+        
+        if (isOpen) {
+            this.elements.drawerContent.classList.add('collapsed');
+            this.elements.chevronIcon.style.transform = 'rotate(0deg)';
+        } else {
+            this.elements.drawerContent.classList.remove('collapsed');
+            this.elements.chevronIcon.style.transform = 'rotate(180deg)';
+        }
+    }
+
+    /**
+     * Update the drawer summary text based on checked items
+     */
+    updateDrawerSummary() {
+        if (!this.elements.drawerSummary) return;
+        
+        const enabledFeatures = [];
+        
+        if (this.elements.pageContentCheckbox?.checked) {
+            enabledFeatures.push('Page Content');
+        }
+        if (this.elements.mcpCheckbox?.checked) {
+            enabledFeatures.push('MCP');
+        }
+        if (this.elements.browserToolsCheckbox?.checked) {
+            enabledFeatures.push('Browser Tools');
+        }
+        if (this.elements.autoExecuteCheckbox?.checked) {
+            enabledFeatures.push('Auto-Execute');
+        }
+        
+        if (enabledFeatures.length === 0) {
+            this.elements.drawerSummary.textContent = 'All features disabled';
+        } else if (enabledFeatures.length === 4) {
+            this.elements.drawerSummary.textContent = 'All features enabled';
+        } else {
+            this.elements.drawerSummary.textContent = `Enabled: ${enabledFeatures.join(', ')}`;
+        }
     }
 }

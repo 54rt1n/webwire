@@ -305,8 +305,6 @@ export class ChatService {
         const { toolCalls, parseErrors } = await this.parseToolsFromResponse(lastAssistantMessage.content, tools);
         this.stateService.conversation.updateToolCalls(lastAssistantMessage.messageId, toolCalls);
 
-        await this.stateService.disk.saveToStorage();
-
         console.log('[ChatService] Reparsed message:', toolCalls, parseErrors, lastAssistantMessage);
         const lastChatMessageElement = this.panel.getLastChatMessageElement();
         if (lastChatMessageElement) {

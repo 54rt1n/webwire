@@ -231,10 +231,98 @@
   
   
   .ww-input-container {
-    padding: var(--space-4);
+    padding: var(--space-2);
     background: var(--color-gray-50);
     border-top: 1px solid var(--color-border);
     flex-shrink: 0;
+    
+    .ww-settings-drawer {
+      margin-bottom: var(--space-3);
+      transition: margin-bottom var(--transition-normal);
+      
+      &:has(.ww-drawer-content.collapsed) {
+        margin-bottom: 0;
+        padding-bottom: 0;
+      }
+      
+      .ww-drawer-handle {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        cursor: pointer;
+        padding: var(--space-1) var(--space-2);
+        margin: calc(var(--space-2) * -1);
+        margin-bottom: var(--space-2);
+        border-radius: var(--radius-md);
+        transition: background-color var(--transition-normal);
+        
+        &:hover {
+          background-color: var(--color-gray-100);
+        }
+        
+        .ww-drawer-summary {
+          flex: 1;
+          
+          .ww-drawer-summary-text {
+            font-size: var(--font-size-xs);
+            color: var(--color-text-secondary);
+            font-weight: var(--font-weight-normal);
+          }
+        }
+        
+        .ww-drawer-toggle {
+          background: var(--color-gray-0);
+          border: 1px solid var(--color-border);
+          border-radius: var(--radius-sm);
+          padding: var(--space-1);
+          cursor: pointer;
+          color: var(--color-text-secondary);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          transition: all var(--transition-normal);
+          
+          &:hover {
+            background: var(--color-gray-100);
+            border-color: var(--color-gray-300);
+            color: var(--color-text-primary);
+          }
+          
+          .ww-chevron-icon {
+            width: 20px;
+            height: 20px;
+            transition: transform var(--transition-normal);
+            stroke-width: 2.5;
+          }
+        }
+      }
+      
+      .ww-drawer-content {
+        overflow: hidden;
+        transition: all var(--transition-normal);
+        max-height: 200px;
+        opacity: 1;
+        
+        &.collapsed {
+          max-height: 0;
+          opacity: 0;
+          margin-bottom: 0;
+        }
+        
+        .ww-settings-grid {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: var(--space-2);
+          padding-top: var(--space-2);
+        }
+        
+        .ww-drawer-actions {
+          display: flex;
+          justify-content: flex-end;
+          margin-top: var(--space-3);
+        }
+      }
+    }
     
     .ww-page-content-toggle {
       margin-bottom: var(--space-3);
@@ -265,6 +353,20 @@
         &:hover {
           color: var(--color-text-primary);
         }
+      }
+    }
+    
+    .ww-label {
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+      font-size: var(--font-size-xs);
+      color: var(--color-text-secondary);
+      cursor: pointer;
+      user-select: none;
+      
+      &:hover {
+        color: var(--color-text-primary);
       }
       
       .ww-checkbox {
@@ -322,6 +424,33 @@
       cursor: pointer;
       transition: all var(--transition-normal);
       font-weight: 500;
+      
+      &:hover:not(:disabled) {
+        background: var(--color-gray-200);
+        color: var(--color-gray-700);
+      }
+      
+      &:disabled {
+        opacity: 0.4;
+        cursor: not-allowed;
+      }
+    }
+    
+    .ww-drawer-actions .ww-reparse-button {
+      align-self: center;
+      margin-top: var(--space-2);
+      padding: 2px 12px;
+      font-size: var(--font-size-xs);
+      color: var(--color-gray-600);
+      background: var(--color-gray-100);
+      border: none;
+      border-radius: 12px;
+      cursor: pointer;
+      transition: all var(--transition-normal);
+      font-weight: 500;
+      width: auto;
+      height: auto;
+      margin-left: var(--space-2);
       
       &:hover:not(:disabled) {
         background: var(--color-gray-200);
