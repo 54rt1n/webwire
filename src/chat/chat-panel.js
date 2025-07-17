@@ -799,7 +799,7 @@ export class WebChatPanel {
         this.updateDrawerSummary();
         
         if (state.currentThread?.messages) {
-            this.displayConversation(state.currentThread);
+            this.displayConversation(state.currentThread, state.messageOptions);
         }
     }
 
@@ -861,9 +861,9 @@ export class WebChatPanel {
     /**
      * Update the conversation
      */
-    updateConversation(conversation) {
+    updateConversation(conversation, options = {}) {
         this.clearMessages();
-        this.displayConversation(conversation);
+        this.displayConversation(conversation, options);
     }
 
     /**

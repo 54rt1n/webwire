@@ -168,6 +168,11 @@ class WebWireContentHost {
             
             // Get active thread directly from state service
             const currentThread = stateService.conversation.getActiveThread();
+
+            const messageOptions = {
+                ...stateService.aim.getAimMessageOptions(),
+                ...currentThread.metadata
+            };
             
             // Get connection states directly from services
             const state = {
@@ -177,7 +182,8 @@ class WebWireContentHost {
                 includePageContent: stateService.ui.getIncludePageContent() !== false,
                 useMCP: stateService.ui.getUseMCP() !== false,
                 useBrowserTools: stateService.ui.getUseBrowserTools() !== false,
-                autoExecuteTools: stateService.ui.getAutoExecuteTools() !== false
+                autoExecuteTools: stateService.ui.getAutoExecuteTools() !== false,
+                messageOptions: messageOptions
             };
             
             // Send to ChatService
