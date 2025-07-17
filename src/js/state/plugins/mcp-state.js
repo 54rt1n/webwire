@@ -48,12 +48,20 @@ export class MCPStatePlugin {
     }
 
     /**
+     * Get the MCP server URL
+     * @returns {string} The MCP server URL
+     */
+    getMcpServerUrl() {
+        return this.stateService.state.settings.mcp.serverUrl;
+    }
+
+    /**
      * Set the MCP server URL in settings
      * @param {string} serverUrl - The MCP server URL to connect to
      */
     setMcpServerUrl(serverUrl) {
         this.stateService.state.settings.mcp.serverUrl = serverUrl;
-        console.log(`Set MCP server URL: ${serverUrl}`);
+        console.log(`[StateService::MCPState] Set MCP server URL: ${serverUrl}`);
     }
 
     // Connection Management Methods
@@ -91,7 +99,7 @@ export class MCPStatePlugin {
         this.stateService.state.mcp.connection.isConnected = false;
         this.stateService.state.mcp.connection.isInitialized = false;
         
-        console.error(`MCP connection error: ${error}`);
+        console.error(`[StateService::MCPState] MCP connection error: ${error}`);
         this.eventBus.emit(EVENTS.MCP.CONNECTION_ERROR, { error });
     }
 

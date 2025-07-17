@@ -36,6 +36,7 @@ export const EVENTS = {
         INJECT_PANEL: 'chat:inject-panel',
         REPLAY_LAST_TURN: 'chat:replay-last-turn',
         REPARSE_MESSAGE: 'chat:reparse-message',
+        RESYNC: 'chat:resync',
         SAVE_MESSAGE: 'chat:save-message',
         SAVE_PANEL_VISIBILITY: 'chat:save-panel-visibility',
         SEND_MESSAGE: 'chat:send-message',

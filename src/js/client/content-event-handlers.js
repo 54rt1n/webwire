@@ -170,6 +170,39 @@ export class ContentEventHandlers {
         this.eventBus.onAsync(EVENTS.CHAT.UPDATE_SETTINGS, this.handleUpdateSettings.bind(this));
         this.eventBus.onAsync(EVENTS.CHAT.GET_OR_CREATE_THREAD, this.handleGetOrCreateThread.bind(this));
         this.eventBus.onAsync(EVENTS.CHAT.CREATE_NEW_THREAD, this.handleCreateNewThread.bind(this));
+        this.eventBus.onAsync(EVENTS.CHAT.RESYNC, this.handleResync.bind(this));
+    }
+
+    /**
+     * Handle resync request from ChatService
+     */
+    async handleResync(data) {
+        console.log('[ContentEventHandlers] Handling resync request');
+        
+        try {
+            // Get fresh state from background
+            const response = await this.dispatcher.dispatch(
+                BACKGROUND_ACTIONS.GET_WEBWIRE_STATE,
+                {},
+                { target: 'background' }
+            );
+            
+            if (response.success && response.result) {
+                console.log('[ContentEventHandlers] Received fresh state from background:', response.result);
+                
+                // Update the content state service
+                if (this.core?.stateService) {
+                    this.core.stateService.setState(response.result);
+                }
+                
+                return { success: true };
+            } else {
+                throw new Error('Failed to get state from background');
+            }
+        } catch (error) {
+            console.error('[ContentEventHandlers] Failed to resync:', error);
+            return { success: false, error: error.message };
+        }
     }
 
     /**
@@ -374,8 +407,6 @@ export class ContentEventHandlers {
             throw error;
         }
     }
-
-
 
     setupContentActions() {
         // Late-bind content actions that depend on services

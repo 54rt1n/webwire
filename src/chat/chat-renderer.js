@@ -93,7 +93,7 @@ export class ChatUIRenderer {
                     <span class="ww-conversation-id">Ready for conversation</span>
                 </div>
                 <div class="ww-actions">
-                    ${this.createHeaderButton('replay-turn', 'Replay Last Turn', this.templates.icons.replay)}
+                    ${this.createHeaderButton('resync', 'Resync', this.templates.icons.replay)}
                     ${this.createHeaderButton('new-conversation', 'New Conversation', this.templates.icons.plus)}
                     ${this.createHeaderButton('close-panel', 'Close', this.templates.icons.close)}
                 </div>
@@ -175,22 +175,27 @@ export class ChatUIRenderer {
         return `
             <div class="ww-input-container">
                 <div class="ww-page-content-toggle">
-                    <label class="ww-label">
-                        <input type="checkbox" class="ww-checkbox">
-                        <span class="ww-text">Include page content</span>
-                    </label>
-                    <label class="ww-label">
-                        <input type="checkbox" class="ww-checkbox mcp-checkbox">
-                        <span class="ww-text">Use MCP</span>
-                    </label>
-                    <label class="ww-label">
-                        <input type="checkbox" class="ww-checkbox browser-tools-checkbox">
-                        <span class="ww-text">Use browser tools</span>
-                    </label>
-                    <label class="ww-label">
-                        <input type="checkbox" class="ww-checkbox auto-execute-checkbox">
-                        <span class="ww-text">Auto-execute tools</span>
-                    </label>
+                    <div class="ww-left-column">
+                        <label class="ww-label">
+                            <input type="checkbox" class="ww-checkbox">
+                            <span class="ww-text">Include page content</span>
+                        </label>
+                        <label class="ww-label">
+                            <input type="checkbox" class="ww-checkbox mcp-checkbox">
+                            <span class="ww-text">Use MCP</span>
+                        </label>
+                        <label class="ww-label">
+                            <input type="checkbox" class="ww-checkbox browser-tools-checkbox">
+                            <span class="ww-text">Use browser tools</span>
+                        </label>
+                        <label class="ww-label">
+                            <input type="checkbox" class="ww-checkbox auto-execute-checkbox">
+                            <span class="ww-text">Auto-execute tools</span>
+                        </label>
+                    </div>
+                    <div class="ww-right-column">
+                        <button class="ww-retry-button" title="Retry last message">Retry</button>
+                    </div>
                 </div>
                 <div class="ww-wrapper">
                     <textarea 

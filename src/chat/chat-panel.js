@@ -74,7 +74,7 @@ export class WebChatPanel {
             panel: this.container.querySelector('.ww-panel'),
             fab: this.container.querySelector('.ww-fab'),
             closeBtn: this.container.querySelector('#close-panel'),
-            replayTurnBtn: this.container.querySelector('#replay-turn'),
+            resyncBtn: this.container.querySelector('#resync'),
             analyzePageBtn: this.container.querySelector('#analyze-page-btn'),
             newConversationBtn: this.container.querySelector('#new-conversation'),
             chatContent: this.container.querySelector('.ww-content'),
@@ -88,7 +88,8 @@ export class WebChatPanel {
             pageContentCheckbox: this.container.querySelector('.ww-checkbox'),
             mcpCheckbox: this.container.querySelector('.mcp-checkbox'),
             browserToolsCheckbox: this.container.querySelector('.browser-tools-checkbox'),
-            autoExecuteCheckbox: this.container.querySelector('.auto-execute-checkbox')
+            autoExecuteCheckbox: this.container.querySelector('.auto-execute-checkbox'),
+            retryBtn: this.container.querySelector('.ww-retry-button')
         };
     }
 
@@ -162,8 +163,8 @@ export class WebChatPanel {
             this.handleNewConversationRequest();
         });
 
-        this.elements.replayTurnBtn?.addEventListener('click', () => {
-            this.handleReplayLastTurn();
+        this.elements.resyncBtn?.addEventListener('click', () => {
+            this.handleResync();
         });
 
         this.elements.pageContentCheckbox?.addEventListener('change', (e) => {
@@ -184,6 +185,10 @@ export class WebChatPanel {
 
         this.elements.reparseBtn?.addEventListener('click', () => {
             this.handleReparseRequest();
+        });
+
+        this.elements.retryBtn?.addEventListener('click', () => {
+            this.handleReplayLastTurn();
         });
     }
 
@@ -436,6 +441,7 @@ export class WebChatPanel {
 
         this.updateConversationIdDisplay(conversation.threadId);
         this.updateReparseButton(conversation.messages.length > 0);
+        this.updateRetryButton(conversation.messages.length > 0);
     }
 
     /**
@@ -470,6 +476,7 @@ export class WebChatPanel {
 
         this.updateConversationIdDisplay(conversation.threadId);
         this.updateReparseButton(conversation.messages.length > 0);
+        this.updateRetryButton(conversation.messages.length > 0);
         this.scrollToBottom();
     }
 
@@ -570,6 +577,12 @@ export class WebChatPanel {
         if (this.elements.reparseBtn) {
             this.elements.reparseBtn.style.display = visible ? 'block' : 'none';
             this.elements.reparseBtn.disabled = !visible;
+        }
+    }
+
+    updateRetryButton(visible) {
+        if (this.elements.retryBtn) {
+            this.elements.retryBtn.disabled = !visible;
         }
     }
 
@@ -682,12 +695,18 @@ export class WebChatPanel {
         console.log('[WebChatPanel] New conversation requested');
         this.clearMessages();
         this.updateConversationIdDisplay(null);
+        this.updateRetryButton(false);
         this.eventBus.emit(EVENTS.CHAT.START_NEW_CONVERSATION, {});
     }
 
     handleReplayLastTurn() {
         console.log('[WebChatPanel] Replay last turn requested');
         this.eventBus.emit(EVENTS.CHAT.REPLAY_LAST_TURN, {});
+    }
+
+    handleResync() {
+        console.log('[WebChatPanel] Resync requested');
+        this.eventBus.emit(EVENTS.CHAT.RESYNC, {});
     }
 
     handleReparseRequest() {

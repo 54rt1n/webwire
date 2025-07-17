@@ -53,7 +53,6 @@ export class MCPConnector {
         throw new Error('State service not provided');
       }
 
-      this.stateService.mcp.setMcpServerUrl(this.mcpServerUrl);
       this.stateService.mcp.setMcpConnection({ sessionId: this.sessionId });
 
       if (this.stateService.mcp.isMcpInitialized()) {
@@ -78,9 +77,14 @@ export class MCPConnector {
         
         return tools;
       } catch (error) {
-        console.error('[MCPConnector] Failed to initialize MCP connector:', error);
-        this.stateService.mcp.setMcpConnectionError(error.message);
-        throw error;
+        // console.error('[MCPConnector] Failed to initialize MCP connector');
+        if (error instanceof Event) {
+          this.stateService.mcp.setMcpConnectionError('SSE connection error. Is your MCP server secure?');
+        } else if (error instanceof Error) {
+          this.stateService.mcp.setMcpConnectionError(error.message);
+        } else {
+          this.stateService.mcp.setMcpConnectionError('Unknown error');
+        }
       }
     }
   
@@ -107,7 +111,7 @@ export class MCPConnector {
         // Use bound listeners for proper cleanup
         this.eventSource.onopen = this.onOpenBound;
         this.eventSource.onmessage = this.onMessageBound;
-        this.eventSource.onerror = this.onErrorBound;
+        this.eventSource.onerror = this.onErrorBound; // This emits an Event object that contains some unhelpful errors
         
         // Listen for the 'endpoint' event to get the POST URL
         this.eventSource.addEventListener('endpoint', this.onEndpointBound);
@@ -165,10 +169,10 @@ export class MCPConnector {
     
     /**
      * Handle SSE connection errors and manage connection state
-     * @param {Event} error - The error event from EventSource
+     * @param {Event} event - The error event from EventSource
      */
-    handleError(error) {
-      console.error('[MCPConnector] SSE error:', error);
+    handleError(event) {
+      console.error('[MCPConnector] SSE error'); // The event message is pretty useless.
       this.stateService.mcp.setMcpConnected(false);
 
       if (this.connectionTimeout) {
@@ -177,8 +181,8 @@ export class MCPConnector {
       }
 
       if (!this.stateService.mcp.isMcpInitialized() && this.rejectConnection) {
-        this.stateService.mcp.setMcpConnectionError(error.message || 'SSE connection error');
-        this.rejectConnection(error);
+        // The error event is pretty useless. It doesn't even have a message, so we'll just throw a generic error.
+        this.rejectConnection(new Error('SSE connection error. Is your MCP server secure?'));
       }
       // Clean up promise handlers
       this.resolveConnection = null;
@@ -226,7 +230,8 @@ export class MCPConnector {
         }
       } catch (error) {
         console.error('[MCPConnector] Error handling endpoint event:', error);
-        this.stateService.mcp.setMcpConnectionError(error.message);
+        const message = error.message || error.toString();
+        this.stateService.mcp.setMcpConnectionError(message);
         if (this.rejectConnection) {
           this.rejectConnection(error);
         }

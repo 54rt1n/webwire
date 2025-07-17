@@ -60,6 +60,7 @@ class WebWireContentHost {
         
         // Initialize WebWire core
         await this.core.initialize();
+        await this.core.connect();
         
         console.log('[WebWireContentHost] Core initialized with:', {
             stateService: !!this.core.stateService,

@@ -12,7 +12,6 @@ export class WebWireClientCore {
         this.stateService = null;
         this.mcpConnector = null;
         this.aiClient = null;
-        this.serverUrl = null;
         this.storage = null;
         this.dispatcher = null;
     }
@@ -45,11 +44,16 @@ export class WebWireClientCore {
      * @returns {boolean} true if connection is successful, false otherwise
      */
     async connect() {
-        this.serverUrl = this.stateService.state.settings?.mcp?.serverUrl || 'http://localhost:8000/sse';
-        console.log(`[WebWireClientCore] Attempting to connect to: ${this.serverUrl}`);
+        const serverUrl = this.stateService.mcp.getMcpServerUrl();
+        if (!serverUrl) {
+            console.error('[WebWireClientCore] No MCP server URL found');
+            return false;
+        }
 
         try {
-            this.mcpConnector = new MCPConnector(this.serverUrl);
+            console.log(`[WebWireClientCore] Attempting to connect to: ${serverUrl}`);
+
+            this.mcpConnector = new MCPConnector(serverUrl);
             await this.mcpConnector.initialize(this.stateService);
 
             console.log('[WebWireClientCore] Connection successful.');

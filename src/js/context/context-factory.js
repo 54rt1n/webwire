@@ -4,6 +4,7 @@ import { EventErrorBoundary } from '../core/error-boundary.js';
 import { MCPConnector } from '../mcp/mcp-connector.js';
 import { StateService, ContentStateService } from '../state/state-service.js';
 import { StorageManager } from '../storage/storage-manager.js';
+import { createInitialState } from '../state/state-container.js';
 
 export async function contextFactory(eventBus, context,
     {storage = false, state = false, contentState = false, ai = false, mcp = false},
@@ -31,7 +32,10 @@ export async function contextFactory(eventBus, context,
                 { target: 'background' }
             );
         console.log('[ContextFactory] Initial state from background:', response);
-        initialState = response.result || {};
+        initialState = {
+            ...createInitialState(),
+            ...(response.result || {})
+        };
     }
 
     if (storage) {

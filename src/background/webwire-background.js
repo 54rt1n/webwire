@@ -721,10 +721,6 @@ class WebWireBackground {
                 return {
                     settings: {},
                     conversation: {},
-                    mcp: {},
-                    panelInjected: false,
-                    mcpConnected: false,
-                    aiClientConfigured: false,
                     frameworkReady: false
                 };
             }
@@ -733,9 +729,6 @@ class WebWireBackground {
             const state = {
                 settings: this.stateService.state.settings || {},
                 conversation: this.stateService.state.conversation || {},
-                mcp: this.stateService.state.mcp || {},
-                ui: this.stateService.state.ui || {},
-                panelInjected: false, // We'll determine this by trying to ping content script
                 frameworkReady: true
             };
 

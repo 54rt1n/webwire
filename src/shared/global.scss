@@ -238,6 +238,20 @@
     
     .ww-page-content-toggle {
       margin-bottom: var(--space-3);
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      
+      .ww-left-column {
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-1);
+      }
+      
+      .ww-right-column {
+        display: flex;
+        align-items: flex-end;
+      }
       
       .ww-label {
         display: flex;
@@ -293,6 +307,30 @@
       
       .ww-text {
         font-weight: var(--font-weight-medium);
+      }
+    }
+    
+    .ww-retry-button {
+      align-self: center;
+      margin-top: var(--space-2);
+      padding: 2px 12px;
+      font-size: var(--font-size-xs);
+      color: var(--color-gray-600);
+      background: var(--color-gray-100);
+      border: none;
+      border-radius: 12px;
+      cursor: pointer;
+      transition: all var(--transition-normal);
+      font-weight: 500;
+      
+      &:hover:not(:disabled) {
+        background: var(--color-gray-200);
+        color: var(--color-gray-700);
+      }
+      
+      &:disabled {
+        opacity: 0.4;
+        cursor: not-allowed;
       }
     }
     
@@ -440,6 +478,7 @@
     transform: scale(0);
     pointer-events: none;
   }
+  
 }
 
 /* Dashboard Container */

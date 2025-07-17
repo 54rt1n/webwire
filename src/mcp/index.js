@@ -147,7 +147,7 @@ class MCPControlPanelApp {
             
             this.fetchAllData();
         } else {
-            this.panel.renderConnectionStatus('disconnected', `Failed: ${error.message}`);
+            this.panel.renderConnectionStatus('disconnected', `Failed to connect to MCP server`);
             
             // Notify ChatService about MCP disconnection
             this.eventBus.emit('mcp:connection-changed', {
