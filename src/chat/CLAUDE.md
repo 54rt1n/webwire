@@ -40,30 +40,6 @@ The central orchestration layer handling:
 - Page content extraction and context building
 - Event coordination between components
 
-#### Key Responsibilities:
-```javascript
-class ChatService {
-    // Core chat operations
-    handleUserMessage()         // Process user input with AI
-    handleReparseMessage()      // Reparse with tool execution
-    handlePageAnalysisRequest() // Analyze current page
-    
-    // Tool integration
-    parseToolsFromResponse()    // Extract tool calls from AI
-    handleExecuteToolCall()     // Execute MCP tools
-    handleToolResult()          // Process tool responses
-    
-    // Context building
-    buildPageContext()          // Extract page content
-    buildStashContext()         // Include stashed documents
-    
-    // Streaming support
-    addThinkingMessage()        // Start streaming message
-    handleStreamingChunk()      // Update streaming content
-    finalizeStreamingMessage()  // Complete streaming
-}
-```
-
 #### Message Processing Flow:
 1. **Input Processing** - Validates and prepares user message
 2. **Context Building** - Extracts page content, stash content, system prompts

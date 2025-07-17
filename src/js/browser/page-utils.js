@@ -21,32 +21,33 @@ export class SemanticPageExtractor {
      * Main extraction method. Produces a structured object representing the page.
      * @returns {Object} A structured representation of the page.
      */
-    extract() {
-        const extractedData = {
+    extract({ includePageNavigation = false, maxTextTokens = null } = {}) {
+        let extractedData = {
             url: window.location.href,
             title: document.title,
             language: document.documentElement.lang || 'en',
-            headings: this.extractHeadings(),
             links: this.extractLinks(),
-            images: this.extractImages(),
             metadata: this.extractMetadata(),
-            summary: {
-                description: this.getMetaContent('description'),
-                ogTitle: this.getMetaContent('og:title'),
-                ogDescription: this.getMetaContent('og:description'),
-            },
-            interactiveElements: this.extractInteractiveElements(),
             timestamp: new Date().toISOString(),
-            text: this.extractMainContent(), // Keep 'text' for compatibility
-            mainContent: this.extractMainContent(),
         };
-        
-        console.log('[SemanticPageExtractor] Extracted structured content:', {
-            url: extractedData.url,
-            title: extractedData.title,
-            contentLength: extractedData.mainContent.length,
-            interactiveElements: extractedData.interactiveElements.length
-        });
+
+        if (includePageNavigation) {
+            extractedData.headings = this.extractHeadings();
+            extractedData.images = this.extractImages();
+            extractedData.interactiveElements = this.extractInteractiveElements();
+        }
+
+        if (maxTextTokens) {
+            const dataTokens = JSON.stringify(extractedData).split(' ').length * 1.75;
+            if (dataTokens < maxTextTokens) {
+                console.log('[SemanticPageExtractor] Extracting main content with maxTextTokens:', maxTextTokens - dataTokens);
+                extractedData.mainContent = this.extractMainContent({ maxTextTokens: maxTextTokens - dataTokens });
+            }
+        } else {
+            extractedData.mainContent = this.extractMainContent();
+        }
+
+        console.log('[SemanticPageExtractor] Extracted structured content:', extractedData);
 
         return extractedData;
     }
@@ -56,7 +57,7 @@ export class SemanticPageExtractor {
      * Uses a comprehensive approach to capture meaningful content.
      * @returns {string} Cleaned, structurally-preserved text content.
      */
-    extractMainContent() {
+    extractMainContent({ maxTextTokens = null } = {}) {
         // Create a copy of the document to manipulate
         const tempDoc = document.cloneNode(true);
         
@@ -68,10 +69,15 @@ export class SemanticPageExtractor {
         const text = tempDoc.body ? tempDoc.body.innerText : '';
         
         // Clean up whitespace and limit length
-        const cleanedText = text
-            .replace(/\s+/g, ' ') // Normalize whitespace
-            .trim()
-            .slice(0, this.config.maxTextLength);
+        const cleanedText = text.replace(/\s+/g, ' ').trim();
+        if (maxTextTokens) {
+            const words = cleanedText.split(' ');
+            const tokens = words.length * 0.75;
+            if (tokens > maxTextTokens) {
+                const wordsToKeep = Math.floor(maxTextTokens / 0.75);
+                cleanedText = words.slice(0, wordsToKeep).join(' ');
+            }
+        }
             
         return cleanedText;
     }
@@ -329,19 +335,8 @@ export class PageUtils {
      * The primary method to get all relevant page data in a structured format.
      * @returns {Object} A structured object containing all extracted page content.
      */
-    getCurrentPageContent() {
-        return this.extractor.extract();
-    }
-
-    /**
-     * Builds a structured context object to be sent to the AI.
-     * This replaces the old pattern of jamming text into the user prompt.
-     * @returns {Object} A structured context object for the AI.
-     */
-    buildPageContext() {
-        // In the new architecture, we just return the full structured object.
-        // The ChatService will be responsible for placing this into the final API call payload.
-        return this.getCurrentPageContent();
+    getCurrentPageContent({ includePageNavigation = false, maxTextTokens = null } = {}) {
+        return this.extractor.extract({ includePageNavigation, maxTextTokens });
     }
 
     /**

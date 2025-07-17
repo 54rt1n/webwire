@@ -76,7 +76,7 @@ export class OpenAIClient extends AbstractAIClient {
     /**
      * Build the messages array for OpenAI API format
      * @param {string} currentMessage - The current user message
-     * @param {Array} gameHistory - Array of previous conversation turns
+     * @param {Array} conversationHistory - Array of previous conversation turns
      * @param {string} systemPrompt - System prompt to include at the beginning
      * @param {Object} [options={}] - Additional options
      * @param {number|null} [options.maxHistory=null] - Maximum number of history turns to include
@@ -84,7 +84,7 @@ export class OpenAIClient extends AbstractAIClient {
      * @returns {string} returns[].role - The role of the message sender ('system', 'user', 'assistant')
      * @returns {string} returns[].content - The content of the message
      */
-    buildMessages(currentMessage, gameHistory, systemPrompt, { maxHistory = null } = {}) {
+    buildMessages(currentMessage, conversationHistory, systemPrompt, { maxHistory = null } = {}) {
         const messages = [
             {
                 role: "system",
@@ -92,16 +92,16 @@ export class OpenAIClient extends AbstractAIClient {
             }
         ];
 
-        // Add recent game history for context (last 6 turns)
-        if (gameHistory.length > 0) {
+        // Add recent conversation history for context (last 6 turns)
+        if (conversationHistory.length > 0) {
             if (maxHistory) {
-                messages.push(...gameHistory.slice(-maxHistory));
+                messages.push(...conversationHistory.slice(-maxHistory));
             } else {
-                messages.push(...gameHistory);
+                messages.push(...conversationHistory);
             }
         }
 
-        // Add current player input
+        // Add current user input
         messages.push({
             role: "user",
             content: currentMessage

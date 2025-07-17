@@ -41,6 +41,8 @@ export class ChatService {
         this.domConnector = new DOMConnector(this.eventBus);
         this.stateService = null;
         this.toolParser = new ToolParser();
+
+        this.maxRequestTokens = 16384;
         
         // Service Components
         this.messageBuilder = new MessageBuilder(this.pageUtils);
@@ -163,6 +165,30 @@ export class ChatService {
                 timestamp: Date.now()
             };
 
+            // Get available tools and build system prompt
+            const tools = this.toolExecutor.getAvailableTools();
+            const systemPrompts = this.buildSystemPrompts(tools, customSystemPrompt);
+
+            // Build page context and prepare m
+            const conversationMessages = this.stateService.conversation.getConversationMessages(threadId);
+
+            // Calculate tokens: subtract AI response tokens and existing conversation tokens
+            const systemPromptTokens = this.messageBuilder.countTokens(systemPrompts);
+            const aiResponseTokens = this.aiClient.samplerConfig?.maxTokens ?? 2048;
+            const conversationTokens = conversationMessages.reduce((total, msg) => {
+                return total + this.messageBuilder.countTokens(msg.content || '');
+            }, 0);
+            const userMessageTokens = this.messageBuilder.countTokens(userMessage.content);
+            const maxTextTokens = this.maxRequestTokens - aiResponseTokens - conversationTokens - systemPromptTokens - userMessageTokens;
+            console.log('[ChatService] Max text tokens:', maxTextTokens, 'aiResponseTokens:', aiResponseTokens, 'conversationTokens:', conversationTokens, 'systemPromptTokens:', systemPromptTokens, 'userMessageTokens:', userMessageTokens);
+            const includePageNavigation = false;
+            const pageContext = this.messageBuilder.buildPageContext(this.stateService, { forcePageContent, includePageNavigation, maxTextTokens });
+            const { messagesForAPI, enhancedUserMessage } = this.messageBuilder.prepareMessagesForAPI(
+                userMessage.content,
+                conversationMessages,
+                pageContext,
+            );
+
             // Store user message immediately in conversation state (part 1 of 2-part creation)
             const location = typeof window !== 'undefined' ? window.location.href : undefined;
             this.stateService.conversation.storePartialUserMessage(threadId, {
@@ -177,21 +203,6 @@ export class ChatService {
             if (!silent) {
                 this.panel.displayMessage(userMessage, { autoScroll: true });
             }
-
-            // Get available tools and build system prompt
-            const tools = this.toolExecutor.getAvailableTools();
-            const systemPrompts = this.buildSystemPrompts(tools, customSystemPrompt);
-
-
-            // Build page context and prepare messages
-            const pageContext = this.messageBuilder.buildPageContext(this.stateService, forcePageContent);
-            const { messagesForAPI, enhancedUserMessage } = this.messageBuilder.prepareMessagesForAPI(
-                threadId,
-                message,
-                this.stateService,
-                pageContext,
-                this.currentConversation
-            );
 
             // Generate AI response with streaming
             const { response, thinkingMessage } = await this.responseHandler.generateAIResponse(
@@ -456,8 +467,6 @@ export class ChatService {
         }
         
         // Store the current conversation for context in AI requests
-        //this.currentConversation = conversation;
-        
         if (conversation && this.panel.isReady()) {
             console.log(`[ChatService] Displaying conversation with ID: ${conversation.threadId}`);
             this.panel.displayConversation(conversation);

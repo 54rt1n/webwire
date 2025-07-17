@@ -15,12 +15,31 @@ const MESSAGE_ROLES = {
 export class MessageBuilder {
     constructor(pageUtils) {
         this.pageUtils = pageUtils;
+        // Rough estimate: 1 token ≈ 0.75 words (common approximation for English text)
+        this.WORDS_PER_TOKEN = 0.75;
+    }
+
+    /**
+     * Count approximate tokens in text
+     * @param {string} text - Text to count tokens for
+     * @returns {number} Approximate token count
+     */
+    countTokens(text) {
+        if (!text || typeof text !== 'string') return 0;
+        
+        // Count words (splitting on whitespace and punctuation)
+        const words = text.split(/\s+/).filter(word => word.length > 0).length;
+        
+        // Convert to approximate tokens
+        const tokens = Math.ceil(words / this.WORDS_PER_TOKEN);
+        console.log('[MessageBuilder] Counting tokens:', text, 'words:', words, 'tokens:', tokens);
+        return tokens;
     }
 
     /**
      * Build page context from stash and page content
      */
-    buildPageContext(stateService, forcePageContent) {
+    buildPageContext(stateService, {forcePageContent = false, includePageNavigation = false, maxTextTokens = null} = {}) {
         const syntheticMessages = [];
         const syntheticSources = [];
         
@@ -33,7 +52,7 @@ export class MessageBuilder {
 
         // Add page content
         if (forcePageContent || stateService.ui.getIncludePageContent() !== false) {
-            const pageContext = this.pageUtils.buildPageContext();
+            const pageContext = this.pageUtils.getCurrentPageContent({ maxTextTokens, includePageNavigation });
             // Convert page context object to string representation
             const pageContextString = typeof pageContext === 'object' 
                 ? JSON.stringify(pageContext, null, 2) 
@@ -60,7 +79,7 @@ export class MessageBuilder {
      * Build tool messages from last assistant message
      */
     buildToolMessagesHeader(lastAssistantMessage) {
-        if (!lastAssistantMessage?.toolCalls?.length) {
+        if (!lastAssistantMessage?.toolCallsn?.length) {
             return null;
         }
 
@@ -78,12 +97,13 @@ export class MessageBuilder {
 
     /**
      * Prepare messages for API including conversation history
+     *  the stateService will be used to get the conversation history
      */
-    prepareMessagesForAPI(threadId, userMessage, stateService, pageContext, conversation) {
+    prepareMessagesForAPI(userMessage, conversationMessages, pageContext) {
         let messagesForAPI = [];
         
         // Get conversation history
-        const messages = stateService.conversation.getConversationMessages(threadId);
+        const messages = conversationMessages;
         if (messages) {
             messagesForAPI = messages
                 .filter(msg => msg.role !== MESSAGE_ROLES.SYSTEM)
@@ -101,7 +121,7 @@ export class MessageBuilder {
         }
 
         // Add tool messages from last assistant message
-        const toolMessagesHeader = this.buildToolMessagesHeader(conversation?.messages?.[conversation.messages.length - 1]);
+        const toolMessagesHeader = this.buildToolMessagesHeader(messagesForAPI[messagesForAPI.length - 1]);
         if (toolMessagesHeader) {
             syntheticHeaders.push(toolMessagesHeader);
         }
