@@ -60,8 +60,6 @@ class WebWireContentHost {
         
         // Initialize WebWire core
         await this.core.initialize();
-        await this.core.connect();
-        
         console.log('[WebWireContentHost] Core initialized with:', {
             stateService: !!this.core.stateService,
             aiClient: !!this.core.aiClient,
@@ -80,6 +78,9 @@ class WebWireContentHost {
         // Initialize ChatService with the core services
         await this.chatService.initialize(this.core.aiClient, this.core.mcpConnector, this.core.stateService);
         console.log('[WebWireContentHost] ChatService initialized');
+
+        await this.core.connect();
+        
         
         // Handle auto-inject and panel restoration
         try {

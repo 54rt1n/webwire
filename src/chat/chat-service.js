@@ -60,7 +60,11 @@ export class ChatService {
         this.eventBus.on(EVENTS.CHAT.SEND_MESSAGE, this.handleUserMessage.bind(this));
         this.eventBus.on(EVENTS.CHAT.ANALYZE_PAGE, this.handlePageAnalysisRequest.bind(this));
         this.eventBus.on(EVENTS.CHAT.UPDATE_SETTINGS, this.handleSettingsRefresh.bind(this));
-        this.eventBus.on(EVENTS.CHAT.UPDATE_MCP_STATUS, this.handleMCPStatusUpdate.bind(this));
+        this.eventBus.on(EVENTS.MCP.CONNECTED, this.handleMCPStatusUpdate.bind(this));
+        this.eventBus.on(EVENTS.MCP.DISCONNECTED, this.handleMCPStatusUpdate.bind(this));
+        this.eventBus.on(EVENTS.MCP.INITIALIZED, this.handleMCPStatusUpdate.bind(this));
+        this.eventBus.on(EVENTS.MCP.TOOLS_UPDATED, this.handleMCPStatusUpdate.bind(this));
+        this.eventBus.on(EVENTS.MCP.CONNECTION_ERROR, this.handleMCPStatusUpdate.bind(this));
         this.eventBus.on(EVENTS.CHAT.CONVERSATION_LOADED, this.handleConversationLoaded.bind(this));
         this.eventBus.on(EVENTS.CHAT.CONVERSATION_UPDATED, this.handleConversationUpdated.bind(this));
         this.eventBus.on(EVENTS.CHAT.START_NEW_CONVERSATION, this.handleNewConversationRequest.bind(this));
@@ -383,8 +387,6 @@ export class ChatService {
     async handleMCPStatusUpdate(payload) {
         console.log('[ChatService] Handling MCP status update:', payload);
         
-        const { isConnected, tools } = payload;
-        
         // Update local state and UI
         this.updateConnectionStatus();
     }
@@ -536,24 +538,22 @@ export class ChatService {
      */
     updateConnectionStatus() {
         const aiConnected = this.aiClient ? true : false;
-        const mcpConnected = this.mcpConnector ? true : false;
+        const mcpConnected = this.stateService.mcp.isMcpConnected();
         
-        let status;
+        let message;
         
         if (aiConnected && mcpConnected) {
-            status = 'AI + MCP Ready';
+            message = 'AI + MCP Ready';
         } else if (aiConnected) {
-            status = 'AI Ready';
+            message = 'AI Ready';
         } else if (mcpConnected) {
-            status = 'MCP Connected';
+            message = 'MCP Connected';
         } else {
-            status = 'Configuring...';
+            message = 'Configuring...';
         }
         
         // Update panel directly since it's in same context
-        if (this.panel.isReady()) {
-            this.panel.updateConnectionStatus(status, aiConnected, mcpConnected);
-        }
+        this.panel.updateConnectionStatus(message, aiConnected, mcpConnected);
     }
 
     /**

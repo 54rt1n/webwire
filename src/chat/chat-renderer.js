@@ -42,6 +42,10 @@ export class ChatUIRenderer {
                     <path d="M6 12c0 1-1 3-3 3s-3-2-3-3 1-3 3-3 3 2 3 3"/>
                     <path d="M13 12h4"/>
                     <path d="M7 12h4"/>
+                </svg>`,
+                
+                statusIndicator: `<svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor">
+                    <circle cx="6" cy="6" r="5"/>
                 </svg>`
             }
         };
@@ -118,7 +122,8 @@ export class ChatUIRenderer {
     createConnectionStatusHTML() {
         return `
             <div class="ww-connection-status">
-                <span class="ww-status-indicator"></span>
+                <span class="ww-status-indicator-ai">${this.templates.icons.statusIndicator}</span>
+                <span class="ww-status-indicator-mcp">${this.templates.icons.statusIndicator}</span>
                 <span class="ww-status-text">Ready</span>
             </div>
         `;

@@ -41,7 +41,6 @@ export const EVENTS = {
         SAVE_PANEL_VISIBILITY: 'chat:save-panel-visibility',
         SEND_MESSAGE: 'chat:send-message',
         START_NEW_CONVERSATION: 'chat:start-new-conversation',
-        UPDATE_MCP_STATUS: 'chat:update-mcp-status',
         UPDATE_SETTINGS: 'chat:update-settings',
         TOGGLE_UI_SETTING: 'chat:toggle-ui-setting',
         EXECUTE_TOOL: 'chat:execute-tool',
