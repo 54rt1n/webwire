@@ -46,11 +46,63 @@ export class ChatService {
         this.maxRequestTokens = 16384;
         
         // Service Components
-        this.messageBuilder = new MessageBuilder(this.pageUtils);
+        this.messageBuilder = null; // Initialized after stateService is set
         this.toolExecutor = null; // Initialized after stateService is set
         this.responseHandler = null;
 
         this.initialized = false;
+    }
+
+    /**
+     * Get encoding options based on model configuration
+     * @param {Object} modelConfig - Model configuration from settings
+     * @returns {Object} Options for tiktoken initialization
+     */
+    getEncodingOptions(modelConfig) {
+        if (!modelConfig) {
+            return {}; // Use defaults
+        }
+        
+        // If tokenizer is explicitly set in config, use it
+        if (modelConfig.tokenizer) {
+            console.log(`[ChatService] Using configured tokenizer: ${modelConfig.tokenizer}`);
+            return { tokenizer: modelConfig.tokenizer };
+        }
+        
+        // Otherwise, auto-detect based on model name
+        const modelName = modelConfig.model?.toLowerCase() || '';
+        
+        // Map common models to their tokenizers
+        const modelTokenizerMap = {
+            'gpt-4': 'cl100k_base',
+            'gpt-3.5-turbo': 'cl100k_base',
+            'claude': 'cl100k_base',
+            'gemini': 'cl100k_base',
+            'mistral': 'cl100k_base',
+            'mixtral': 'cl100k_base',
+            'llama': 'cl100k_base',
+            'deepseek': 'cl100k_base',
+            'qwen': 'cl100k_base',
+            'yi': 'cl100k_base',
+            'kimi': 'kimi-k2',
+            'moonshot': 'kimi-k2',
+            'codex': 'r50k_base',
+            'gpt-3': 'p50k_base',
+            'davinci': 'p50k_base',
+            'curie': 'p50k_base'
+        };
+        
+        // Find the first matching tokenizer
+        for (const [key, tokenizer] of Object.entries(modelTokenizerMap)) {
+            if (modelName.includes(key)) {
+                console.log(`[ChatService] Auto-detected tokenizer for ${key}: ${tokenizer}`);
+                return { tokenizer };
+            }
+        }
+        
+        // Default to cl100k_base for unknown models (most modern models use this)
+        console.log('[ChatService] Using default cl100k_base tokenizer for unknown model:', modelName);
+        return { tokenizer: 'cl100k_base' };
     }
 
     /**
@@ -95,6 +147,11 @@ export class ChatService {
         this.aiClient = aiClient;
         this.mcpConnector = mcpConnector;
         this.stateService = stateService;
+        
+        // Initialize message builder with model configuration
+        const modelConfig = this.stateService.settings.getModelConfig('chat');
+        const encodingOptions = this.getEncodingOptions(modelConfig);
+        this.messageBuilder = new MessageBuilder(this.pageUtils, encodingOptions);
         
         // Initialize tool executor with dependencies
         this.toolExecutor = new ToolExecutor(
@@ -754,6 +811,10 @@ export class ChatService {
     destroy() {
         if (this.panel) {
             this.panel.destroy();
+        }
+        
+        if (this.messageBuilder) {
+            this.messageBuilder.destroy();
         }
         
         if (this.mcpConnector) {

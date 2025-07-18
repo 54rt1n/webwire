@@ -1,10 +1,12 @@
 import '../shared/global.scss';
 import './style.scss';
+import { MessageBuilder } from '../chat/message-builder.js';
 
 export class OptionsPanel {
     constructor(eventBus) {
         this.eventBus = eventBus;
         this.elements = this._DOMElements();
+        this.populateTokenizerDropdowns();
     }
 
     /**
@@ -38,6 +40,7 @@ export class OptionsPanel {
                 chat: {
                     model: document.getElementById('chatModel'),
                     provider: document.getElementById('chatProvider'),
+                    tokenizer: document.getElementById('chatTokenizer'),
                     temperature: document.getElementById('chatTemp'),
                     maxTokens: document.getElementById('chatMaxTokens'),
                     topP: document.getElementById('chatTopP'),
@@ -49,6 +52,7 @@ export class OptionsPanel {
                 thought: {
                     model: document.getElementById('thoughtModel'),
                     provider: document.getElementById('thoughtProvider'),
+                    tokenizer: document.getElementById('thoughtTokenizer'),
                     temperature: document.getElementById('thoughtTemp'),
                     maxTokens: document.getElementById('thoughtMaxTokens'),
                     topP: document.getElementById('thoughtTopP'),
@@ -60,6 +64,7 @@ export class OptionsPanel {
                 tool: {
                     model: document.getElementById('toolModel'),
                     provider: document.getElementById('toolProvider'),
+                    tokenizer: document.getElementById('toolTokenizer'),
                     temperature: document.getElementById('toolTemp'),
                     maxTokens: document.getElementById('toolMaxTokens'),
                     topP: document.getElementById('toolTopP'),
@@ -93,6 +98,46 @@ export class OptionsPanel {
      */
     clearStatus() {
         this.elements.status.style.display = 'none';
+    }
+
+    /**
+     * Populate tokenizer dropdowns with available options
+     */
+    populateTokenizerDropdowns() {
+        const tokenizers = MessageBuilder.availableTokenizers();
+        
+        // Add empty option for chat tokenizer
+        const emptyOption = document.createElement('option');
+        emptyOption.value = '';
+        emptyOption.textContent = '(Auto-detect)';
+        this.elements.modelConfigs.chat.tokenizer.appendChild(emptyOption);
+        
+        // Populate chat tokenizer dropdown
+        tokenizers.forEach(tokenizer => {
+            const option = document.createElement('option');
+            option.value = tokenizer.id;
+            option.textContent = tokenizer.name;
+            option.title = tokenizer.description;
+            this.elements.modelConfigs.chat.tokenizer.appendChild(option);
+        });
+        
+        // Populate thought tokenizer dropdown (with same options)
+        tokenizers.forEach(tokenizer => {
+            const option = document.createElement('option');
+            option.value = tokenizer.id;
+            option.textContent = tokenizer.name;
+            option.title = tokenizer.description;
+            this.elements.modelConfigs.thought.tokenizer.appendChild(option);
+        });
+        
+        // Populate tool tokenizer dropdown (with same options)
+        tokenizers.forEach(tokenizer => {
+            const option = document.createElement('option');
+            option.value = tokenizer.id;
+            option.textContent = tokenizer.name;
+            option.title = tokenizer.description;
+            this.elements.modelConfigs.tool.tokenizer.appendChild(option);
+        });
     }
 
     /**
@@ -133,6 +178,7 @@ export class OptionsPanel {
                 if (modelConfig) {
                     this.elements.modelConfigs[modelType].model.value = modelConfig.model || '';
                     this.elements.modelConfigs[modelType].provider.value = modelConfig.provider || '';
+                    this.elements.modelConfigs[modelType].tokenizer.value = modelConfig.tokenizer || '';
                     if (modelConfig.samplerConfig) {
                         this.elements.modelConfigs[modelType].temperature.value = modelConfig.samplerConfig.temperature ?? '';
                         this.elements.modelConfigs[modelType].maxTokens.value = modelConfig.samplerConfig.maxTokens ?? '';
@@ -190,6 +236,7 @@ export class OptionsPanel {
             const modelConfig = {
                 model: this.elements.modelConfigs[modelType].model.value.trim(),
                 provider: this.elements.modelConfigs[modelType].provider.value.trim(),
+                tokenizer: this.elements.modelConfigs[modelType].tokenizer.value.trim() || undefined,
                 samplerConfig: {}
             };
             

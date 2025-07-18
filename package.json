@@ -28,5 +28,8 @@
     "vite": "^5.0.0",
     "webpack": "^5.98.0",
     "webpack-cli": "^5.1.4"
+  },
+  "dependencies": {
+    "js-tiktoken": "^1.0.20"
   }
 }

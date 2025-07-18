@@ -1,5 +1,6 @@
 import { generateMessageId } from '../js/utils/id-generator.js';
 import { buildToolMessages } from './message-utils.js';
+import { Tiktoken } from 'js-tiktoken/lite';
 
 const MESSAGE_ROLES = {
     USER: 'user',
@@ -8,31 +9,96 @@ const MESSAGE_ROLES = {
     ERROR: 'error'
 };
 
+// Static list of available tokenizers
+const AVAILABLE_TOKENIZERS = [
+    { id: 'cl100k_base', name: 'cl100k_base (GPT-4, GPT-3.5-turbo)', description: 'Default tokenizer for OpenAI models' },
+    { id: 'p50k_base', name: 'p50k_base (GPT-3)', description: 'Legacy tokenizer for GPT-3 models' },
+    { id: 'r50k_base', name: 'r50k_base (Codex)', description: 'Tokenizer for code models' },
+    { id: 'kimi-k2', name: 'Kimi-K2 (Moonshot AI)', description: 'Custom tokenizer for Kimi-K2-Instruct model' }
+];
+
 /**
  * MessageBuilder - Handles constructing API-ready messages
  * Extracted from ChatService.handleUserMessage
  */
 export class MessageBuilder {
-    constructor(pageUtils) {
+    constructor(pageUtils, options = {}) {
         this.pageUtils = pageUtils;
-        // Rough estimate: 1 token ≈ 0.75 words (common approximation for English text)
+        this.encoder = null;
+        this.encoderOptions = options;
+        
+        // Fallback values
         this.WORDS_PER_TOKEN = 0.75;
+        
+        // Initialize encoder asynchronously
+        this.encoderPromise = this.initializeEncoder(options);
+    }
+    
+    /**
+     * Get list of available tokenizers
+     * @returns {Array} List of available tokenizer configurations
+     */
+    static availableTokenizers() {
+        return AVAILABLE_TOKENIZERS;
+    }
+    
+    /**
+     * Initialize the tiktoken encoder based on model configuration
+     * @param {Object} options - Configuration options
+     * @param {string} options.tokenizer - Tokenizer name (e.g., 'cl100k_base', 'kimi-k2')
+     */
+    async initializeEncoder(options = {}) {
+        try {
+            const tokenizerName = options.tokenizer || 'cl100k_base'; // Default to cl100k_base
+            
+            // Fetch the tokenizer JSON file
+            const response = await fetch(chrome.runtime.getURL(`tokenizers/${tokenizerName}.json`));
+            if (!response.ok) {
+                throw new Error(`Failed to fetch tokenizer: ${response.status}`);
+            }
+            const ranks = await response.json();
+            
+            // Create Tiktoken instance with the loaded ranks
+            this.encoder = new Tiktoken(ranks);
+            console.log(`[MessageBuilder] Initialized with tokenizer: ${tokenizerName}`);
+        } catch (error) {
+            console.warn('[MessageBuilder] Failed to initialize tiktoken encoder, falling back to word-based estimation:', error);
+            this.encoder = null;
+            // Fallback: 1 token ≈ 0.75 words (common approximation for English text)
+            this.WORDS_PER_TOKEN = 0.75;
+        }
     }
 
     /**
      * Count approximate tokens in text
      * @param {string} text - Text to count tokens for
-     * @returns {number} Approximate token count
+     * @returns {Promise<number>} Approximate token count
      */
-    countTokens(text) {
+    async countTokens(text) {
         if (!text || typeof text !== 'string') return 0;
         
-        // Count words (splitting on whitespace and punctuation)
+        // Wait for encoder to be initialized
+        await this.encoderPromise;
+        
+        if (this.encoder) {
+            try {
+                // Use tiktoken for accurate token counting
+                const tokens = this.encoder.encode(text);
+                const tokenCount = tokens.length;
+                console.log('[MessageBuilder] Counting tokens with tiktoken:', text.substring(0, 50) + '...', 'tokens:', tokenCount);
+                return tokenCount;
+            } catch (error) {
+                console.warn('[MessageBuilder] Error encoding text with tiktoken:', error);
+                // Fall through to word-based estimation
+            }
+        }
+        
+        // Fallback: Count words (splitting on whitespace and punctuation)
         const words = text.split(/\s+/).filter(word => word.length > 0).length;
         
         // Convert to approximate tokens
         const tokens = Math.ceil(words / this.WORDS_PER_TOKEN);
-        console.log('[MessageBuilder] Counting tokens:', text, 'words:', words, 'tokens:', tokens);
+        console.log('[MessageBuilder] Counting tokens (fallback):', text.substring(0, 50) + '...', 'words:', words, 'tokens:', tokens);
         return tokens;
     }
 
@@ -143,5 +209,19 @@ export class MessageBuilder {
             : userMessage;
 
         return { messagesForAPI, enhancedUserMessage };
+    }
+
+    /**
+     * Cleanup resources
+     */
+    destroy() {
+        if (this.encoder) {
+            try {
+                this.encoder.free();
+            } catch (error) {
+                console.warn('[MessageBuilder] Error freeing encoder:', error);
+            }
+            this.encoder = null;
+        }
     }
 }

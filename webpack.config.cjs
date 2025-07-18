@@ -69,7 +69,8 @@ module.exports = (env, argv) => {
               return JSON.stringify(manifest, null, 2);
             } 
           },
-          { from: './src/icons', to: 'icons' }
+          { from: './src/icons', to: 'icons' },
+          { from: './src/tokenizers', to: 'tokenizers' }
         ]
       }),
       new HtmlWebpackPlugin({

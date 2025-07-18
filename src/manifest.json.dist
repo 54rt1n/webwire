@@ -51,6 +51,7 @@
     {
       "resources": [
         "icons/*.png",
+        "tokenizers/*.json",
         "*.js",
         "*.html"
       ],

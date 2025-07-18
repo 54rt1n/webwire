@@ -126,6 +126,12 @@
                 </select>
             </div>
             <div class="form-group">
+                <label for="chatTokenizer">Tokenizer:</label>
+                <select id="chatTokenizer">
+                    <!-- Options will be populated dynamically -->
+                </select>
+            </div>
+            <div class="form-group">
                 <label for="chatTemp">Temperature:</label>
                 <input type="number" id="chatTemp" min="0" max="2" step="0.1" placeholder="0.8">
             </div>
@@ -179,6 +185,13 @@
                 </select>
             </div>
             <div class="form-group">
+                <label for="thoughtTokenizer">Tokenizer:</label>
+                <select id="thoughtTokenizer">
+                    <option value="">(Same as Chat)</option>
+                    <!-- Other options will be populated dynamically -->
+                </select>
+            </div>
+            <div class="form-group">
                 <label for="thoughtTemp">Temperature:</label>
                 <input type="number" id="thoughtTemp" min="0" max="2" step="0.1" placeholder="Optional">
             </div>
@@ -229,6 +242,13 @@
                     <option value="meta">Meta</option>
                     <option value="aimind">AIMind</option>
                     <option value="openrouter">OpenRouter</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="toolTokenizer">Tokenizer:</label>
+                <select id="toolTokenizer">
+                    <option value="">(Same as Chat)</option>
+                    <!-- Other options will be populated dynamically -->
                 </select>
             </div>
              <div class="form-group">
