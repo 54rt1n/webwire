@@ -179,7 +179,16 @@ export class ChatService {
             // Load current conversation on startup
             console.log('[ChatService] Loading current conversation on startup...');
 
+            // Initialize all UI settings
             this.panel.setPageContentCheckboxState(this.stateService.ui.getIncludePageContent() || false);
+            this.panel.updateMcpSetting(this.stateService.ui.getUseMCP());
+            this.panel.updateBrowserToolsSetting(this.stateService.ui.getUseBrowserTools());
+            this.panel.updateAutoExecuteSetting(this.stateService.ui.getAutoExecuteTools());
+            
+            // Initialize selected model
+            const selectedModel = this.stateService.ui.getSelectedModel() || 'chat';
+            const currentConfig = this.stateService.settings.getModelConfig(selectedModel);
+            this.panel.updateSelectedModelSetting(selectedModel, currentConfig?.model);
 
             if (!this.stateService.conversation.getActiveThreadId()) {
                 await this.sendGetOrCreateThread();
@@ -201,6 +210,8 @@ export class ChatService {
 
     /**
      * Handle user message event
+     *  This is one of the main entry points for the chat service.
+     *  Be very careful with modifying this function.
      */
     async handleUserMessage(payload, { autoExecuteTools = false,
         forcePageContent = false, customSystemPrompt = null } = {}) {
@@ -283,12 +294,15 @@ export class ChatService {
                 this.panel.displayMessage(userMessage, { autoScroll: true, ...persona });
             }
 
+            const apiArgs = this.stateService.settings.getCurrentModelConfig();
+
             // Generate AI response with streaming
             const { response, thinkingMessage } = await this.responseHandler.generateAIResponse(
                 this.aiClient,
                 enhancedUserMessage,
                 messagesForAPI,
-                systemPrompts
+                systemPrompts,
+                { apiArgs: apiArgs }
             );
 
             // Parse and execute tools
@@ -355,6 +369,8 @@ export class ChatService {
                         []
                     );
                 }
+                // Re-enable retry button after cancellation
+                this.panel.updateRetryButton(true);
                 return; // Don't show error for cancelled requests
             }
             
@@ -365,6 +381,9 @@ export class ChatService {
                 console.error('[ChatService] Error handling user message:', error);
                 this.panel.displayError(error.message, streamingState.currentMessage?.messageId);
             }
+            
+            // Re-enable retry button after error
+            this.panel.updateRetryButton(true);
         }
     }
 
@@ -451,6 +470,12 @@ export class ChatService {
         if ('autoExecuteTools' in data) {
             this.stateService.ui.setAutoExecuteTools(data.autoExecuteTools);
             this.panel.updateAutoExecuteSetting(data.autoExecuteTools);
+        }
+
+        if ('selectedModel' in data) {
+            this.stateService.ui.setSelectedModel(data.selectedModel);
+            const currentConfig = this.stateService.settings.getModelConfig(data.selectedModel);
+            this.panel.updateSelectedModelSetting(data.selectedModel, currentConfig?.model);
         }
         
         // Send unified settings update to background for persistence
@@ -726,6 +751,11 @@ export class ChatService {
         if (this.panel.isReady()) {
             this.panel.updatePageContentSetting(this.stateService.ui.getIncludePageContent());
             this.panel.updateMcpSetting(this.stateService.ui.getUseMCP());
+            this.panel.updateBrowserToolsSetting(this.stateService.ui.getUseBrowserTools());
+            this.panel.updateAutoExecuteSetting(this.stateService.ui.getAutoExecuteTools());
+            const selectedModel = this.stateService.ui.getSelectedModel() || 'chat';
+            const currentConfig = this.stateService.settings.getModelConfig(selectedModel);
+            this.panel.updateSelectedModelSetting(selectedModel, currentConfig?.model);
         }
     }
 

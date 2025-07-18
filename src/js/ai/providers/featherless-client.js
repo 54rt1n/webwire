@@ -34,6 +34,7 @@ export class FeatherlessClient extends AbstractAIClient {
      * @param {string} userTurn - What the user wants to do
      * @param {Array} history - role, content
      * @param {Object} options - Additional options including system prompt
+     * @param {Object} options.apiArgs - Additional API arguments (sampler settings, model, etc)
      * @returns {Promise<string>} AI response
      */
     async generateTurn(userTurn, history = [], { systemPrompt, apiHeaders = {}, ...options } = {}) {

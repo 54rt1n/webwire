@@ -82,6 +82,7 @@ export function createInitialState() {
                 useMCP: true,
                 useBrowserTools: true,
                 autoExecuteTools: true,
+                selectedModel: 'chat'
             }
         },
 

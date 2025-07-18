@@ -97,19 +97,26 @@ export class AbstractAIClient {
      * Get the current sampler configuration with snake_case keys for API compatibility
      * @returns {Object} Sampler configuration object with snake_case keys
      */
-    getSamplerConfig() {
+    getSamplerConfig(samplerConfig = null) {
+        if (!samplerConfig) {
+            samplerConfig = this.samplerConfig;
+        }
+
+        const validKeys = ['temperature', 'minP', 'maxTokens', 'frequencyPenalty', 'presencePenalty', 'model'];
         const config = {
             temperature: 0.8,
             minP: 0.05,
             maxTokens: 2048,
             frequencyPenalty: 0.1,
             presencePenalty: 0.1,
-            ...this.samplerConfig
+            model: this.model,
+            ...samplerConfig
         };
+
 
         // snakcase the keys from the default config
         return Object.fromEntries(
-            Object.entries(config).map(([key, value]) => [key.replace(/([A-Z])/g, '_$1').toLowerCase(), value])
+            Object.entries(config).filter(([key]) => validKeys.includes(key)).map(([key, value]) => [key.replace(/([A-Z])/g, '_$1').toLowerCase(), value])
         );
     }
 
@@ -240,6 +247,9 @@ export class AbstractAIClient {
             apiArgs.tools = tools;
         }
 
+        const samplerConfig = this.getSamplerConfig(apiArgs);
+        console.log('[AbstractAIClient]', 'Sampler config:', samplerConfig);
+
         try {
             this.state.lastRequestTime = Date.now();
             
@@ -252,11 +262,9 @@ export class AbstractAIClient {
                     ...apiHeaders
                 },
                 body: JSON.stringify({
-                    model: this.model,
                     messages: messages,
                     stream: true,
-                    ...this.getSamplerConfig(),
-                    ...apiArgs
+                    ...samplerConfig,
                 }),
                 signal: controller.signal
             });

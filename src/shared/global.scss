@@ -315,6 +315,68 @@
           gap: var(--space-2);
           padding-top: var(--space-2);
         }
+
+        .ww-model-selector {
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          gap: var(--space-4);
+          margin-top: var(--space-3);
+          padding-top: var(--space-3);
+          padding-bottom: var(--space-3);
+          border-top: 1px solid var(--color-border);
+          border-bottom: 1px solid var(--color-border);
+          
+          .ww-label {
+            margin: 0;
+            flex-shrink: 0;
+          }
+          
+          .ww-selected-model-display {
+            margin-left: auto;
+            margin-right: var(--space-2);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 150px;
+          }
+          
+          .ww-radio {
+            appearance: none;
+            width: 16px;
+            height: 16px;
+            border: 2px solid var(--color-border);
+            border-radius: 50%;
+            background: var(--color-surface);
+            cursor: pointer;
+            position: relative;
+            transition: all var(--transition-normal);
+            
+            &:checked {
+              border-color: var(--color-primary-500);
+              
+              &::before {
+                content: '';
+                position: absolute;
+                top: 3px;
+                left: 3px;
+                width: 6px;
+                height: 6px;
+                border-radius: 50%;
+                background: var(--color-primary-500);
+              }
+            }
+            
+            &:hover {
+              border-color: var(--color-primary-300);
+            }
+            
+            &:focus {
+              outline: none;
+              box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+            }
+          }
+        }
         
         .ww-drawer-actions {
           display: flex;
@@ -433,6 +495,16 @@
       &:disabled {
         opacity: 0.4;
         cursor: not-allowed;
+      }
+    }
+    
+    .ww-selected-model-display {
+      font-size: var(--font-size-xs);
+      color: var(--color-text-secondary);
+      
+      .ww-model-name {
+        font-weight: var(--font-weight-medium);
+        color: var(--color-text-primary);
       }
     }
     

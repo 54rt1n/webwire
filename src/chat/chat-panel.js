@@ -96,7 +96,11 @@ export class WebChatPanel {
             drawerToggle: this.container.querySelector('.ww-drawer-toggle'),
             drawerContent: this.container.querySelector('.ww-drawer-content'),
             drawerSummary: this.container.querySelector('.ww-drawer-summary-text'),
-            chevronIcon: this.container.querySelector('.ww-chevron-icon')
+            chevronIcon: this.container.querySelector('.ww-chevron-icon'),
+            modelChatRadio: this.container.querySelector('.ww-model-chat'),
+            modelThoughtRadio: this.container.querySelector('.ww-model-thought'),
+            modelToolRadio: this.container.querySelector('.ww-model-tool'),
+            modelNameDisplay: this.container.querySelector('.ww-model-name')
         };
     }
 
@@ -196,6 +200,28 @@ export class WebChatPanel {
         this.elements.autoExecuteCheckbox?.addEventListener('change', (e) => {
             this.handleAutoExecuteToggle(e.target.checked);
             this.updateDrawerSummary();
+        });
+
+        // Model selection radio buttons
+        this.elements.modelChatRadio?.addEventListener('change', (e) => {
+            if (e.target.checked) {
+                this.handleSelectedModelChange('chat');
+                this.updateDrawerSummary();
+            }
+        });
+
+        this.elements.modelThoughtRadio?.addEventListener('change', (e) => {
+            if (e.target.checked) {
+                this.handleSelectedModelChange('thought');
+                this.updateDrawerSummary();
+            }
+        });
+
+        this.elements.modelToolRadio?.addEventListener('change', (e) => {
+            if (e.target.checked) {
+                this.handleSelectedModelChange('tool');
+                this.updateDrawerSummary();
+            }
         });
 
         this.elements.reparseBtn?.addEventListener('click', () => {
@@ -645,6 +671,21 @@ export class WebChatPanel {
         }
     }
 
+    updateSelectedModelSetting(selectedModel, actualModelName) {
+        if (selectedModel === 'chat' && this.elements.modelChatRadio) {
+            this.elements.modelChatRadio.checked = true;
+        } else if (selectedModel === 'thought' && this.elements.modelThoughtRadio) {
+            this.elements.modelThoughtRadio.checked = true;
+        } else if (selectedModel === 'tool' && this.elements.modelToolRadio) {
+            this.elements.modelToolRadio.checked = true;
+        }
+        
+        // Update the model name display
+        if (this.elements.modelNameDisplay && actualModelName) {
+            this.elements.modelNameDisplay.textContent = actualModelName;
+        }
+    }
+
     updateConversationIdDisplay(threadId) {
         if (!this.elements.conversationId) return;
 
@@ -837,6 +878,13 @@ export class WebChatPanel {
         });
     }
 
+    handleSelectedModelChange(selectedModel) {
+        console.log('[WebChatPanel] Selected model change:', selectedModel);
+        this.eventBus.emit(EVENTS.CHAT.TOGGLE_UI_SETTING, { 
+            selectedModel: selectedModel 
+        });
+    }
+
     handleInitialState(state) {
         console.log('[WebChatPanel] Handling initial state:', state);
         
@@ -854,6 +902,10 @@ export class WebChatPanel {
 
         if (state.autoExecuteTools !== undefined) {
             this.updateAutoExecuteSetting(state.autoExecuteTools);
+        }
+
+        if (state.selectedModel !== undefined) {
+            this.updateSelectedModelSetting(state.selectedModel);
         }
         
         // Update drawer summary after setting initial state

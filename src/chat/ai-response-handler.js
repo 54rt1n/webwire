@@ -88,7 +88,7 @@ export class AIResponseHandler {
     /**
      * Handle AI response generation with streaming
      */
-    async generateAIResponse(aiClient, enhancedUserMessage, messagesForAPI, systemPrompt) {
+    async generateAIResponse(aiClient, enhancedUserMessage, messagesForAPI, systemPrompt, { apiArgs = {} } = {}) {
         // Create abort controller for this request
         this.streamingState.abortController = new AbortController();
         
@@ -97,12 +97,15 @@ export class AIResponseHandler {
         
         // Set up streaming
         const unsubscribeStream = this.setupStreaming(thinkingMessage);
+
+        console.log('[AIResponseHandler]', 'API args:', apiArgs);
         
         try {
             const response = await aiClient.generateTurn(enhancedUserMessage, messagesForAPI, { 
                 systemPrompt,
                 maxHistory: 100,
-                abortController: this.streamingState.abortController
+                abortController: this.streamingState.abortController,
+                apiArgs: apiArgs
             });
 
             if (!response) {

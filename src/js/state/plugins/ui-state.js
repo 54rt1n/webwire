@@ -128,4 +128,18 @@ export class UiStatePlugin {
     setAutoExecuteTools(autoExecuteTools) {
         this.stateService.state.settings.ui.autoExecuteTools = autoExecuteTools;
     }
+
+    /**
+     * Get selected model setting
+     */
+    getSelectedModel() {
+        return this.stateService.state.settings.ui.selectedModel;
+    }
+
+    /**
+     * Set selected model setting
+     */
+    setSelectedModel(selectedModel) {
+        this.stateService.state.settings.ui.selectedModel = selectedModel;
+    }
 } 

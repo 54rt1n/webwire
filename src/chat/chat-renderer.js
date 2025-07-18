@@ -222,6 +222,21 @@ export class ChatUIRenderer {
                                 <span class="ww-text">Auto-execute tools</span>
                             </label>
                         </div>
+                        <div class="ww-model-selector">
+                            <label class="ww-label">
+                                <input type="radio" name="ww-selected-model" value="chat" class="ww-radio ww-model-chat" checked>
+                                <span class="ww-text">Chat</span>
+                            </label>
+                            <label class="ww-label">
+                                <input type="radio" name="ww-selected-model" value="thought" class="ww-radio ww-model-thought">
+                                <span class="ww-text">Thought</span>
+                            </label>
+                            <label class="ww-label">
+                                <input type="radio" name="ww-selected-model" value="tool" class="ww-radio ww-model-tool">
+                                <span class="ww-text">Tool</span>
+                            </label>
+                            <span class="ww-selected-model-display">Selected: <span class="ww-model-name">-</span></span>
+                        </div>
                         <div class="ww-drawer-actions">
                             <button class="ww-reparse-button" title="Reparse with tools">Reparse</button>
                             <button class="ww-retry-button" title="Retry last message">Retry</button>
@@ -336,9 +351,7 @@ export class ChatUIRenderer {
     createThinkingContentHTML() {
         return `
             <span class="ww-thinking-line">
-                <span class="ww-thinking-indicator">💭</span>
-                <span class="ww-streaming-content"></span>
-                <span class="ww-cursor">▊</span>
+                <span class="ww-streaming-content">⚡ <span class="ww-cursor">▊</span></span>
             </span>
         `;
     }
@@ -450,7 +463,9 @@ export class ChatUIRenderer {
      */
     updateStreamingContent(streamingElement, content) {
         if (streamingElement) {
-            streamingElement.innerHTML = this.escapeAndFormatContent(content);
+            // Format content and append cursor inline with the text, keeping lightning emoji
+            const formattedContent = this.escapeAndFormatContent(content);
+            streamingElement.innerHTML = '⚡ ' + formattedContent + '<span class="ww-cursor">▊</span>';
         }
     }
 
