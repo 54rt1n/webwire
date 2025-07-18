@@ -243,9 +243,9 @@ export class ChatService {
             // Calculate tokens: subtract AI response tokens and existing conversation tokens
             const systemPromptTokens = await this.messageBuilder.countTokens(systemPrompts);
             const aiResponseTokens = this.aiClient.samplerConfig?.maxTokens ?? 2048;
-            const conversationTokens = await Promise.all(conversationMessages.map(async (msg) => {
+            const conversationTokens = (await Promise.all(conversationMessages.map(async (msg) => {
                 return await this.messageBuilder.countTokens(msg.content || '');
-            })).reduce((total, msg) => total + msg, 0);
+            }))).reduce((total, msg) => total + msg, 0);
             const userMessageTokens = await this.messageBuilder.countTokens(userMessage.content);
             const maxTextTokens = this.maxRequestTokens - aiResponseTokens - conversationTokens - systemPromptTokens - userMessageTokens;
             console.log('[ChatService] Max text tokens:', maxTextTokens, 'aiResponseTokens:', aiResponseTokens, 'conversationTokens:', conversationTokens, 'systemPromptTokens:', systemPromptTokens, 'userMessageTokens:', userMessageTokens);
