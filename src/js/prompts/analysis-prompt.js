@@ -8,7 +8,7 @@
  * Build a short user message prompt for abstractive webpage analysis
  * @returns {string} The short user message
  */
-export function buildMarkdownReportPrompt() {
+export function buildPrompt() {
     return "Create an engaging, insightful analysis that reveals the deeper meaning and significance of this webpage content.";
 }
 
@@ -16,7 +16,7 @@ export function buildMarkdownReportPrompt() {
  * Build the system prompt for abstractive webpage analysis
  * @returns {string} The detailed system prompt with instructions
  */
-export function buildMarkdownReportSystem() {
+export function buildSystemPrompt() {
     return `You are performing an abstractive analysis of web content. Follow this exact process:
 
 ## Step 1: Extract Ten Key Facts

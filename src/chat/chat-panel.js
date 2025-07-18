@@ -228,7 +228,12 @@ export class WebChatPanel {
 
             // Analyze page button (in welcome message)
             if (e.target.closest('#analyze-page-btn')) {
-                this.handlePageAnalysisRequest();
+                this.handlePageAnalysisRequest('analysis');
+            }
+
+            // Timeline page button (in welcome message)
+            if (e.target.closest('#timeline-page-btn')) {
+                this.handlePageAnalysisRequest('timeline');
             }
         });
     }
@@ -777,8 +782,8 @@ export class WebChatPanel {
         }, 1500);
     }
 
-    handlePageAnalysisRequest() {
-        this.eventBus.emit(EVENTS.CHAT.ANALYZE_PAGE, {});
+    handlePageAnalysisRequest(promptType) {
+        this.eventBus.emit(EVENTS.CHAT.ANALYZE_PAGE, { promptType });
     }
 
     handleNewConversationRequest() {

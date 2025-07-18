@@ -10,7 +10,8 @@ import { MessageBuilder } from './message-builder.js';
 import { ToolExecutor } from './tool-executor.js';
 import { AIResponseHandler } from './ai-response-handler.js';
 import { ClipboardUtil } from '../js/utils/clipboard-util.js';
-import { buildMarkdownReportPrompt, buildMarkdownReportSystem } from '../js/prompts/analysis-prompt.js';
+import * as analysis from '../js/prompts/analysis-prompt.js';
+import * as timeline from '../js/prompts/timeline-prompt.js';
 
 /**
  * WebWire Chat Service - Platform-Agnostic Core
@@ -392,10 +393,20 @@ export class ChatService {
      * Handle page analysis request event
      */
     async handlePageAnalysisRequest(payload) {
-        console.log('[ChatService] Handling page analysis request');
-        
-        const userMessage = buildMarkdownReportPrompt();
-        const systemPrompt = buildMarkdownReportSystem();
+        console.log('[ChatService] Handling page analysis request', payload);
+
+        const { promptType } = payload;
+
+        let userMessage = '';
+        let systemPrompt = '';
+
+        if (promptType === 'analysis') {
+            userMessage = analysis.buildPrompt();
+            systemPrompt = analysis.buildSystemPrompt();
+        } else if (promptType === 'timeline') {
+            userMessage = timeline.buildPrompt();
+            systemPrompt = timeline.buildSystemPrompt();
+        }
         
         // Force page content inclusion and add custom system prompt for analysis requests
         await this.handleUserMessage({ message: userMessage }, { 
