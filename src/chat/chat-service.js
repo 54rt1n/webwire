@@ -10,6 +10,7 @@ import { MessageBuilder } from './message-builder.js';
 import { ToolExecutor } from './tool-executor.js';
 import { AIResponseHandler } from './ai-response-handler.js';
 import { ClipboardUtil } from '../js/utils/clipboard-util.js';
+import { buildMarkdownReportPrompt, buildMarkdownReportSystem } from '../js/prompts/analysis-prompt.js';
 
 /**
  * WebWire Chat Service - Platform-Agnostic Core
@@ -392,9 +393,6 @@ export class ChatService {
      */
     async handlePageAnalysisRequest(payload) {
         console.log('[ChatService] Handling page analysis request');
-        
-        // Import analysis prompt functions
-        const { buildMarkdownReportPrompt, buildMarkdownReportSystem } = await import('../js/prompts/analysis-prompt.js');
         
         const userMessage = buildMarkdownReportPrompt();
         const systemPrompt = buildMarkdownReportSystem();
