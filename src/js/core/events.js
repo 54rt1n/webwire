@@ -46,7 +46,8 @@ export const EVENTS = {
         EXECUTE_TOOL: 'chat:execute-tool',
         CANCEL_TOOL: 'chat:cancel-tool',
         TOOL_RESULT: 'chat:tool-result',
-        CANCEL_STREAM: 'chat:cancel-stream'
+        CANCEL_STREAM: 'chat:cancel-stream',
+        COPY_MESSAGE: 'chat:copy-message'
     },
     AIM: {
         THOUGHT_TOGGLED: 'aim:thought_toggled',

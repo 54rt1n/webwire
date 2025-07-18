@@ -67,6 +67,9 @@ export function createInitialState() {
                 personaName: undefined,
                 showThought: false,
                 autoThink: false,
+                systemMessage: undefined,
+                userHeader: undefined,
+                userFooter: undefined,
             },
             mcp: {
                 serverUrl: undefined,

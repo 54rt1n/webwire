@@ -9,6 +9,7 @@ import { buildToolMessages } from './message-utils.js';
 import { MessageBuilder } from './message-builder.js';
 import { ToolExecutor } from './tool-executor.js';
 import { AIResponseHandler } from './ai-response-handler.js';
+import { ClipboardUtil } from '../js/utils/clipboard-util.js';
 
 /**
  * WebWire Chat Service - Platform-Agnostic Core
@@ -47,7 +48,7 @@ export class ChatService {
         // Service Components
         this.messageBuilder = new MessageBuilder(this.pageUtils);
         this.toolExecutor = null; // Initialized after stateService is set
-        this.responseHandler = new AIResponseHandler(this.eventBus, this.panel);
+        this.responseHandler = null;
 
         this.initialized = false;
     }
@@ -73,6 +74,7 @@ export class ChatService {
         this.eventBus.on(EVENTS.CHAT.TOOL_RESULT, this.handleToolResult.bind(this));
         this.eventBus.on(EVENTS.CHAT.TOGGLE_UI_SETTING, this.handleUISettingsToggle.bind(this));
         this.eventBus.on(EVENTS.CHAT.CANCEL_STREAM, this.cancelStreamingResponse.bind(this));
+        this.eventBus.on(EVENTS.CHAT.COPY_MESSAGE, this.handleCopyMessage.bind(this));
         
         // Listen for AI streaming events
         this.eventBus.on(EVENTS.AI.STREAM_CHUNK, this.handleStreamingChunk.bind(this));
@@ -101,6 +103,8 @@ export class ChatService {
             this.domConnector,
             this.stateService
         );
+        
+        this.responseHandler = new AIResponseHandler(this.eventBus, this.stateService, this.panel);
 
         this.setupEventListeners();
         console.log('[ChatService] Event listeners set up');
@@ -139,7 +143,8 @@ export class ChatService {
     /**
      * Handle user message event
      */
-    async handleUserMessage(payload, { autoExecuteTools = false, forcePageContent = false, customSystemPrompt = null } = {}) {
+    async handleUserMessage(payload, { autoExecuteTools = false,
+        forcePageContent = false, customSystemPrompt = null } = {}) {
         console.log('[ChatService] Handling user message:', payload);
         
         const { message, silent = false } = payload;
@@ -171,7 +176,8 @@ export class ChatService {
 
             // Get available tools and build system prompt
             const tools = this.toolExecutor.getAvailableTools();
-            const systemPrompts = this.buildSystemPrompts(tools, customSystemPrompt);
+            const systemMessage = this.stateService.aim.getSystemMessage();
+            const systemPrompts = this.buildSystemPrompts(tools, systemMessage, customSystemPrompt);
 
             // Build page context and prepare m
             const conversationMessages = this.stateService.conversation.getConversationMessages(threadId);
@@ -187,11 +193,20 @@ export class ChatService {
             console.log('[ChatService] Max text tokens:', maxTextTokens, 'aiResponseTokens:', aiResponseTokens, 'conversationTokens:', conversationTokens, 'systemPromptTokens:', systemPromptTokens, 'userMessageTokens:', userMessageTokens);
             const includePageNavigation = false;
             const pageContext = this.messageBuilder.buildPageContext(this.stateService, { forcePageContent, includePageNavigation, maxTextTokens });
-            const { messagesForAPI, enhancedUserMessage } = this.messageBuilder.prepareMessagesForAPI(
+            let { messagesForAPI, enhancedUserMessage } = this.messageBuilder.prepareMessagesForAPI(
                 userMessage.content,
                 conversationMessages,
                 pageContext,
             );
+
+            const userHeader = this.stateService.aim.getUserHeader();
+            const userFooter = this.stateService.aim.getUserFooter();
+            if (userHeader) {
+                enhancedUserMessage = userHeader + '\n\n' + enhancedUserMessage;
+            }
+            if (userFooter) {
+                enhancedUserMessage = enhancedUserMessage + '\n\n' + userFooter;
+            }
 
             // Store user message immediately in conversation state (part 1 of 2-part creation)
             const location = typeof window !== 'undefined' ? window.location.href : undefined;
@@ -381,6 +396,53 @@ export class ChatService {
     }
 
     /**
+     * Handle copy message event
+     */
+    async handleCopyMessage(data) {
+        console.log('[ChatService] Handling copy message request:', data);
+        
+        const { messageId } = data;
+        if (!messageId) {
+            console.warn('[ChatService] No messageId provided for copy request');
+            return;
+        }
+
+        const threadId = this.stateService.conversation.getActiveThreadId();
+        if (!threadId) {
+            console.warn('[ChatService] No active thread found for copy request');
+            return;
+        }
+
+        // Get the message from conversation state
+        const conversation = this.stateService.conversation.getConversation(threadId);
+        if (!conversation || !conversation.messages) {
+            console.warn('[ChatService] No conversation or messages found');
+            return;
+        }
+
+        // Find the message by ID
+        const message = conversation.messages.find(msg => 
+            (msg.messageId && msg.messageId === messageId) || 
+            (msg.id && msg.id === messageId)
+        );
+
+        if (!message) {
+            console.warn('[ChatService] Message not found with ID:', messageId);
+            return;
+        }
+
+        // Copy the message content to clipboard
+        const success = await ClipboardUtil.copyToClipboard(message.content);
+        
+        if (success) {
+            console.log('[ChatService] Message copied to clipboard successfully');
+        } else {
+            console.error('[ChatService] Failed to copy message to clipboard');
+            // Could emit an error event or show a notification here
+        }
+    }
+
+    /**
      * Handle MCP status update event
      */
     async handleMCPStatusUpdate(payload) {
@@ -566,15 +628,16 @@ export class ChatService {
     /**
      * Build system prompts
      */
-    buildSystemPrompts(tools, customSystemPrompt) {
+    buildSystemPrompts(tools, ...prompts) {
         const systemPrompts = ["You are a helpful assistant analyzing web pages and helping users."];
         
         if (tools.length > 0) {
             systemPrompts.push(ToolFormatter.generateSystemPrompt(tools));
         }
 
-        if (customSystemPrompt) {
-            systemPrompts.push(customSystemPrompt);
+        if (prompts.length > 0) {
+            // Filter and add only non-empty prompts
+            systemPrompts.push(...prompts.filter(prompt => prompt && prompt.trim() !== ''));
         }
 
         return systemPrompts.join('\n\n');

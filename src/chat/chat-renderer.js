@@ -46,6 +46,11 @@ export class ChatUIRenderer {
                 
                 statusIndicator: `<svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor">
                     <circle cx="6" cy="6" r="5"/>
+                </svg>`,
+                
+                copy: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
                 </svg>`
             }
         };
@@ -301,10 +306,19 @@ export class ChatUIRenderer {
             contentHTML += this.createToolMessagesHTML(toolMessages, message.messageId);
         }
 
+        const copyButtonHTML = (message.role === 'assistant' && !isThinking) 
+            ? `<button class="ww-copy-button" data-message-id="${message.messageId || message.id}" title="Copy message">
+                ${this.templates.icons.copy}
+               </button>`
+            : '';
+
         return `
             <div class="ww-sender">${senderName}</div>
             <div class="ww-content">${contentHTML}</div>
-            <div class="ww-time">${time}</div>
+            <div class="ww-message-actions">
+                ${copyButtonHTML}
+                <div class="ww-time">${time}</div>
+            </div>
         `;
     }
 
@@ -479,6 +493,15 @@ export class ChatUIRenderer {
         
         const escaped = this.escapeHTML(content);
         return escaped.replace(/\n/g, '<br>');
+    }
+
+    /**
+     * Create copy button HTML
+     */
+    createCopyButtonHTML(messageId) {
+        return `<button class="ww-copy-button" data-message-id="${messageId}" title="Copy message">
+            ${this.templates.icons.copy}
+        </button>`;
     }
 
     /**

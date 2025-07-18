@@ -212,6 +212,13 @@ export class WebChatPanel {
      */
     setupDelegatedListeners() {
         this.elements.chatContent?.addEventListener('click', (e) => {
+            // Copy button handling
+            const copyButton = e.target.closest('.ww-copy-button');
+            if (copyButton) {
+                this.handleCopyMessage(copyButton);
+                return;
+            }
+
             // Tool button handling
             const toolButton = e.target.closest('.ww-tool-btn');
             if (toolButton) {
@@ -362,6 +369,15 @@ export class WebChatPanel {
                 toolMessages,
                 messageId
             );
+        }
+        
+        // Add copy button to message actions
+        const messageActions = messageEl.querySelector('.ww-message-actions');
+        if (messageActions) {
+            const timeEl = messageActions.querySelector('.ww-time');
+            if (timeEl) {
+                timeEl.insertAdjacentHTML('beforebegin', this.renderer.createCopyButtonHTML(messageId));
+            }
         }
         
         this.scrollToBottom();
@@ -719,6 +735,46 @@ export class WebChatPanel {
         console.log('[WebChatPanel] Cancel request');
         this.eventBus.emit(EVENTS.CHAT.CANCEL_STREAM, {});
         this.hideCancelButton();
+    }
+
+    /**
+     * Handle copy message button click
+     */
+    handleCopyMessage(button) {
+        const messageId = button.dataset.messageId;
+        
+        if (!messageId) {
+            console.warn('[WebChatPanel] Copy button clicked but no messageId found');
+            return;
+        }
+
+        console.log('[WebChatPanel] Copy message request for ID:', messageId);
+        
+        // Emit event to chat service to handle the actual copying
+        this.eventBus.emit(EVENTS.CHAT.COPY_MESSAGE, { messageId });
+        
+        // Show visual feedback on button
+        this.showCopyFeedback(button);
+    }
+
+    /**
+     * Show visual feedback for copy operation
+     */
+    showCopyFeedback(button) {
+        const originalHTML = button.innerHTML;
+        const originalTitle = button.title;
+        
+        // Show success feedback
+        button.innerHTML = '✓';
+        button.title = 'Copied!';
+        button.classList.add('ww-copy-success');
+        
+        // Reset after delay
+        setTimeout(() => {
+            button.innerHTML = originalHTML;
+            button.title = originalTitle;
+            button.classList.remove('ww-copy-success');
+        }, 1500);
     }
 
     handlePageAnalysisRequest() {

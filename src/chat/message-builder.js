@@ -127,16 +127,18 @@ export class MessageBuilder {
         }
 
         // Enhance first user message or current message
+        let enhanced = false;
         const firstUserIndex = messagesForAPI.findIndex(msg => msg.role === MESSAGE_ROLES.USER);
         if (firstUserIndex !== -1 && pageContext.syntheticMessages.length > 0) {
             messagesForAPI[firstUserIndex] = {
                 ...messagesForAPI[firstUserIndex],
                 content: pageContext.syntheticMessages.join('\n\n') + '\n\n' + messagesForAPI[firstUserIndex].content
             };
+            enhanced = true;
         }
 
         // Build enhanced user message
-        const enhancedUserMessage = syntheticHeaders.length > 0 
+        const enhancedUserMessage = syntheticHeaders.length > 0 && !enhanced
             ? syntheticHeaders.join('\n\n') + '\n\n' + userMessage
             : userMessage;
 

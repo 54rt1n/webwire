@@ -69,6 +69,9 @@ export class OptionsPanel {
                     presencePenalty: document.getElementById('toolPresPenalty'),
                 }
             },
+            systemMessage: document.getElementById('systemMessage'),
+            userHeader: document.getElementById('userHeader'),
+            userFooter: document.getElementById('userFooter'),
             saveBtn: document.getElementById('saveBtn'),
             status: document.getElementById('status')
         };
@@ -105,6 +108,11 @@ export class OptionsPanel {
         this.elements.showThoughtCheckbox.checked = settings.aim?.showThought || false;
         this.elements.autoThinkCheckbox.checked = settings.aim?.autoThink || false;
         this.elements.autoInjectCheckbox.checked = settings.ui?.autoInject || false;
+
+        // System prompt settings
+        this.elements.systemMessage.value = settings.aim?.systemMessage || '';
+        this.elements.userHeader.value = settings.aim?.userHeader || '';
+        this.elements.userFooter.value = settings.aim?.userFooter || '';
 
         // Provider settings
         if (settings.ai?.providers) {
@@ -150,6 +158,9 @@ export class OptionsPanel {
                 personaName: this.elements.personaNameInput.value.trim(),
                 showThought: this.elements.showThoughtCheckbox.checked,
                 autoThink: this.elements.autoThinkCheckbox.checked,
+                systemMessage: this.elements.systemMessage.value.trim() || undefined,
+                userHeader: this.elements.userHeader.value.trim() || undefined,
+                userFooter: this.elements.userFooter.value.trim() || undefined,
             },
             mcp: {
                 serverUrl: this.elements.mcpServerUrlInput.value.trim()

@@ -77,6 +77,48 @@
     }
   }
 
+  /* Message actions container */
+  .ww-message-actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: var(--space-1);
+    
+    .ww-copy-button {
+      opacity: 0;
+      background: transparent;
+      border: none;
+      padding: var(--space-1);
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      color: var(--color-text-muted);
+      transition: all var(--transition-normal);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      
+      svg {
+        width: 14px;
+        height: 14px;
+      }
+      
+      &:hover {
+        background: var(--color-gray-100);
+        color: var(--color-text-secondary);
+      }
+      
+      &.ww-copy-success {
+        color: var(--color-success-600);
+        background: var(--color-success-50);
+      }
+    }
+  }
+
+  /* Show copy button on message hover */
+  .ww-message.ww-assistant:hover .ww-copy-button {
+    opacity: 1;
+  }
+
   /* Status indicator styling with nice visual effects */
   .ww-connection-status {
     .ww-status-indicator-ai,

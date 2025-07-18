@@ -177,6 +177,54 @@ export class AIMStatePlugin {
     }
 
     /**
+     * Gets the system message.
+     * @returns {string|undefined} The current system message
+     */
+    getSystemMessage() {
+        return this.stateService.state.settings.aim.systemMessage;
+    }
+
+    /**
+     * Sets the system message.
+     * @param {string|undefined} message - The system message to set
+     */
+    setSystemMessage(message) {
+        this.stateService.state.settings.aim.systemMessage = message;
+    }
+
+    /**
+     * Gets the user header.
+     * @returns {string|undefined} The current user header
+     */
+    getUserHeader() {
+        return this.stateService.state.settings.aim.userHeader;
+    }
+
+    /**
+     * Sets the user header.
+     * @param {string|undefined} header - The user header to set
+     */
+    setUserHeader(header) {
+        this.stateService.state.settings.aim.userHeader = header;
+    }
+
+    /**
+     * Gets the user footer.
+     * @returns {string|undefined} The current user footer
+     */
+    getUserFooter() {
+        return this.stateService.state.settings.aim.userFooter;
+    }
+
+    /**
+     * Sets the user footer.
+     * @param {string|undefined} footer - The user footer to set
+     */
+    setUserFooter(footer) {
+        this.stateService.state.settings.aim.userFooter = footer;
+    }
+
+    /**
      * Gets a summary of the current AIM configuration.
      * @returns {Object} Summary object with current settings
      */
