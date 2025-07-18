@@ -41,7 +41,7 @@ export class FeatherlessClient extends AbstractAIClient {
             throw new Error('Featherless API key not configured');
         }
 
-        console.log('[FeatherlessClient]', 'Generating turn for input', userTurn);
+        console.log('[FeatherlessClient]', 'Generating turn for input', userTurn.substring(0, 100));
         
         try {
             const messages = this.buildMessages(userTurn, history, systemPrompt, options);
