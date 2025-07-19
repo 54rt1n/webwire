@@ -47,7 +47,8 @@ export const EVENTS = {
         CANCEL_TOOL: 'chat:cancel-tool',
         TOOL_RESULT: 'chat:tool-result',
         CANCEL_STREAM: 'chat:cancel-stream',
-        COPY_MESSAGE: 'chat:copy-message'
+        COPY_MESSAGE: 'chat:copy-message',
+        UPDATE_CONVERSATION: 'chat:update-conversation'
     },
     AIM: {
         THOUGHT_TOGGLED: 'aim:thought_toggled',
@@ -74,7 +75,8 @@ export const EVENTS = {
     UI: {
         CHANGED: 'ui:changed',
         SAVE_PANEL_VISIBILITY: 'ui:save-panel-visibility',
-        INJECT_PANEL: 'ui:inject-panel'
+        INJECT_PANEL: 'ui:inject-panel',
+        THREAD_SAVED: 'ui:thread-saved'
     },
     THREADS: {
         GET_OR_CREATE: 'threads:get-or-create',

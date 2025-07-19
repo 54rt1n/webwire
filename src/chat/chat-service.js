@@ -132,6 +132,9 @@ export class ChatService {
         
         // Listen for AI streaming events
         this.eventBus.on(EVENTS.AI.STREAM_CHUNK, this.handleStreamingChunk.bind(this));
+        
+        // Listen for save status events
+        this.eventBus.on(EVENTS.UI.THREAD_SAVED, this.handleThreadSaved.bind(this));
     }
 
     /**
@@ -841,6 +844,22 @@ export class ChatService {
             await this.handleConversationLoaded({ conversation: conversationData });
         } else {
             console.warn('[ChatService] Failed to load conversation or no conversation returned:', conversationData);
+        }
+    }
+
+    /**
+     * Handle thread saved event
+     * @param {Object} data - { threadId, status, error }
+     */
+    handleThreadSaved(data) {
+        console.log('[ChatService] Thread saved event:', data);
+        
+        if (!this.panel) return;
+        
+        if (data.status === 'success') {
+            this.panel.updateSaveIndicator('success');
+        } else if (data.status === 'error') {
+            this.panel.updateSaveIndicator('error', data.error || 'Failed to save thread');
         }
     }
 

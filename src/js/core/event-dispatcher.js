@@ -158,7 +158,7 @@ export class EventDispatcher {
 
   // ── Chrome Extension Messaging ───────────────────────────────────
 
-  async sendChromeMessage(message, timeout = 5000) {
+  async sendChromeMessage(message, timeout = 30000) {
     return new Promise((resolve, reject) => {
       const requestId = ++this.requestId;
       

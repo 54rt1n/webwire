@@ -121,6 +121,11 @@
 
   /* Status indicator styling with nice visual effects */
   .ww-connection-status {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    
     .ww-status-indicator-ai,
     .ww-status-indicator-mcp {
       display: inline-flex;
@@ -147,6 +152,46 @@
     .ww-status-indicator-mcp {
       &.connecting {
         animation: pulse-glow 2s ease-in-out infinite;
+      }
+    }
+    
+    /* Save indicator disk icon */
+    .ww-save-indicator {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      margin-left: auto;
+      padding: 4px;
+      color: var(--color-gray-400);
+      transition: all var(--transition-normal);
+      cursor: pointer;
+      border: 1px solid transparent;
+      border-radius: var(--radius-sm);
+      
+      svg {
+        width: 16px;
+        height: 16px;
+      }
+      
+      &:hover {
+        color: var(--color-gray-600);
+        background: var(--color-gray-50);
+        border-color: var(--color-gray-200);
+      }
+      
+      &.ww-saving {
+        color: var(--color-green-600);
+        filter: drop-shadow(0 1px 3px rgba(16, 185, 129, 0.4));
+      }
+      
+      &.ww-saved {
+        color: #FFD700; /* Gold color */
+        filter: drop-shadow(0 1px 3px rgba(255, 215, 0, 0.4));
+      }
+      
+      &.ww-error {
+        color: var(--color-red-600);
+        filter: drop-shadow(0 1px 3px rgba(239, 68, 68, 0.4));
       }
     }
   }

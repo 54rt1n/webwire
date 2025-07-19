@@ -48,6 +48,21 @@ export class ChatUIRenderer {
                     <circle cx="6" cy="6" r="5"/>
                 </svg>`,
                 
+                disk: `<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                    <!-- Main floppy body -->
+                    <path d="M5 3h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/>
+                    <!-- Metal slider -->
+                    <rect x="7" y="3" width="10" height="5" fill="var(--color-gray-600)"/>
+                    <!-- Metal slider opening -->
+                    <rect x="9" y="3" width="6" height="3" fill="var(--color-gray-800)"/>
+                    <!-- Label area -->
+                    <rect x="6" y="11" width="12" height="8" rx="0.5" fill="var(--color-gray-100)"/>
+                    <!-- Label lines -->
+                    <line x1="8" y1="13" x2="16" y2="13" stroke="var(--color-gray-400)" stroke-width="0.5"/>
+                    <line x1="8" y1="15" x2="16" y2="15" stroke="var(--color-gray-400)" stroke-width="0.5"/>
+                    <line x1="8" y1="17" x2="14" y2="17" stroke="var(--color-gray-400)" stroke-width="0.5"/>
+                </svg>`,
+                
                 copy: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
                     <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
@@ -134,6 +149,7 @@ export class ChatUIRenderer {
                 <span class="ww-status-indicator-ai">${this.templates.icons.statusIndicator}</span>
                 <span class="ww-status-indicator-mcp">${this.templates.icons.statusIndicator}</span>
                 <span class="ww-status-text">Ready</span>
+                <span class="ww-save-indicator">${this.templates.icons.disk}</span>
             </div>
         `;
     }

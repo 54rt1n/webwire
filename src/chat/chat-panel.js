@@ -87,6 +87,7 @@ export class WebChatPanel {
             statusIndicatorAi: this.container.querySelector('.ww-status-indicator-ai'),
             statusIndicatorMcp: this.container.querySelector('.ww-status-indicator-mcp'),
             statusText: this.container.querySelector('.ww-status-text'),
+            saveIndicator: this.container.querySelector('.ww-save-indicator'),
             conversationId: this.container.querySelector('.ww-conversation-id'),
             pageContentCheckbox: this.container.querySelector('.ww-page-content-checkbox'),
             mcpCheckbox: this.container.querySelector('.ww-mcp-checkbox'),
@@ -176,6 +177,10 @@ export class WebChatPanel {
 
         this.elements.resyncBtn?.addEventListener('click', () => {
             this.handleResync();
+        });
+        
+        this.elements.saveIndicator?.addEventListener('click', () => {
+            this.handleSaveConversation();
         });
 
         this.elements.drawerToggle?.addEventListener('click', () => {
@@ -844,6 +849,27 @@ export class WebChatPanel {
         console.log('[WebChatPanel] Resync requested');
         this.eventBus.emit(EVENTS.CHAT.RESYNC, {});
     }
+    
+    /**
+     * Handle save conversation request
+     */
+    async handleSaveConversation() {
+        console.log('[WebChatPanel] Save conversation requested');
+        
+        // Show saving state
+        this.updateSaveIndicator('saving');
+        
+        try {
+            // Emit async event to save conversation
+            const result = await this.eventBus.emitAsync(EVENTS.CHAT.UPDATE_CONVERSATION);
+            
+            // Result will be handled by THREAD_SAVED event
+            console.log('[WebChatPanel] Save conversation result:', result);
+        } catch (error) {
+            console.error('[WebChatPanel] Failed to save conversation:', error);
+            this.updateSaveIndicator('error', error.message || 'Failed to save conversation');
+        }
+    }
 
     handleReparseRequest() {
         console.log('[WebChatPanel] Reparse requested');
@@ -879,7 +905,7 @@ export class WebChatPanel {
     }
 
     handleSelectedModelChange(selectedModel) {
-        console.log('[WebChatPanel] Selected model change:', selectedModel);
+        conthreadId, sole.log('[WebChatPanel] Selected model change:', selectedModel);
         this.eventBus.emit(EVENTS.CHAT.TOGGLE_UI_SETTING, { 
             selectedModel: selectedModel 
         });
@@ -1033,6 +1059,70 @@ export class WebChatPanel {
             this.elements.drawerSummary.textContent = 'All features enabled';
         } else {
             this.elements.drawerSummary.textContent = `Enabled: ${enabledFeatures.join(', ')}`;
+        }
+    }
+    
+    /**
+     * Update save indicator status
+     * @param {string} status - 'success' or 'error'
+     * @param {string} errorMessage - Error message for tooltip (optional)
+     */
+    updateSaveIndicator(status, errorMessage = null, options = {}) {
+        if (!this.elements.saveIndicator) return;
+
+        const { expireTime = 5000 } = options;
+        
+        // Clear any existing timeout
+        if (this.saveIndicatorTimeout) {
+            clearTimeout(this.saveIndicatorTimeout);
+            this.saveIndicatorTimeout = null;
+        }
+        
+        // Remove existing classes
+        this.elements.saveIndicator.classList.remove('ww-saving', 'ww-saved', 'ww-error');
+        
+        if (status === 'saving') {
+            // Turn green while saving
+            this.elements.saveIndicator.classList.add('ww-saving');
+            this.elements.saveIndicator.setAttribute('title', 'Saving...');
+        } else if (status === 'success') {
+            // Turn gold for success
+            this.elements.saveIndicator.classList.add('ww-saved');
+            
+            // Set last saved time tooltip
+            const now = new Date();
+            const timeStr = now.toLocaleTimeString();
+            this.elements.saveIndicator.setAttribute('title', `Last saved: ${timeStr}`);
+            
+            // Reset to default after 5 seconds
+            this.saveIndicatorTimeout = setTimeout(() => {
+                this.elements.saveIndicator.classList.remove('ww-saved');
+                // Keep the tooltip showing last saved time
+            }, expireTime);
+        } else if (status === 'error') {
+            // Turn red for error
+            this.elements.saveIndicator.classList.add('ww-error');
+            
+            // Set error tooltip if provided
+            if (errorMessage) {
+                this.elements.saveIndicator.setAttribute('title', errorMessage);
+            }
+            // Error state persists until cleared
+        }
+    }
+    
+    /**
+     * Clear save indicator error state
+     */
+    clearSaveIndicator() {
+        if (!this.elements.saveIndicator) return;
+        
+        this.elements.saveIndicator.classList.remove('ww-error', 'ww-saved');
+        this.elements.saveIndicator.removeAttribute('title');
+        
+        if (this.saveIndicatorTimeout) {
+            clearTimeout(this.saveIndicatorTimeout);
+            this.saveIndicatorTimeout = null;
         }
     }
 }

@@ -84,6 +84,12 @@ class WebWireBackground {
             }
         });
 
+        this.eventBus.onAsync(BACKGROUND_ACTIONS.UPDATE_CONVERSATION, async (data, options) => {
+            const { threadId, messages, metadata } = data;
+            const success = await this.stateService.conversation.updateConversation(threadId, messages, metadata);
+            return { success };
+        });
+
         this.eventBus.onAsync(BACKGROUND_ACTIONS.GET_OR_CREATE_CURRENT_THREAD, async (data, options) => {
             let threadId = this.stateService.conversation.getCurrentConversation();
             let reason = null;

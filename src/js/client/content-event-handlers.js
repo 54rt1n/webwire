@@ -171,6 +171,7 @@ export class ContentEventHandlers {
         this.eventBus.onAsync(EVENTS.CHAT.GET_OR_CREATE_THREAD, this.handleGetOrCreateThread.bind(this));
         this.eventBus.onAsync(EVENTS.CHAT.CREATE_NEW_THREAD, this.handleCreateNewThread.bind(this));
         this.eventBus.onAsync(EVENTS.CHAT.RESYNC, this.handleResync.bind(this));
+        this.eventBus.onAsync(EVENTS.CHAT.UPDATE_CONVERSATION, this.handleUpdateConversation.bind(this));
     }
 
     /**
@@ -274,7 +275,7 @@ export class ContentEventHandlers {
      */
     async handleSaveMessage(data) {
         try {
-            const threadId = data.threadId;
+            const threadId = this.stateService.conversation.getActiveThreadId();
             if (!threadId) {
                 console.log('[ContentEventHandlers] No threadId found in data:', data);
                 throw new Error('[ContentEventHandlers] No threadId found in data');
@@ -285,9 +286,12 @@ export class ContentEventHandlers {
                 data,
                 { target: 'background' }
             );
+
+            this.eventBus.emit(EVENTS.UI.THREAD_SAVED, { threadId, data, status: 'success' });
             return response;
         } catch (error) {
             console.error('[ContentEventHandlers] Failed to save message:', error);
+            this.eventBus.emit(EVENTS.UI.THREAD_SAVED, { data, status: 'error', error: error.message });
             throw error;
         }
     }
@@ -324,6 +328,44 @@ export class ContentEventHandlers {
             return response;
         } catch (error) {
             console.error('[ContentEventHandlers] Failed to update settings:', error);
+            throw error;
+        }
+    }
+
+    async handleUpdateConversation(data) {
+        console.log('[ContentEventHandlers] Handling update conversation request:', data);
+        try {
+            // Validate we have a threadId, messages, and metadata
+            const threadId = this.stateService.conversation.getActiveThreadId();
+            if (!threadId) {
+                console.error('[ContentEventHandlers] Invalid update conversation request:', data);
+                throw new Error('[ContentEventHandlers] Invalid update conversation request');
+            }
+
+            const { messages, metadata } = this.stateService.conversation.getConversation(threadId);
+            
+            const response = await this.dispatcher.dispatch(
+                BACKGROUND_ACTIONS.UPDATE_CONVERSATION,
+                { threadId, messages, metadata },
+                { target: 'background' }
+            );
+            
+            // Emit THREAD_SAVED event to update UI
+            this.eventBus.emit(EVENTS.UI.THREAD_SAVED, { 
+                threadId, 
+                status: 'success' 
+            });
+            
+            return response;
+        } catch (error) {
+            console.error('[ContentEventHandlers] Failed to update conversation:', error);
+            
+            // Emit THREAD_SAVED event with error status
+            this.eventBus.emit(EVENTS.UI.THREAD_SAVED, { 
+                status: 'error', 
+                error: error.message 
+            });
+            
             throw error;
         }
     }

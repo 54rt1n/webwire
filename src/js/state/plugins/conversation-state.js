@@ -26,6 +26,16 @@ export class ConversationStatePlugin {
     }
 
     /**
+     * Get conversation metadata by thread ID
+     * @param {string} threadId
+     * @returns {object} Conversation metadata
+     */
+    getConversationMetadata(threadId) {
+        const state = this.stateService.state.conversation;
+        return state.metadata[threadId];
+    }
+
+    /**
      * Get a conversation by thread ID
      * @param {string} threadId
      * @returns {object} Conversation object
@@ -37,6 +47,22 @@ export class ConversationStatePlugin {
             messages: state.history[threadId],
             metadata: state.metadata[threadId]
         };
+    }
+
+    /**
+     * Update a conversation by thread ID
+     * @param {string} threadId
+     * @param {array} messages - Array of messages
+     * @param {object} metadata - Conversation metadata
+     * @returns {boolean} True if successful, false otherwise
+     */
+    updateConversation(threadId, messages, metadata) {
+        const state = this.stateService.state.conversation;
+
+        // TODO we should probably merge unique values or something here
+        state.metadata[threadId] = metadata;
+        state.history[threadId] = messages;
+        return true;
     }
 
     /**
