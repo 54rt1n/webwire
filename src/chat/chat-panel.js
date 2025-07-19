@@ -905,7 +905,7 @@ export class WebChatPanel {
     }
 
     handleSelectedModelChange(selectedModel) {
-        conthreadId, sole.log('[WebChatPanel] Selected model change:', selectedModel);
+        console.log('[WebChatPanel] Selected model change:', selectedModel);
         this.eventBus.emit(EVENTS.CHAT.TOGGLE_UI_SETTING, { 
             selectedModel: selectedModel 
         });
