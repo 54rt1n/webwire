@@ -51,41 +51,6 @@ export class DOMAgent {
                     required: ['fields'],
                 },
             },
-            {
-                name: 'extract_elements',
-                description: 'Extract information about elements matching a selector.',
-                parameters: {
-                    type: 'object',
-                    properties: {
-                        selector: { type: 'string', description: 'CSS selector for elements to extract.' },
-                        attributes: { type: 'array', items: { type: 'string' }, description: 'List of attributes to extract.' },
-                    },
-                    required: ['selector'],
-                },
-            },
-            {
-                name: 'scroll_to',
-                description: 'Scroll to an element or a specific position on the page.',
-                parameters: {
-                    type: 'object',
-                    properties: {
-                        selector: { type: 'string', description: 'CSS selector for the element to scroll to.' },
-                        position: { type: 'string', description: 'Scroll position ("top", "bottom", "center").' },
-                    },
-                },
-            },
-            {
-                name: 'wait_for_element',
-                description: 'Wait for an element to appear on the page.',
-                parameters: {
-                    type: 'object',
-                    properties: {
-                        selector: { type: 'string', description: 'CSS selector for the element to wait for.' },
-                        timeout: { type: 'number', description: 'Timeout in milliseconds (default: 5000).', default: 5000 },
-                    },
-                    required: ['selector'],
-                },
-            },
         ];
     }
 
@@ -217,73 +182,6 @@ export class DOMAgent {
         }
 
         return { message: `Filled ${fieldsFilled} of ${Object.keys(fields).length} provided fields.` };
-    }
-
-    /**
-     * Extracts data from elements matching a selector.
-     * @param {Object} params - { selector: string, attributes?: string[] }.
-     */
-    async extract_elements({ selector, attributes = ['textContent', 'href'] }) {
-        if (!selector) throw new Error('Selector parameter is required.');
-
-        const elements = document.querySelectorAll(selector);
-        const extracted = Array.from(elements).map(el => {
-            const data = { tagName: el.tagName.toLowerCase() };
-            attributes.forEach(attr => {
-                data[attr] = attr === 'textContent' ? el.textContent.trim() : el.getAttribute(attr);
-            });
-            return data;
-        });
-
-        return {
-            count: extracted.length,
-            elements: extracted,
-        };
-    }
-
-    /**
-     * Scrolls the page to a specific element or position.
-     * @param {Object} params - { selector?, position? }.
-     */
-    async scroll_to({ selector, position = 'center' }) {
-        if (selector) {
-            const element = document.querySelector(selector);
-            if (!element) throw new Error(`Element with selector "${selector}" not found.`);
-            element.scrollIntoView({ behavior: 'smooth', block: position });
-            return { message: `Scrolled to element "${selector}".` };
-        }
-
-        // Fallback to window scrolling if no selector
-        const positions = {
-            top: { top: 0, left: 0 },
-            bottom: { top: document.body.scrollHeight, left: 0 },
-        };
-        const scrollOptions = positions[position] || { top: 0, left: 0 };
-        window.scrollTo({ ...scrollOptions, behavior: 'smooth' });
-
-        return { message: `Scrolled to page ${position}.` };
-    }
-
-    /**
-     * Waits for an element to appear on the page.
-     * @param {Object} params - { selector: string, timeout?: number }.
-     */
-    async wait_for_element({ selector, timeout = 5000 }) {
-        if (!selector) throw new Error('Selector parameter is required.');
-
-        return new Promise((resolve, reject) => {
-            const startTime = Date.now();
-            const interval = setInterval(() => {
-                const element = document.querySelector(selector);
-                if (element) {
-                    clearInterval(interval);
-                    resolve({ message: `Element "${selector}" found after ${Date.now() - startTime}ms.` });
-                } else if (Date.now() - startTime > timeout) {
-                    clearInterval(interval);
-                    reject(new Error(`Element "${selector}" not found within ${timeout}ms.`));
-                }
-            }, 100);
-        });
     }
 
     // --- Helper Methods ---

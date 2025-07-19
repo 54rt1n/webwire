@@ -119,12 +119,11 @@ export class MessageBuilder {
         // Add page content
         if (forcePageContent || stateService.ui.getIncludePageContent() !== false) {
             const pageContext = this.pageUtils.getCurrentPageContent({ maxTextTokens, includePageNavigation });
-            // Convert page context object to string representation
-            const pageContextString = typeof pageContext === 'object' 
-                ? JSON.stringify(pageContext, null, 2) 
-                : pageContext;
-            syntheticMessages.push(pageContextString);
-            syntheticSources.push('page');
+            const { text, mainContent, ...metadata } = pageContext;
+            syntheticMessages.push(JSON.stringify(metadata));
+            syntheticMessages.push(text || mainContent);
+            syntheticSources.push('page_metadata');
+            syntheticSources.push('page_content');
         }
 
         return { syntheticMessages, syntheticSources };

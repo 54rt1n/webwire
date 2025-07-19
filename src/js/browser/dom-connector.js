@@ -71,65 +71,6 @@ export class DOMConnector {
                     required: ['fields']
                 }
             },
-            {
-                name: 'extract_elements',
-                description: 'Extract information about elements matching a selector',
-                parameters: {
-                    type: 'object',
-                    properties: {
-                        selector: {
-                            type: 'string',
-                            description: 'CSS selector for elements to extract'
-                        },
-                        attributes: {
-                            type: 'array',
-                            items: { type: 'string' },
-                            description: 'List of attributes to extract (default: text, href, src)'
-                        }
-                    },
-                    required: ['selector']
-                }
-            },
-            {
-                name: 'scroll_to',
-                description: 'Scroll to an element or position',
-                parameters: {
-                    type: 'object',
-                    properties: {
-                        selector: {
-                            type: 'string',
-                            description: 'CSS selector for element to scroll to'
-                        },
-                        x: {
-                            type: 'number',
-                            description: 'X coordinate (alternative to selector)'
-                        },
-                        y: {
-                            type: 'number',
-                            description: 'Y coordinate (alternative to selector)'
-                        }
-                    }
-                }
-            },
-            {
-                name: 'wait_for_element',
-                description: 'Wait for an element to appear on the page',
-                parameters: {
-                    type: 'object',
-                    properties: {
-                        selector: {
-                            type: 'string',
-                            description: 'CSS selector for element to wait for'
-                        },
-                        timeout: {
-                            type: 'number',
-                            description: 'Timeout in milliseconds (default: 5000)',
-                            default: 5000
-                        }
-                    },
-                    required: ['selector']
-                }
-            }
         ];
 
         this.setupEventListeners();
@@ -189,14 +130,10 @@ export class DOMConnector {
             });
 
             // Dispatch the DOM operation event to content script
-            this.eventBus.emit('dispatch:outbound', {
-                target: 'host',
-                event: EVENTS.DOM.EXECUTE,
-                data: {
-                    operationId,
-                    toolName,
-                    parameters
-                }
+            this.eventBus.emit(EVENTS.DOM.EXECUTE, {
+                operationId,
+                toolName,
+                parameters
             });
 
             // Wait for the operation to complete
