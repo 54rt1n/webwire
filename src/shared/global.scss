@@ -542,8 +542,8 @@
       background: var(--color-gray-50);
       border: 1px solid var(--color-border);
       border-radius: var(--radius-lg);
-      padding: 0;
       transition: all var(--transition-normal);
+      padding: var(--space-2);
       
       &:focus-within {
         border-color: var(--color-primary-500);
@@ -556,45 +556,18 @@
       flex: 1;
       border: none;
       background: transparent;
-      padding: var(--space-2) var(--space-4);
       font-size: var(--font-size-sm);
       resize: none;
       outline: none;
       min-height: 44px;
-      max-height: 120px;
+      /*max-height: 120px;*/
+      height: 100%;
       font-family: inherit;
       line-height: 1.4;
       color: var(--color-text-primary);
       
       &::placeholder {
         color: var(--color-text-muted);
-      }
-    }
-    
-    .ww-reparse-button {
-      width: 44px;
-      height: 44px;
-      border: none;
-      border-radius: var(--radius-md);
-      background: var(--color-gray-100);
-      color: var(--color-text-secondary);
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      transition: all var(--transition-normal);
-      flex-shrink: 0;
-      
-      &:hover:not(:disabled) {
-        background: var(--color-gray-200);
-        color: var(--color-text-primary);
-      }
-      
-      &:disabled {
-        background: var(--color-gray-100);
-        color: var(--color-text-muted);
-        cursor: not-allowed;
-        opacity: 0.5;
       }
     }
     
@@ -611,7 +584,7 @@
       justify-content: center;
       transition: all var(--transition-normal);
       flex-shrink: 0;
-      margin: var(--space-1);
+      margin: 0;
       
       &:hover:not(:disabled) {
         background: var(--color-primary-600);
@@ -637,6 +610,7 @@
       justify-content: center;
       transition: all var(--transition-normal);
       flex-shrink: 0;
+      margin: 0;
       
       svg {
         width: 20px;

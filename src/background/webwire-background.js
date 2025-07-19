@@ -87,6 +87,7 @@ class WebWireBackground {
         this.eventBus.onAsync(BACKGROUND_ACTIONS.UPDATE_CONVERSATION, async (data, options) => {
             const { threadId, messages, metadata } = data;
             const success = await this.stateService.conversation.updateConversation(threadId, messages, metadata);
+            await this.stateService.disk.saveToStorage();
             return { success };
         });
 

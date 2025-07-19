@@ -334,6 +334,12 @@ export class ChatService {
             // Finalize the thinking message with the complete response
             this.responseHandler.finalizeStreamingMessage(thinkingMessage, assistantMsg);
 
+            this.stateService.conversation.storeAssistantMessage(threadId, assistantMsg, {
+                ...persona,
+                url: location,
+                title: document.title,
+            });
+
             console.log('[ChatService] Saving message:', userMsg, assistantMsg);
 
             // Request host to save conversation
@@ -342,7 +348,7 @@ export class ChatService {
                 userMessage: userMsg,
                 assistantMessage: assistantMsg,
                 options: {
-                    ...this.stateService.aim.getAimMessageOptions(),
+                    ...persona,
                     url: location,
                     title: document.title,
                 }}, { target: EVENT_CONTEXT.BACKGROUND }
