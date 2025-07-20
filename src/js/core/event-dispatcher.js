@@ -223,7 +223,7 @@ export class EventDispatcher {
     }
   }
 
-  async sendToSpecificTab(tabId, event, data, timeout = 5000) {
+  async sendToSpecificTab(tabId, event, data, timeout = 30000) {
     return new Promise((resolve, reject) => {
       const timeoutId = setTimeout(() => {
         reject(new Error(`Tab message timeout after ${timeout}ms`));
@@ -264,7 +264,7 @@ export class EventDispatcher {
 
   // ── PostMessage Communication (Panel ↔ Content) ─────────────────
 
-  async sendToInjectedPanel(event, data, timeout = 5000) {
+  async sendToInjectedPanel(event, data, timeout = 30000) {
     return new Promise((resolve, reject) => {
       const requestId = ++this.requestId;
       
@@ -294,7 +294,7 @@ export class EventDispatcher {
     });
   }
 
-  async sendToParentContent(event, data, timeout = 5000) {
+  async sendToParentContent(event, data, timeout = 30000) {
     return new Promise((resolve, reject) => {
       const requestId = ++this.requestId;
       

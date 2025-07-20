@@ -255,17 +255,18 @@ export class ChatService {
             // Build page context and prepare m
             const conversationMessages = this.stateService.conversation.getConversationMessages(threadId);
 
+            const wrapperTokens = 7;
+
             // Calculate tokens: subtract AI response tokens and existing conversation tokens
-            const systemPromptTokens = await this.messageBuilder.countTokens(systemPrompts);
+            const systemPromptTokens = await this.messageBuilder.countTokens(systemPrompts) + wrapperTokens;
             const aiResponseTokens = this.aiClient.samplerConfig?.maxTokens ?? 2048;
             const conversationTokens = (await Promise.all(conversationMessages.map(async (msg) => {
-                return await this.messageBuilder.countTokens(msg.content || '');
+                return await this.messageBuilder.countTokens(msg.content || '') + wrapperTokens;
             }))).reduce((total, msg) => total + msg, 0);
-            const userMessageTokens = await this.messageBuilder.countTokens(userMessage.content);
-            const maxTextTokens = this.maxRequestTokens - aiResponseTokens - conversationTokens - systemPromptTokens - userMessageTokens;
+            const userMessageTokens = await this.messageBuilder.countTokens(userMessage.content) + wrapperTokens;
+            const maxTextTokens = this.maxRequestTokens - aiResponseTokens - conversationTokens - systemPromptTokens - userMessageTokens - 512;
             console.log('[ChatService] Max text tokens:', maxTextTokens, 'aiResponseTokens:', aiResponseTokens, 'conversationTokens:', conversationTokens, 'systemPromptTokens:', systemPromptTokens, 'userMessageTokens:', userMessageTokens);
-            const includePageNavigation = false;
-            const pageContext = this.messageBuilder.buildPageContext(this.stateService, { forcePageContent, includePageNavigation, maxTextTokens });
+            const pageContext = await this.messageBuilder.buildPageContext(this.stateService, { forcePageContent, include: { navigation: false, links: true }, maxTextTokens });
             let { messagesForAPI, enhancedUserMessage } = this.messageBuilder.prepareMessagesForAPI(
                 userMessage.content,
                 conversationMessages,

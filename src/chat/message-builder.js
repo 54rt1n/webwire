@@ -102,10 +102,18 @@ export class MessageBuilder {
         return tokens;
     }
 
+    async clipText(text, maxTokens) {
+        const tokenizedText = this.encoder.encode(text);
+        const clippedTokens = tokenizedText.slice(0, maxTokens);
+        const clippedText = this.encoder.decode(clippedTokens);
+        return clippedText;
+    }
+
+
     /**
      * Build page context from stash and page content
      */
-    buildPageContext(stateService, {forcePageContent = false, includePageNavigation = false, maxTextTokens = null} = {}) {
+    async buildPageContext(stateService, {forcePageContent = false, include = { navigation: false, links: false }, maxTextTokens = null} = {}) {
         const syntheticMessages = [];
         const syntheticSources = [];
         
@@ -118,11 +126,19 @@ export class MessageBuilder {
 
         // Add page content
         if (forcePageContent || stateService.ui.getIncludePageContent() !== false) {
-            const pageContext = this.pageUtils.getCurrentPageContent({ maxTextTokens, includePageNavigation });
+            const pageContext = this.pageUtils.getCurrentPageContent({ includePageNavigation: include.navigation, includeLinks: include.links });
             const { text, mainContent, ...metadata } = pageContext;
+            const metadataString = JSON.stringify(metadata);
+            const metadataTokens = await this.countTokens(metadataString);
+            if (maxTextTokens !== null && metadataTokens > maxTextTokens) {
+                return { syntheticMessages, syntheticSources, warning: `Page metadata exceeds max text tokens: ${metadataTokens} > ${maxTextTokens}` };
+            }
+            const remainingTokens = maxTextTokens - metadataTokens;
             syntheticMessages.push(JSON.stringify(metadata));
-            syntheticMessages.push(text || mainContent);
             syntheticSources.push('page_metadata');
+            const pageContent = text || mainContent;
+            const clippedPageContent = await this.clipText(pageContent, remainingTokens);
+            syntheticMessages.push(clippedPageContent);
             syntheticSources.push('page_content');
         }
 
