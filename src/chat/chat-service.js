@@ -132,6 +132,8 @@ export class ChatService {
         
         // Listen for AI streaming events
         this.eventBus.on(EVENTS.AI.STREAM_CHUNK, this.handleStreamingChunk.bind(this));
+        this.eventBus.on(EVENTS.AI.STREAM_STARTED, this.handleStreamStarted.bind(this));
+        this.eventBus.on(EVENTS.AI.STREAM_COMPLETED, this.handleStreamCompleted.bind(this));
         
         // Listen for save status events
         this.eventBus.on(EVENTS.UI.THREAD_SAVED, this.handleThreadSaved.bind(this));
@@ -750,6 +752,22 @@ export class ChatService {
     handleStreamingChunk(chunk, messageHandle) {
         this.responseHandler.handleStreamingChunk(chunk, messageHandle);
     }
+    
+    /**
+     * Handle stream started event
+     */
+    handleStreamStarted() {
+        // Update FAB to show streaming indicator
+        this.panel.updateFabStreamingState(true);
+    }
+    
+    /**
+     * Handle stream completed event
+     */
+    handleStreamCompleted() {
+        // Reset FAB to normal state when streaming ends
+        this.panel.updateFabStreamingState(false);
+    }
 
     /**
      * Set current settings
@@ -874,6 +892,11 @@ export class ChatService {
      * Clean up the chat service
      */
     destroy() {
+        // Cancel any ongoing streaming first
+        if (this.responseHandler) {
+            this.responseHandler.cancelStreaming();
+        }
+        
         if (this.panel) {
             this.panel.destroy();
         }

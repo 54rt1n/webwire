@@ -32,6 +32,12 @@ export class ChatUIRenderer {
                     <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
                 </svg>`,
                 
+                streamingDots: `<div class="ww-streaming-dots">
+                    <div class="ww-dot"></div>
+                    <div class="ww-dot"></div>
+                    <div class="ww-dot"></div>
+                </div>`,
+                
                 send: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <path d="m22 2-7 20-4-9-9-4Z"/>
                     <path d="M22 2 11 13"/>
@@ -286,6 +292,20 @@ export class ChatUIRenderer {
                 ${this.templates.icons.chat}
             </div>
         `;
+    }
+    
+    /**
+     * Create streaming FAB content
+     */
+    createStreamingFabContent() {
+        return this.templates.icons.streamingDots;
+    }
+    
+    /**
+     * Create normal FAB content
+     */
+    createNormalFabContent() {
+        return this.templates.icons.chat;
     }
 
     /**

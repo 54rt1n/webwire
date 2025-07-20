@@ -5,6 +5,7 @@ import { PageUtils } from '../js/browser/page-utils.js';
 import { DOMAgent } from '../js/browser/dom-agent.js';
 import { WebWireClientCore } from '../js/client/webwire-client-core.js';
 import { setupDebugMethods, setupGlobalDebugAccess } from './debug.js';
+import { TabIndicator } from './tab-indicator.js';
 import {
     BACKGROUND_ACTIONS,
     CONTENT_ACTIONS,
@@ -39,6 +40,9 @@ class WebWireContentHost {
         // Host state
         this.pageUtils = new PageUtils();
         this.domAgent = new DOMAgent(this.eventBus);
+        
+        // Tab indicator for streaming status
+        this.tabIndicator = new TabIndicator(this.eventBus);
 
         this.initialized = false;
         
@@ -124,6 +128,11 @@ class WebWireContentHost {
                 this.chatService.togglePanel();
             }
         });
+        
+        // Clean up on page unload
+        window.addEventListener('beforeunload', () => {
+            this.cleanup();
+        });
     }
 
     /**
@@ -192,6 +201,25 @@ class WebWireContentHost {
             console.log('[WebWireContentHost] Initial state sent to ChatService');
         } catch (error) {
             console.error('[WebWireContentHost] Failed to send initial state:', error);
+        }
+    }
+    
+    /**
+     * Clean up before page unload
+     */
+    cleanup() {
+        console.log('[WebWireContentHost] Cleaning up before page unload...');
+        
+        if (this.chatService) {
+            this.chatService.destroy();
+        }
+        
+        if (this.tabIndicator) {
+            this.tabIndicator.destroy();
+        }
+        
+        if (this.core) {
+            this.core.disconnect();
         }
     }
 }

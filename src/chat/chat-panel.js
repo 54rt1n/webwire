@@ -614,6 +614,21 @@ export class WebChatPanel {
     toggle() {
         this.isVisible ? this.hide() : this.show();
     }
+    
+    /**
+     * Update FAB for streaming state
+     */
+    updateFabStreamingState(isStreaming) {
+        if (!this.elements.fab) return;
+        
+        if (isStreaming) {
+            this.elements.fab.classList.add('ww-streaming');
+            this.elements.fab.innerHTML = this.renderer.createStreamingFabContent();
+        } else {
+            this.elements.fab.classList.remove('ww-streaming');
+            this.elements.fab.innerHTML = this.renderer.createNormalFabContent();
+        }
+    }
 
     /**
      * UI state updates

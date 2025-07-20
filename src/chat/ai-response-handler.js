@@ -61,6 +61,9 @@ export class AIResponseHandler {
             this.streamingState.isActive = true;
             this.streamingState.streamingText = '';
             this.streamingState.currentMessage = messageHandle;
+            
+            // Emit stream started event
+            this.eventBus.emit(EVENTS.AI.STREAM_STARTED);
         }
         
         this.streamingState.streamingText += chunk;
@@ -76,6 +79,9 @@ export class AIResponseHandler {
         this.streamingState.isActive = false;
         this.streamingState.currentMessage = null;
         this.streamingState.streamingText = '';
+
+        // Emit stream completed event
+        this.eventBus.emit(EVENTS.AI.STREAM_COMPLETED);
 
         // Finalize in panel
         this.panel.finalizeThinkingMessage(
@@ -127,6 +133,9 @@ export class AIResponseHandler {
             this.streamingState.abortController.abort();
             this.streamingState.abortController = null;
             this.streamingState.isActive = false;
+            
+            // Emit stream completed event when cancelled
+            this.eventBus.emit(EVENTS.AI.STREAM_COMPLETED);
         }
     }
 
