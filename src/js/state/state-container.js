@@ -99,6 +99,8 @@ export function createInitialState() {
         },
     
         mcp: {
+            isAvailable: false,
+            error: undefined,
             systemMessage: undefined,
             /* connection
                 {

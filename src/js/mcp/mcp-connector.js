@@ -32,6 +32,7 @@ export class MCPConnector {
       this.eventSource = null;
       this.requestId = 0;
       this.errorState = null;
+      this.isAvailable = false;
       this.connectionTimeout = null;
       this.onOpenBound = this.handleOpen.bind(this);
       this.onMessageBound = this.handleMessage.bind(this);
@@ -53,6 +54,11 @@ export class MCPConnector {
         throw new Error('State service not provided');
       }
 
+      // Check for HTTPS downgrade using state service
+      if (this.stateService.mcp.isHTTPSDowngrade()) {
+        throw new Error('MCP server security downgrade.');
+      }
+
       this.stateService.mcp.setMcpConnection({ sessionId: this.sessionId });
 
       if (this.stateService.mcp.isMcpInitialized()) {
@@ -61,7 +67,7 @@ export class MCPConnector {
   
       try {
         console.log('[MCPConnector] Initializing MCP Connector...');
-        
+
         // Connect to SSE endpoint
         await this.connectSSE();
         
@@ -95,9 +101,6 @@ export class MCPConnector {
      * @throws {Error} If connection fails or times out
      */
     async connectSSE() {
-      if (this.errorState) {
-        throw new Error(this.errorState);
-      }
       return new Promise((resolve, reject) => {
         this.resolveConnection = resolve;
         this.rejectConnection = reject;
@@ -127,6 +130,11 @@ export class MCPConnector {
      * @returns {EventSource} Configured EventSource instance
      */
     createEventSource() {
+      // Check for HTTPS downgrade using state service
+      if (this.stateService.mcp.isHTTPSDowngrade()) {
+        throw new Error('MCP server security downgrade.');
+      }
+
       const sseUrl = new URL(this.mcpServerUrl);
       sseUrl.searchParams.append('session_id', this.sessionId);
       console.log(`[MCPConnector] Connecting to SSE endpoint: ${sseUrl}`);

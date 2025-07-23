@@ -719,14 +719,13 @@ export class WebChatPanel {
         }
     }
 
-    updateConnectionStatus(message, aiConnected = false, mcpConnected = false) {
+    updateConnectionStatus(message, ai = {connected: undefined, connecting: undefined, unavailable: undefined, disconnected: undefined, message: undefined}, mcp = {connected: undefined, connecting: undefined, unavailable: undefined, disconnected: undefined, message: undefined}) {
         if (!this.elements.statusText || !this.elements.statusIndicatorAi || !this.elements.statusIndicatorMcp) return;
 
-        let color, text;
-
         const colors = {
-            'connected': '#10b981',
-            'connecting': '#3b82f6',
+            'connected': '#10b981',     // Keep original green
+            'connecting': '#059669',    // Darker green for "ready"
+            'unavailable': '#6b7280',   // Gray
             'disconnected': '#ef4444'
         }
 
@@ -734,32 +733,13 @@ export class WebChatPanel {
         this.elements.statusIndicatorAi.classList.remove('connecting');
         this.elements.statusIndicatorMcp.classList.remove('connecting');
 
-        if (aiConnected && mcpConnected) {
-            this.elements.statusIndicatorAi.style.color = colors.connected;
-            this.elements.statusIndicatorMcp.style.color = colors.connected;
-            this.elements.statusIndicatorAi.title = 'AI: Connected and ready';
-            this.elements.statusIndicatorMcp.title = 'MCP: Connected and ready';
-            this.elements.statusText.textContent = 'AI + MCP Ready';
-        } else if (aiConnected) {
-            this.elements.statusIndicatorAi.style.color = colors.connected;
-            this.elements.statusIndicatorMcp.style.color = colors.disconnected;
-            this.elements.statusIndicatorAi.title = 'AI: Connected and ready';
-            this.elements.statusIndicatorMcp.title = 'MCP: Disconnected';
-            this.elements.statusText.textContent = 'AI Ready';
-        } else if (mcpConnected) {
-            this.elements.statusIndicatorAi.style.color = colors.connecting;
-            this.elements.statusIndicatorMcp.style.color = colors.connected;
-            this.elements.statusIndicatorAi.title = 'AI: Connecting...';
-            this.elements.statusIndicatorMcp.title = 'MCP: Connected';
-            this.elements.statusIndicatorAi.classList.add('connecting');
-            this.elements.statusText.textContent = 'MCP Connected';
-        } else {
-            this.elements.statusIndicatorAi.style.color = colors.disconnected;
-            this.elements.statusIndicatorMcp.style.color = colors.disconnected;
-            this.elements.statusIndicatorAi.title = 'AI: Disconnected';
-            this.elements.statusIndicatorMcp.title = 'MCP: Disconnected';
-            this.elements.statusText.textContent = message || 'Configuring...';
-        }
+        this.elements.statusIndicatorAi.style.color = ai.connected ? colors.connected : ai.connecting ? colors.connecting : ai.unavailable ? colors.unavailable : colors.disconnected;
+        this.elements.statusIndicatorAi.title = ai.message || 'AI: Disconnected';
+        this.elements.statusIndicatorAi.classList.remove('connecting');
+        this.elements.statusIndicatorMcp.style.color = mcp.connected ? colors.connected : mcp.connecting ? colors.connecting : mcp.unavailable ? colors.unavailable : colors.disconnected;
+        this.elements.statusIndicatorMcp.title = mcp.message || 'MCP: Disconnected';
+        this.elements.statusIndicatorMcp.classList.remove('connecting');
+        this.elements.statusText.textContent = message || 'Configuring...';
     }
 
     /**

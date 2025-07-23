@@ -48,6 +48,22 @@ export class MCPStatePlugin {
     }
 
     /**
+     * Check if MCP is available
+     * @returns {boolean} True if available, false otherwise
+     */
+    isMcpAvailable() {
+        return this.stateService.state.mcp.isAvailable;
+    }
+
+    /**
+     * Get the MCP error message
+     * @returns {string} The MCP error message
+     */
+    getMcpError() {
+        return this.stateService.state.mcp.error;
+    }
+
+    /**
      * Get the MCP server URL
      * @returns {string} The MCP server URL
      */
@@ -62,6 +78,21 @@ export class MCPStatePlugin {
     setMcpServerUrl(serverUrl) {
         this.stateService.state.settings.mcp.serverUrl = serverUrl;
         console.log(`[StateService::MCPState] Set MCP server URL: ${serverUrl}`);
+    }
+
+    /**
+     * Check if connecting to MCP server would cause HTTPS downgrade
+     * @returns {boolean} True if connecting would downgrade from HTTPS to HTTP
+     */
+    isHTTPSDowngrade() {
+        const serverUrl = this.getMcpServerUrl();
+        if (!serverUrl) return false;
+        
+        // Check if window is available (not in service worker context)
+        if (typeof window === 'undefined') return false;
+        
+        // Check if trying to connect to HTTP from HTTPS page
+        return serverUrl.startsWith('http://') && window.location.protocol === 'https:';
     }
 
     // Connection Management Methods
@@ -95,9 +126,11 @@ export class MCPStatePlugin {
      * @param {string} error - Error message describing the connection failure
      */
     setMcpConnectionError(error) {
+        this.stateService.state.mcp.isAvailable = false;
+        this.stateService.state.mcp.error = error;
         this.stateService.state.mcp.connection.connectionError = error;
-        this.stateService.state.mcp.connection.isConnected = false;
         this.stateService.state.mcp.connection.isInitialized = false;
+        this.stateService.state.mcp.connection.isConnected = false;
         
         console.error(`[StateService::MCPState] MCP connection error: ${error}`);
         this.eventBus.emit(EVENTS.MCP.CONNECTION_ERROR, { error });

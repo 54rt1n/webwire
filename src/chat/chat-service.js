@@ -739,23 +739,60 @@ export class ChatService {
      * Update connection status and notify panel
      */
     updateConnectionStatus() {
-        const aiConnected = this.aiClient ? true : false;
-        const mcpConnected = this.stateService.mcp.isMcpConnected();
+        // Check AI configuration status
+        const modelConfig = this.stateService.settings.getModelConfig(this.stateService.ui.getSelectedModel() || 'chat');
+        const hasAiConfig = modelConfig && modelConfig.provider && modelConfig.model;
         
-        let message;
-        
-        if (aiConnected && mcpConnected) {
-            message = 'AI + MCP Ready';
-        } else if (aiConnected) {
-            message = 'AI Ready';
-        } else if (mcpConnected) {
-            message = 'MCP Connected';
+        // Build AI status object
+        const aiStatus = {};
+        if (this.aiClient) {
+            aiStatus.connected = true;
+            aiStatus.message = 'AI: Connected';
+        } else if (hasAiConfig) {
+            aiStatus.connecting = true;
+            aiStatus.message = 'AI: Ready';
         } else {
-            message = 'Configuring...';
+            aiStatus.unavailable = true;
+            aiStatus.message = 'AI: Not configured';
         }
         
-        // Update panel directly since it's in same context
-        this.panel.updateConnectionStatus(message, aiConnected, mcpConnected);
+        // Build MCP status object
+        const mcpStatus = {};
+        const mcpError = this.stateService.mcp.getMcpError();
+        const isHTTPSDowngrade = this.stateService.mcp.isHTTPSDowngrade();
+        
+        if (this.stateService.mcp.isMcpConnected() && this.stateService.mcp.isMcpInitialized()) {
+            mcpStatus.connected = true;
+            mcpStatus.message = 'MCP: Connected';
+        } else if (this.stateService.mcp.isMcpConnected() && !this.stateService.mcp.isMcpInitialized()) {
+            mcpStatus.connecting = true;
+            mcpStatus.message = 'MCP: Initializing...';
+        } else if (isHTTPSDowngrade) {
+            mcpStatus.unavailable = true;
+            mcpStatus.message = 'MCP: Security downgrade (HTTPS to HTTP)';
+        } else if (mcpError) {
+            mcpStatus.disconnected = true;
+            mcpStatus.message = `MCP: ${mcpError}`;
+        } else if (this.stateService.mcp.getMcpServerUrl()) {
+            mcpStatus.unavailable = true;
+            mcpStatus.message = 'MCP: Disconnected';
+        } else {
+            mcpStatus.unavailable = true;
+            mcpStatus.message = 'MCP: Not configured';
+        }
+        
+        // Build overall status message
+        let message;
+        if ((aiStatus.connected || aiStatus.connecting) && (mcpStatus.connected || mcpStatus.connecting)) {
+            message = 'AI + MCP Ready';
+        } else if (aiStatus.connected || aiStatus.connecting) {
+            message = 'AI Ready';
+        } else {
+            message = 'AI Not configured';
+        }
+        
+        // Update panel with new status format
+        this.panel.updateConnectionStatus(message, aiStatus, mcpStatus);
     }
 
     /**
