@@ -500,11 +500,18 @@ export class ContentEventHandlers {
      */
     async handleSettingsChanged(data) {
         try {
+            console.log('[ContentEventHandlers] Settings changed:', data.settings);
             this.currentSettings = data.settings || {};
+            
+            // Trigger full resync to ensure everything is properly updated
+            await this.handleResync({});
+            
+            // Notify UI of settings update
             this.eventBus.emit(EVENTS.CHAT.UPDATE_SETTINGS, { settings: this.currentSettings });
+            
             return { success: true };
         } catch (error) {
-            console.error('[WebWireContentHost] Failed to handle settings change:', error);
+            console.error('[ContentEventHandlers] Failed to handle settings change:', error);
             return { success: false, error: error.message };
         }
     }

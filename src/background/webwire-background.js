@@ -175,6 +175,13 @@ class WebWireBackground {
                 stateServiceReady: !!this.stateService
             };
         });
+        
+        // Handle settings updates from options page
+        this.eventBus.onAsync('SETTINGS_UPDATED', async (data, options) => {
+            console.log('[WebWireBackground] Handling SETTINGS_UPDATED event');
+            await this.handleSettingsUpdated(data, options.sender);
+            return { success: true };
+        });
 
         console.log('[WebWireBackground] EventBus listeners set up');
     }
