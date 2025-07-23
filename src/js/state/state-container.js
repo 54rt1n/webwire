@@ -21,9 +21,11 @@ export function createInitialState() {
                         model: undefined,
                         provider: undefined,
                         tokenizer: undefined,
+                        minimalMode: false,
                         samplerConfig: {
                             temperature: 0.8,
                             maxTokens: 2048,
+                            maxContentTokens: 16384,
                             topP: undefined,
                             minP: 0.05,
                             topK: undefined,
@@ -33,6 +35,7 @@ export function createInitialState() {
                     },
                     thought: undefined,
                     tool: undefined,
+                    creative: undefined,
                 },
                 providers: {
                     featherless: {

@@ -245,19 +245,38 @@ export class ChatUIRenderer {
                             </label>
                         </div>
                         <div class="ww-model-selector">
-                            <label class="ww-label">
-                                <input type="radio" name="ww-selected-model" value="chat" class="ww-radio ww-model-chat" checked>
-                                <span class="ww-text">Chat</span>
-                            </label>
-                            <label class="ww-label">
-                                <input type="radio" name="ww-selected-model" value="thought" class="ww-radio ww-model-thought">
-                                <span class="ww-text">Thought</span>
-                            </label>
-                            <label class="ww-label">
-                                <input type="radio" name="ww-selected-model" value="tool" class="ww-radio ww-model-tool">
-                                <span class="ww-text">Tool</span>
-                            </label>
-                            <span class="ww-selected-model-display">Selected: <span class="ww-model-name">-</span></span>
+                            <div class="ww-model-selector-grid">
+                                <div class="ww-model-radios">
+                                    <div class="ww-model-radio-row">
+                                        <label class="ww-label">
+                                            <input type="radio" name="ww-selected-model" value="chat" class="ww-radio ww-model-chat" checked>
+                                            <span class="ww-text">Chat</span>
+                                        </label>
+                                        <label class="ww-label">
+                                            <input type="radio" name="ww-selected-model" value="thought" class="ww-radio ww-model-thought">
+                                            <span class="ww-text">Thought</span>
+                                        </label>
+                                    </div>
+                                    <div class="ww-model-radio-row">
+                                        <label class="ww-label">
+                                            <input type="radio" name="ww-selected-model" value="tool" class="ww-radio ww-model-tool">
+                                            <span class="ww-text">Tool</span>
+                                        </label>
+                                        <label class="ww-label">
+                                            <input type="radio" name="ww-selected-model" value="creative" class="ww-radio ww-model-creative">
+                                            <span class="ww-text">Creative</span>
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="ww-selected-model-display">
+                                    <div class="ww-model-name-row">Selected: <span class="ww-model-name">-</span></div>
+                                    <div class="ww-model-config-row">
+                                        <span class="ww-model-temp">Temp: -</span>
+                                        <span class="ww-model-max">Max: -</span>
+                                        <span class="ww-model-config"></span>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                         <div class="ww-drawer-actions">
                             <button class="ww-reparse-button" title="Reparse with tools">Reparse</button>

@@ -101,7 +101,11 @@ export class WebChatPanel {
             modelChatRadio: this.container.querySelector('.ww-model-chat'),
             modelThoughtRadio: this.container.querySelector('.ww-model-thought'),
             modelToolRadio: this.container.querySelector('.ww-model-tool'),
-            modelNameDisplay: this.container.querySelector('.ww-model-name')
+            modelCreativeRadio: this.container.querySelector('.ww-model-creative'),
+            modelNameDisplay: this.container.querySelector('.ww-model-name'),
+            modelTempDisplay: this.container.querySelector('.ww-model-temp'),
+            modelMaxDisplay: this.container.querySelector('.ww-model-max'),
+            modelConfigDisplay: this.container.querySelector('.ww-model-config')
         };
     }
 
@@ -225,6 +229,13 @@ export class WebChatPanel {
         this.elements.modelToolRadio?.addEventListener('change', (e) => {
             if (e.target.checked) {
                 this.handleSelectedModelChange('tool');
+                this.updateDrawerSummary();
+            }
+        });
+
+        this.elements.modelCreativeRadio?.addEventListener('change', (e) => {
+            if (e.target.checked) {
+                this.handleSelectedModelChange('creative');
                 this.updateDrawerSummary();
             }
         });
@@ -691,18 +702,37 @@ export class WebChatPanel {
         }
     }
 
-    updateSelectedModelSetting(selectedModel, actualModelName) {
+    updateSelectedModelSetting(selectedModel, actualModelName, modelConfig) {
         if (selectedModel === 'chat' && this.elements.modelChatRadio) {
             this.elements.modelChatRadio.checked = true;
         } else if (selectedModel === 'thought' && this.elements.modelThoughtRadio) {
             this.elements.modelThoughtRadio.checked = true;
         } else if (selectedModel === 'tool' && this.elements.modelToolRadio) {
             this.elements.modelToolRadio.checked = true;
+        } else if (selectedModel === 'creative' && this.elements.modelCreativeRadio) {
+            this.elements.modelCreativeRadio.checked = true;
         }
         
         // Update the model name display
-        if (this.elements.modelNameDisplay && actualModelName) {
-            this.elements.modelNameDisplay.textContent = actualModelName;
+        if (this.elements.modelNameDisplay) {
+            this.elements.modelNameDisplay.textContent = actualModelName || '-';
+        }
+        
+        // Update temperature and max tokens displays
+        if (this.elements.modelTempDisplay && modelConfig?.samplerConfig) {
+            const temp = modelConfig.samplerConfig.temperature;
+            this.elements.modelTempDisplay.textContent = `Temp: ${temp !== undefined ? temp : '-'}`;
+        }
+        
+        if (this.elements.modelMaxDisplay && modelConfig?.samplerConfig) {
+            const maxContentTokens = modelConfig.samplerConfig.maxContentTokens;
+            this.elements.modelMaxDisplay.textContent = `Max: ${maxContentTokens !== undefined ? maxContentTokens : '-'}`;
+        }
+        
+        // Update model config indicators
+        if (this.elements.modelConfigDisplay) {
+            const minimalEmoji = modelConfig?.minimalMode ? '🗜️' : '';
+            this.elements.modelConfigDisplay.textContent = minimalEmoji;
         }
     }
 

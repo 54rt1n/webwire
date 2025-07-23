@@ -43,11 +43,13 @@ export class OptionsPanel {
                     tokenizer: document.getElementById('chatTokenizer'),
                     temperature: document.getElementById('chatTemp'),
                     maxTokens: document.getElementById('chatMaxTokens'),
+                    maxContentTokens: document.getElementById('chatMaxContentTokens'),
                     topP: document.getElementById('chatTopP'),
                     minP: document.getElementById('chatMinP'),
                     topK: document.getElementById('chatTopK'),
                     frequencyPenalty: document.getElementById('chatFreqPenalty'),
                     presencePenalty: document.getElementById('chatPresPenalty'),
+                    minimalMode: document.getElementById('chatMinimalMode'),
                 },
                 thought: {
                     model: document.getElementById('thoughtModel'),
@@ -55,11 +57,13 @@ export class OptionsPanel {
                     tokenizer: document.getElementById('thoughtTokenizer'),
                     temperature: document.getElementById('thoughtTemp'),
                     maxTokens: document.getElementById('thoughtMaxTokens'),
+                    maxContentTokens: document.getElementById('thoughtMaxContentTokens'),
                     topP: document.getElementById('thoughtTopP'),
                     minP: document.getElementById('thoughtMinP'),
                     topK: document.getElementById('thoughtTopK'),
                     frequencyPenalty: document.getElementById('thoughtFreqPenalty'),
                     presencePenalty: document.getElementById('thoughtPresPenalty'),
+                    minimalMode: document.getElementById('thoughtMinimalMode'),
                 },
                 tool: {
                     model: document.getElementById('toolModel'),
@@ -67,14 +71,31 @@ export class OptionsPanel {
                     tokenizer: document.getElementById('toolTokenizer'),
                     temperature: document.getElementById('toolTemp'),
                     maxTokens: document.getElementById('toolMaxTokens'),
+                    maxContentTokens: document.getElementById('toolMaxContentTokens'),
                     topP: document.getElementById('toolTopP'),
                     minP: document.getElementById('toolMinP'),
                     topK: document.getElementById('toolTopK'),
                     frequencyPenalty: document.getElementById('toolFreqPenalty'),
                     presencePenalty: document.getElementById('toolPresPenalty'),
+                    minimalMode: document.getElementById('toolMinimalMode'),
+                },
+                creative: {
+                    model: document.getElementById('creativeModel'),
+                    provider: document.getElementById('creativeProvider'),
+                    tokenizer: document.getElementById('creativeTokenizer'),
+                    temperature: document.getElementById('creativeTemp'),
+                    maxTokens: document.getElementById('creativeMaxTokens'),
+                    maxContentTokens: document.getElementById('creativeMaxContentTokens'),
+                    topP: document.getElementById('creativeTopP'),
+                    minP: document.getElementById('creativeMinP'),
+                    topK: document.getElementById('creativeTopK'),
+                    frequencyPenalty: document.getElementById('creativeFreqPenalty'),
+                    presencePenalty: document.getElementById('creativePresPenalty'),
+                    minimalMode: document.getElementById('creativeMinimalMode'),
                 }
             },
             systemMessage: document.getElementById('systemMessage'),
+            minimalSystemMessage: document.getElementById('minimalSystemMessage'),
             userHeader: document.getElementById('userHeader'),
             userFooter: document.getElementById('userFooter'),
             saveBtn: document.getElementById('saveBtn'),
@@ -138,6 +159,21 @@ export class OptionsPanel {
             option.title = tokenizer.description;
             this.elements.modelConfigs.tool.tokenizer.appendChild(option);
         });
+        
+        // Add empty option for creative tokenizer
+        const creativeEmptyOption = document.createElement('option');
+        creativeEmptyOption.value = '';
+        creativeEmptyOption.textContent = '(Same as Chat)';
+        this.elements.modelConfigs.creative.tokenizer.appendChild(creativeEmptyOption);
+        
+        // Populate creative tokenizer dropdown (with same options)
+        tokenizers.forEach(tokenizer => {
+            const option = document.createElement('option');
+            option.value = tokenizer.id;
+            option.textContent = tokenizer.name;
+            option.title = tokenizer.description;
+            this.elements.modelConfigs.creative.tokenizer.appendChild(option);
+        });
     }
 
     /**
@@ -156,6 +192,7 @@ export class OptionsPanel {
 
         // System prompt settings
         this.elements.systemMessage.value = settings.aim?.systemMessage || '';
+        this.elements.minimalSystemMessage.value = settings.aim?.minimalSystemMessage || '';
         this.elements.userHeader.value = settings.aim?.userHeader || '';
         this.elements.userFooter.value = settings.aim?.userFooter || '';
 
@@ -182,12 +219,15 @@ export class OptionsPanel {
                     if (modelConfig.samplerConfig) {
                         this.elements.modelConfigs[modelType].temperature.value = modelConfig.samplerConfig.temperature ?? '';
                         this.elements.modelConfigs[modelType].maxTokens.value = modelConfig.samplerConfig.maxTokens ?? '';
+                        this.elements.modelConfigs[modelType].maxContentTokens.value = modelConfig.samplerConfig.maxContentTokens ?? '';
                         this.elements.modelConfigs[modelType].topP.value = modelConfig.samplerConfig.topP ?? '';
                         this.elements.modelConfigs[modelType].minP.value = modelConfig.samplerConfig.minP ?? '';
                         this.elements.modelConfigs[modelType].topK.value = modelConfig.samplerConfig.topK ?? '';
                         this.elements.modelConfigs[modelType].frequencyPenalty.value = modelConfig.samplerConfig.frequencyPenalty ?? '';
                         this.elements.modelConfigs[modelType].presencePenalty.value = modelConfig.samplerConfig.presencePenalty ?? '';
                     }
+                    // Set minimal mode checkbox
+                    this.elements.modelConfigs[modelType].minimalMode.checked = modelConfig.minimalMode || false;
                 }
             }
         }
@@ -205,6 +245,7 @@ export class OptionsPanel {
                 showThought: this.elements.showThoughtCheckbox.checked,
                 autoThink: this.elements.autoThinkCheckbox.checked,
                 systemMessage: this.elements.systemMessage.value.trim() || undefined,
+                minimalSystemMessage: this.elements.minimalSystemMessage.value.trim() || undefined,
                 userHeader: this.elements.userHeader.value.trim() || undefined,
                 userFooter: this.elements.userFooter.value.trim() || undefined,
             },
@@ -245,6 +286,9 @@ export class OptionsPanel {
             
             const maxTokens = this.elements.modelConfigs[modelType].maxTokens.value.trim();
             if (maxTokens) modelConfig.samplerConfig.maxTokens = parseInt(maxTokens, 10);
+            
+            const maxContentTokens = this.elements.modelConfigs[modelType].maxContentTokens.value.trim();
+            if (maxContentTokens) modelConfig.samplerConfig.maxContentTokens = parseInt(maxContentTokens, 10);
 
             const topP = this.elements.modelConfigs[modelType].topP.value.trim();
             if (topP) modelConfig.samplerConfig.topP = parseFloat(topP);
@@ -260,6 +304,9 @@ export class OptionsPanel {
             
             const presPenalty = this.elements.modelConfigs[modelType].presencePenalty.value.trim();
             if (presPenalty) modelConfig.samplerConfig.presencePenalty = parseFloat(presPenalty);
+            
+            // Get minimal mode checkbox value
+            modelConfig.minimalMode = this.elements.modelConfigs[modelType].minimalMode.checked;
             
             // Only add model if name is specified
             if (modelConfig.model) {

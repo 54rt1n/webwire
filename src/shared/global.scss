@@ -317,28 +317,56 @@
         }
 
         .ww-model-selector {
-          display: flex;
-          justify-content: center;
-          align-items: center;
-          gap: var(--space-4);
           margin-top: var(--space-3);
           padding-top: var(--space-3);
           padding-bottom: var(--space-3);
           border-top: 1px solid var(--color-border);
           border-bottom: 1px solid var(--color-border);
           
-          .ww-label {
-            margin: 0;
-            flex-shrink: 0;
+          .ww-model-selector-grid {
+            display: grid;
+            grid-template-columns: 1fr auto;
+            gap: var(--space-4);
+            align-items: center;
+          }
+          
+          .ww-model-radios {
+            display: flex;
+            flex-direction: column;
+            gap: var(--space-2);
+          }
+          
+          .ww-model-radio-row {
+            display: flex;
+            gap: var(--space-4);
+            justify-content: flex-start;
+            
+            .ww-label {
+              margin: 0;
+              flex-shrink: 0;
+            }
           }
           
           .ww-selected-model-display {
-            margin-left: auto;
-            margin-right: var(--space-2);
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            max-width: 150px;
+            display: flex;
+            flex-direction: column;
+            gap: var(--space-1);
+            padding-right: var(--space-2);
+            font-size: var(--font-size-sm);
+            
+            .ww-model-name-row {
+              white-space: nowrap;
+              overflow: hidden;
+              text-overflow: ellipsis;
+              max-width: 200px;
+            }
+            
+            .ww-model-config-row {
+              display: flex;
+              gap: var(--space-3);
+              color: var(--color-text-secondary);
+              font-size: var(--font-size-xs);
+            }
           }
           
           .ww-radio {

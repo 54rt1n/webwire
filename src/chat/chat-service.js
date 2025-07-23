@@ -45,8 +45,6 @@ export class ChatService {
         this.domConnector = new DOMConnector(this.eventBus);
         this.stateService = null;
         this.toolParser = new ToolParser();
-
-        this.maxRequestTokens = 16384;
         
         // Service Components
         this.messageBuilder = null; // Initialized after stateService is set
@@ -196,7 +194,7 @@ export class ChatService {
             // Initialize selected model
             const selectedModel = this.stateService.ui.getSelectedModel() || 'chat';
             const currentConfig = this.stateService.settings.getModelConfig(selectedModel);
-            this.panel.updateSelectedModelSetting(selectedModel, currentConfig?.model);
+            this.panel.updateSelectedModelSetting(selectedModel, currentConfig?.model, currentConfig);
 
             if (!this.stateService.conversation.getActiveThreadId()) {
                 await this.sendGetOrCreateThread();
@@ -304,7 +302,8 @@ export class ChatService {
                 return await this.messageBuilder.countTokens(msg.content || '') + wrapperTokens;
             }))).reduce((total, msg) => total + msg, 0);
             const userMessageTokens = await this.messageBuilder.countTokens(userMessage.content) + wrapperTokens;
-            const maxTextTokens = this.maxRequestTokens - aiResponseTokens - conversationTokens - systemPromptTokens - userMessageTokens - 512;
+            const maxContentTokens = this.aiClient.samplerConfig?.maxContentTokens || 16384;
+            const maxTextTokens = maxContentTokens - aiResponseTokens - conversationTokens - systemPromptTokens - userMessageTokens - 512;
             console.log('[ChatService] Max text tokens:', maxTextTokens, 'aiResponseTokens:', aiResponseTokens, 'conversationTokens:', conversationTokens, 'systemPromptTokens:', systemPromptTokens, 'userMessageTokens:', userMessageTokens);
             const pageContext = await this.messageBuilder.buildPageContext(this.stateService, { forcePageContent, include: { navigation: false, links: true }, maxTextTokens });
             let { messagesForAPI, enhancedUserMessage } = this.messageBuilder.prepareMessagesForAPI(
@@ -525,7 +524,7 @@ export class ChatService {
         if ('selectedModel' in data) {
             this.stateService.ui.setSelectedModel(data.selectedModel);
             const currentConfig = this.stateService.settings.getModelConfig(data.selectedModel);
-            this.panel.updateSelectedModelSetting(data.selectedModel, currentConfig?.model);
+            this.panel.updateSelectedModelSetting(data.selectedModel, currentConfig?.model, currentConfig);
         }
         
         // Send unified settings update to background for persistence
@@ -858,7 +857,7 @@ export class ChatService {
             this.panel.updateAutoExecuteSetting(this.stateService.ui.getAutoExecuteTools());
             const selectedModel = this.stateService.ui.getSelectedModel() || 'chat';
             const currentConfig = this.stateService.settings.getModelConfig(selectedModel);
-            this.panel.updateSelectedModelSetting(selectedModel, currentConfig?.model);
+            this.panel.updateSelectedModelSetting(selectedModel, currentConfig?.model, currentConfig);
         }
     }
 
