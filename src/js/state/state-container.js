@@ -18,8 +18,9 @@ export function createInitialState() {
             ai: {
                 models: {
                     chat: {
-                        //model: 'deepseek-ai/DeepSeek-V3-0324',
-                        //provider: 'featherless',
+                        model: undefined,
+                        provider: undefined,
+                        tokenizer: undefined,
                         samplerConfig: {
                             temperature: 0.8,
                             maxTokens: 2048,
@@ -205,7 +206,8 @@ export function serializeState(state) {
     return {
         version: state.version,
         session: state.session,
-        settings: state.settings,
+        // Settings are managed separately via settings adapter, don't duplicate
+        // settings: state.settings,
         aim: state.aim,
         mcp: {
             // Only serialize connection info and tools, not pending requests
@@ -239,7 +241,9 @@ export function deserializeState(saveData, currentState) {
         const newState = { ...currentState };
 
         if (saveData.version) newState.version = saveData.version;
-        if (saveData.settings) newState.settings = saveData.settings;
+        // Skip settings if they're already loaded (to avoid overwriting with stale data)
+        // Settings are managed separately via the settings adapter
+        // if (saveData.settings) newState.settings = saveData.settings;
         if (saveData.aim) newState.aim = saveData.aim;
         if (saveData.mcp) {
             // Merge MCP state carefully, preserving current connection state

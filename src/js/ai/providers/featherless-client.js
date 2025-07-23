@@ -25,8 +25,12 @@ export class FeatherlessClient extends AbstractAIClient {
         super('FeatherlessClient', eventBus, config);
 
         // Only keep what's specific to FeatherlessClient
-        this.model = config.model || 'meta-llama/Meta-Llama-3.1-8B-Instruct';
         this.baseUrl = config.baseUrl || 'https://api.featherless.ai/v1';
+        
+        // Set default model if not provided
+        if (!this.model) {
+            this.model = 'meta-llama/Meta-Llama-3.1-8B-Instruct';
+        }
     }
 
     /**

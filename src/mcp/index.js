@@ -53,7 +53,7 @@ class MCPControlPanelApp {
             
             // 3. Initialize ChatService
             console.log('[MCPApp] Initializing ChatService...');
-            await this.chatService.initialize(this.core.aiClient, this.core.mcpConnector, this.core.stateService);
+            await this.chatService.initialize(this.core.mcpConnector, this.core.stateService);
 
             // 4. Update ChatService with current settings if available
             this.chatService.handleSettingsRefresh({ settings: this.core.stateService.settings.getSettings() });

@@ -10,6 +10,7 @@ import { MessageBuilder } from './message-builder.js';
 import { ToolExecutor } from './tool-executor.js';
 import { AIResponseHandler } from './ai-response-handler.js';
 import { ClipboardUtil } from '../js/utils/clipboard-util.js';
+import { AIClientFactory } from '../js/ai/ai-client-factory.js';
 import * as analysis from '../js/prompts/analysis-prompt.js';
 import * as timeline from '../js/prompts/timeline-prompt.js';
 
@@ -142,7 +143,7 @@ export class ChatService {
     /**
      * Initialize the chat service (async setup)
      */
-    async initialize(aiClient, mcpConnector, stateService) {
+    async initialize(mcpConnector, stateService) {
         console.log('[ChatService] Starting initialization...');
 
         if (this.initialized) {
@@ -151,14 +152,16 @@ export class ChatService {
 
         this.initialized = true;
 
-        this.aiClient = aiClient;
         this.mcpConnector = mcpConnector;
         this.stateService = stateService;
-        
+
         // Initialize message builder with model configuration
-        const modelConfig = this.stateService.settings.getModelConfig('chat');
+        const currentModel = this.stateService.ui.getSelectedModel() || 'chat';
+        const modelConfig = this.stateService.settings.getModelConfig(currentModel);
         const encodingOptions = this.getEncodingOptions(modelConfig);
         this.messageBuilder = new MessageBuilder(this.pageUtils, encodingOptions);
+
+        // Initialize tool executor with dependencies
         
         // Initialize tool executor with dependencies
         this.toolExecutor = new ToolExecutor(
@@ -207,6 +210,38 @@ export class ChatService {
     }
 
     /**
+     * Get AI client, creating or updating it if necessary based on current model selection
+     * @returns {Object} AI client instance
+     * @throws {Error} If no model configuration or client creation fails
+     */
+    getAiClient() {
+        const selectedModel = this.stateService.ui.getSelectedModel();
+        if (!selectedModel) {
+            throw new Error('[ChatService] No model selected');
+        }
+        console.log('[ChatService] getAiClient() called for model type:', selectedModel);
+        
+        const currentConfig = this.stateService.settings.getModelConfig(selectedModel);
+        console.log('[ChatService] Current config retrieved:', currentConfig);
+        
+        if (!currentConfig) {
+            throw new Error(`No model configuration found for: ${selectedModel}`);
+        }
+        
+        // Check if we need to create or update the AI client
+        if (!this.aiClient || this.aiClient.needsUpdate?.(currentConfig)) {
+            console.log('[ChatService] Creating/updating AI client for model:', selectedModel, 'provider:', currentConfig.provider);
+            console.log('[ChatService] Full config being passed to factory:', JSON.stringify(currentConfig));
+            this.aiClient = AIClientFactory.createClient(this.eventBus, currentConfig);
+            console.log('[ChatService] AI client created, type:', this.aiClient.constructor.name);
+        } else {
+            console.log('[ChatService] Using existing AI client');
+        }
+        
+        return this.aiClient;
+    }
+
+    /**
      * Parse the response for tool calls
      */
     async parseToolsFromResponse(response, tools) {
@@ -224,9 +259,12 @@ export class ChatService {
         
         const { message, silent = false } = payload;
         
-        if (!this.aiClient) {
-            console.log('[ChatService] No AI client configured');
-            this.panel.displayError('AI client not configured. Please check settings.');
+        let aiClient;
+        try {
+            aiClient = this.getAiClient();
+        } catch (error) {
+            console.error('[ChatService] Failed to get AI client:', error);
+            this.panel.displayError(error.message);
             return;
         }
 
@@ -304,7 +342,7 @@ export class ChatService {
 
             // Generate AI response with streaming
             const { response, thinkingMessage } = await this.responseHandler.generateAIResponse(
-                this.aiClient,
+                aiClient,
                 enhancedUserMessage,
                 messagesForAPI,
                 systemPrompts,

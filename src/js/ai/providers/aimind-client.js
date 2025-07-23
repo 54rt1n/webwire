@@ -10,8 +10,12 @@ export class AIMindClient extends AbstractAIClient {
     constructor(eventBus, config = {}) {
         super('AIMindClient', eventBus, config);
 
-        this.model = config.model || 'deepseek-ai/DeepSeek-V3-0324';
         this.baseUrl = config.apiEndpoint;
+        
+        // Set default model if not provided
+        if (!this.model) {
+            this.model = 'deepseek-ai/DeepSeek-V3-0324';
+        }
     }
 
     /**

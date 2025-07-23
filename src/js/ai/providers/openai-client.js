@@ -35,8 +35,12 @@ export class OpenAIClient extends AbstractAIClient {
         super('OpenAIClient', eventBus, config);
 
         // Only keep what's specific to OpenAIClient
-        this.model = config.model || 'gpt-4-turbo';
         this.baseUrl = config.baseUrl || 'https://api.openai.com/v1';
+        
+        // Set default model if not provided
+        if (!this.model) {
+            this.model = 'gpt-4-turbo';
+        }
     }
 
     /**

@@ -1,4 +1,3 @@
-import { AIClientFactory } from '../ai/ai-client-factory.js';
 import { EventDispatcher } from '../core/event-dispatcher.js';
 import { EventErrorBoundary } from '../core/error-boundary.js';
 import { MCPConnector } from '../mcp/mcp-connector.js';
@@ -61,9 +60,7 @@ export async function contextFactory(eventBus, context,
         results.stateService = new ContentStateService(initialState, results.eventBus);
     }
 
-    if (ai) {
-        results.aiClient = AIClientFactory.createClient(results.eventBus, results.stateService.settings.getModelConfig(modelType));
-    }
+    // AI client creation removed - now handled lazily by ChatService.getAiClient()
 
     if (mcp) {
         const serverUrl = results.stateService.state.settings?.mcp?.serverUrl;

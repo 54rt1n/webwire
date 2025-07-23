@@ -35,14 +35,20 @@ export class SettingsStatePlugin {
             const settings = await this.settingsAdapter.getAll();
             console.log('[StateService::SettingsState] Raw settings from adapter:', settings);
             
-            // If settings is null or undefined, initialize with empty object
-            const validSettings = settings || {};
+            // If settings is null or undefined, keep the existing settings structure
+            if (!settings) {
+                console.log('[StateService::SettingsState] No settings found, keeping initial state');
+                return this.stateService.state.settings;
+            }
             
-            this.stateService.state.settings = validSettings;
-            console.log('[StateService::SettingsState] Settings loaded and set in state:', validSettings);
+            // Deep merge loaded settings with existing settings to preserve structure
+            const mergedSettings = this.deepMerge(this.stateService.state.settings || {}, settings);
+            
+            this.stateService.state.settings = mergedSettings;
+            console.log('[StateService::SettingsState] Settings loaded and merged with initial state:', mergedSettings);
             console.log('[StateService::SettingsState] Final state.settings:', this.stateService.state.settings);
             
-            return validSettings;
+            return mergedSettings;
         } catch (error) {
             console.error('[StateService::SettingsState] Error loading settings:', error);
             
@@ -124,15 +130,28 @@ export class SettingsStatePlugin {
         if (type === null) 
             type = 'chat';
 
+        console.log('[StateService::SettingsState] Getting model config for type:', type);
+        console.log('[StateService::SettingsState] Available models:', this.stateService.state.settings?.ai?.models);
+
         // If the type is not in the model config, return set the type to chat
         if (!this.stateService.state.settings?.ai?.models[type]) {
+            console.log('[StateService::SettingsState] Type not found, defaulting to chat');
             type = 'chat';
         }
 
         const model = this.stateService.state.settings?.ai?.models[type];
+        console.log('[StateService::SettingsState] Model for type', type, ':', model);
+        
+        if (!model || !model.provider) {
+            console.warn('[StateService::SettingsState] No model configuration found for type:', type, 'model:', model);
+            return null;
+        }
+        
         const provider = this.stateService.state.settings?.ai?.providers[model.provider];
+        console.log('[StateService::SettingsState] Provider config for', model.provider, ':', provider);
+        
         const config = {...model, ...provider};
-        console.log('[StateService::SettingsState] Model config:', config);
+        console.log('[StateService::SettingsState] Final model config:', config);
         return config;
     }
 

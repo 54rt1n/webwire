@@ -31,12 +31,12 @@ export class MCPConnector {
       this.sessionId = generateUUID(); // Generate a unique session ID for this connection
       this.eventSource = null;
       this.requestId = 0;
+      this.errorState = null;
       this.connectionTimeout = null;
       this.onOpenBound = this.handleOpen.bind(this);
       this.onMessageBound = this.handleMessage.bind(this);
       this.onErrorBound = this.handleError.bind(this);
       this.onEndpointBound = this.handleEndpoint.bind(this);
-      
     }
   
     /**
@@ -85,6 +85,7 @@ export class MCPConnector {
         } else {
           this.stateService.mcp.setMcpConnectionError('Unknown error');
         }
+        throw error;
       }
     }
   
@@ -94,6 +95,9 @@ export class MCPConnector {
      * @throws {Error} If connection fails or times out
      */
     async connectSSE() {
+      if (this.errorState) {
+        throw new Error(this.errorState);
+      }
       return new Promise((resolve, reject) => {
         this.resolveConnection = resolve;
         this.rejectConnection = reject;
@@ -173,11 +177,18 @@ export class MCPConnector {
      */
     handleError(event) {
       console.error('[MCPConnector] SSE error'); // The event message is pretty useless.
+      this.errorState = event.message;
       this.stateService.mcp.setMcpConnected(false);
 
       if (this.connectionTimeout) {
         clearTimeout(this.connectionTimeout);
         this.connectionTimeout = null;
+      }
+
+      // Clean up the event source
+      if (this.eventSource) {
+        this.eventSource.close();
+        this.eventSource = null;
       }
 
       if (!this.stateService.mcp.isMcpInitialized() && this.rejectConnection) {
@@ -233,7 +244,7 @@ export class MCPConnector {
         const message = error.message || error.toString();
         this.stateService.mcp.setMcpConnectionError(message);
         if (this.rejectConnection) {
-          this.rejectConnection(error);
+          this.rejectConnection(new Error(this.errorState));
         }
       } finally {
         // Clean up promise handlers

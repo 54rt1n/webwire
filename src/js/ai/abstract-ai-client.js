@@ -34,6 +34,8 @@ export class AbstractAIClient {
         this.clientName = clientName;
         this.eventBus = eventBus;
         this.apiKey = config.apiKey || null;
+        this.provider = config.provider || null;
+        this.model = config.model || null;
         this.samplerConfig = config.samplerConfig || {
             temperature: 0.8,
             minP: 0.05,

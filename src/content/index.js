@@ -80,7 +80,7 @@ class WebWireContentHost {
         console.log('[WebWireContentHost] UI listeners set up');
 
         // Initialize ChatService with the core services
-        await this.chatService.initialize(this.core.aiClient, this.core.mcpConnector, this.core.stateService);
+        await this.chatService.initialize(this.core.mcpConnector, this.core.stateService);
         console.log('[WebWireContentHost] ChatService initialized');
 
         await this.core.connect();
