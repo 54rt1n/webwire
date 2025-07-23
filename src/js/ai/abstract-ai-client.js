@@ -96,6 +96,13 @@ export class AbstractAIClient {
     }
 
     /**
+     * Valid keys for the sampler config (for overriding)
+     */
+    _validSamplerConfigKeys() {
+        return ['temperature', 'minP', 'maxTokens', 'frequencyPenalty', 'presencePenalty', 'model'];
+    }
+
+    /**
      * Get the current sampler configuration with snake_case keys for API compatibility
      * @returns {Object} Sampler configuration object with snake_case keys
      */
@@ -104,7 +111,7 @@ export class AbstractAIClient {
             samplerConfig = this.samplerConfig;
         }
 
-        const validKeys = ['temperature', 'minP', 'maxTokens', 'frequencyPenalty', 'presencePenalty', 'model'];
+        const validKeys = this._validSamplerConfigKeys();
         const config = {
             temperature: 0.8,
             minP: 0.05,

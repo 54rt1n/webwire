@@ -78,6 +78,13 @@ export class OpenAIClient extends AbstractAIClient {
     }
 
     /**
+     * Valid keys for the sampler config
+     */
+    _validSamplerConfigKeys() {
+        return ['temperature', 'maxTokens', 'frequencyPenalty', 'presencePenalty', 'model'];
+    }
+
+    /**
      * Build the messages array for OpenAI API format
      * @param {string} currentMessage - The current user message
      * @param {Array} conversationHistory - Array of previous conversation turns
@@ -111,6 +118,10 @@ export class OpenAIClient extends AbstractAIClient {
             content: currentMessage
         });
 
-        return messages;
+        // Remove all fields except role and content
+        return messages.map(message => ({
+            role: message.role,
+            content: message.content
+        }));
     }
 } 
