@@ -53,13 +53,8 @@ export class AIClientFactory {
                 client = new AIStudioClient(eventBus, modelConfig);
                 break;
             case 'openrouter':
-                // OpenRouter uses OpenAI-compatible API
-                // Use apiEndpoint from config if available, otherwise default
-                const openrouterConfig = {
-                    ...modelConfig,
-                    baseUrl: modelConfig.apiEndpoint || 'https://openrouter.ai/api/v1'
-                };
-                client = new OpenAIClient(eventBus, openrouterConfig);
+                client = new OpenAIClient(eventBus, modelConfig);
+                client.baseUrl = "https://openrouter.ai/api/v1";
                 break;
             case 'groq':
                 // Groq uses OpenAI-compatible API
