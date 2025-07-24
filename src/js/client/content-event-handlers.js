@@ -223,7 +223,7 @@ export class ContentEventHandlers {
             return response;
         } catch (error) {
             console.error('[ContentEventHandlers] Failed to end conversation:', error);
-            throw error;
+            return { success: false, error: error.message };
         }
     }
 
@@ -292,7 +292,7 @@ export class ContentEventHandlers {
         } catch (error) {
             console.error('[ContentEventHandlers] Failed to save message:', error);
             this.eventBus.emit(EVENTS.UI.THREAD_SAVED, { data, status: 'error', error: error.message });
-            throw error;
+            return { success: false, error: error.message };
         }
     }
 
@@ -309,7 +309,7 @@ export class ContentEventHandlers {
             return response;
         } catch (error) {
             console.error('[ContentEventHandlers] Failed to save panel visibility:', error);
-            throw error;
+            return { success: false, error: error.message };
         }
     }
 
@@ -328,7 +328,7 @@ export class ContentEventHandlers {
             return response;
         } catch (error) {
             console.error('[ContentEventHandlers] Failed to update settings:', error);
-            throw error;
+            return { success: false, error: error.message };
         }
     }
 
@@ -366,7 +366,7 @@ export class ContentEventHandlers {
                 error: error.message 
             });
             
-            throw error;
+            return { success: false, error: error.message };
         }
     }
 
@@ -406,7 +406,7 @@ export class ContentEventHandlers {
             return response;
         } catch (error) {
             console.error('[ContentEventHandlers] Failed to get/create thread:', error);
-            throw error;
+            return { success: false, error: error.message };
         }
     }
 
@@ -446,7 +446,7 @@ export class ContentEventHandlers {
             return response;
         } catch (error) {
             console.error('[WebWireContentHost] Failed to create new thread:', error);
-            throw error;
+            return { success: false, error: error.message };
         }
     }
 

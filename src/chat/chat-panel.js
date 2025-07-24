@@ -446,16 +446,52 @@ export class WebChatPanel {
     /**
      * Display error message
      */
-    displayError(error, thinkingMessageId = null) {
+    displayError(error, thinkingMessageId = null, options = {}) {
         if (thinkingMessageId) {
             this.removeMessage(thinkingMessageId);
         }
         
-        this.displayMessage({
-            role: 'error',
-            content: error,
-            timestamp: Date.now()
-        });
+        // Handle special error display options for extension invalidation
+        if (options.persistent || options.actionButton) {
+            const messageId = `error-${Date.now()}`;
+            
+            // Create error message with action button
+            const errorContent = `
+                <div class="ww-error-content">
+                    <div class="ww-error-icon">⚠️</div>
+                    <div class="ww-error-text">${this.renderer.escapeHtml(error)}</div>
+                    ${options.actionButton ? `
+                        <button class="ww-error-action-btn ww-button">
+                            ${this.renderer.escapeHtml(options.actionButton.text)}
+                        </button>
+                    ` : ''}
+                </div>
+            `;
+            
+            const messageElement = document.createElement('div');
+            messageElement.className = 'ww-message ww-error-message ww-persistent-error';
+            messageElement.id = messageId;
+            messageElement.innerHTML = errorContent;
+            
+            this.elements.messages.appendChild(messageElement);
+            
+            // Bind action button if provided
+            if (options.actionButton) {
+                const actionBtn = messageElement.querySelector('.ww-error-action-btn');
+                if (actionBtn) {
+                    actionBtn.addEventListener('click', options.actionButton.action);
+                }
+            }
+            
+            this.scrollToBottom();
+        } else {
+            // Standard error display
+            this.displayMessage({
+                role: 'error',
+                content: error,
+                timestamp: Date.now()
+            });
+        }
         
         // Hide cancel button on error
         this.hideCancelButton();

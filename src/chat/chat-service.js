@@ -665,6 +665,38 @@ export class ChatService {
         console.log('[ChatService] Handling conversation loaded:', payload);
         
         let { conversation } = payload;
+        
+        // Check for error response first
+        if (conversation && conversation.success === false) {
+            console.error('[ChatService] Failed to load conversation:', conversation.error);
+            
+            // Handle specific errors
+            if (conversation.error && conversation.error.includes('Extension context invalidated')) {
+                console.log('[ChatService] Extension context invalidated, showing reload message');
+                if (this.panel.isReady()) {
+                    this.panel.displayError(
+                        'WebWire extension was updated. Please refresh this page to continue using the chat.',
+                        null,
+                        {
+                            persistent: true,
+                            actionButton: {
+                                text: 'Refresh Page',
+                                action: () => window.location.reload()
+                            }
+                        }
+                    );
+                }
+                return;
+            }
+            
+            // For other errors, show to user
+            if (this.panel.isReady()) {
+                this.panel.displayError(`Failed to load conversation: ${conversation.error}`);
+            }
+            return;
+        }
+        
+        // Handle wrapped result
         if (conversation && conversation.result) {
             conversation = conversation.result;
         }

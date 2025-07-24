@@ -94,10 +94,14 @@ export class EventBus {
                 const result = await callback(message, { ...opts }, ...args);
                 if (notify) {
                     notify(result);
+                } else {
+                    console.log(`[EventBus ${this.domain}] No notify function provided for event: ${eventName}`);
                 }
             } catch (err) {
                 if (error) {
                     error(err);
+                } else {
+                    console.error(`[EventBus ${this.domain}] No error function provided for event: ${eventName}`);
                 }
             }
         };

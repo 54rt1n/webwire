@@ -1,5 +1,6 @@
 import { EventErrorBoundary } from './error-boundary.js';
 import { EVENT_TYPES, EVENT_CONTEXT } from './events.js';
+import { BACKGROUND_ACTIONS } from './cc-actions.js';
 
 export class EventDispatcher {
   constructor(context, eventBus, {backgroundIsLocal = false} = {}) {
@@ -11,6 +12,12 @@ export class EventDispatcher {
     // Track pending cross-context requests
     this.pendingRequests = new Map();
     this.requestId = 0;
+    
+    // Retry queue for failed messages due to extension context invalidation
+    this.retryQueue = [];
+    this.isReconnecting = false;
+    this.maxRetries = 3;
+    this.retryDelay = 100; // Start with 100ms, exponential backoff
     
     // Setup context-specific communication handlers
     this.setupContextHandlers();
@@ -158,7 +165,7 @@ export class EventDispatcher {
 
   // ── Chrome Extension Messaging ───────────────────────────────────
 
-  async sendChromeMessage(message, timeout = 30000) {
+  async sendChromeMessage(message, timeout = 30000, retryCount = 0) {
     return new Promise((resolve, reject) => {
       const requestId = ++this.requestId;
       
@@ -168,8 +175,15 @@ export class EventDispatcher {
         reject(new Error(`Chrome message timeout after ${timeout}ms`));
       }, timeout);
 
-      // Track request
-      this.pendingRequests.set(requestId, { resolve, reject, timeoutId });
+      // Track request with retry info
+      this.pendingRequests.set(requestId, { 
+        resolve, 
+        reject, 
+        timeoutId,
+        message,
+        timeout,
+        retryCount
+      });
 
       // Enhance message with tab context if available
       const enhancedMessage = {
@@ -189,7 +203,26 @@ export class EventDispatcher {
         this.pendingRequests.delete(requestId);
 
         if (chrome.runtime.lastError) {
-          reject(new Error(chrome.runtime.lastError.message));
+          const error = chrome.runtime.lastError.message;
+          
+          // Check if it's an extension context invalidation
+          if (error.includes('Extension context invalidated')) {
+            console.warn('[EventDispatcher] Extension context invalidated, queueing for retry');
+            
+            // Queue for retry
+            this.queueForRetry({
+              message,
+              timeout,
+              retryCount,
+              resolve,
+              reject
+            });
+            
+            // Trigger reconnection process
+            this.handleContextInvalidation();
+          } else {
+            reject(new Error(error));
+          }
         } else {
           resolve(response);
         }
@@ -515,10 +548,117 @@ export class EventDispatcher {
 
   // ── Debugging and Utilities ──────────────────────────────────────
 
+  // ── Retry and Reconnection Logic ─────────────────────────────────
+  
+  queueForRetry(retryInfo) {
+    if (retryInfo.retryCount >= this.maxRetries) {
+      console.error('[EventDispatcher] Max retries reached, failing message');
+      retryInfo.reject(new Error('Max retries reached after extension context invalidation'));
+      return;
+    }
+    
+    this.retryQueue.push(retryInfo);
+    console.log(`[EventDispatcher] Queued message for retry (${this.retryQueue.length} in queue)`);
+  }
+  
+  async handleContextInvalidation() {
+    if (this.isReconnecting) {
+      console.log('[EventDispatcher] Already reconnecting, skipping');
+      return;
+    }
+    
+    this.isReconnecting = true;
+    console.log('[EventDispatcher] Starting reconnection process');
+    
+    // Wait a bit for the extension to stabilize
+    await new Promise(resolve => setTimeout(resolve, this.retryDelay));
+    
+    // Test if we can communicate
+    try {
+      await this.testConnection();
+      console.log('[EventDispatcher] Connection restored, processing retry queue');
+      
+      // Process all queued messages
+      await this.processRetryQueue();
+      
+    } catch (error) {
+      console.error('[EventDispatcher] Connection test failed:', error);
+      // Exponential backoff
+      this.retryDelay = Math.min(this.retryDelay * 2, 5000);
+      
+      // Try again
+      setTimeout(() => {
+        this.isReconnecting = false;
+        this.handleContextInvalidation();
+      }, this.retryDelay);
+    }
+    
+    this.isReconnecting = false;
+  }
+  
+  async testConnection() {
+    // Use BACKGROUND_ACTIONS.PING to test connection
+    return new Promise((resolve, reject) => {
+      const testMessage = {
+        type: 'CROSS_CONTEXT_EVENT',
+        event: BACKGROUND_ACTIONS.PING,
+        data: {},
+        source: this.context,
+        target: 'background'
+      };
+      
+      chrome.runtime.sendMessage(testMessage, (response) => {
+        if (chrome.runtime.lastError) {
+          reject(new Error(chrome.runtime.lastError.message));
+        } else if (response && response.success) {
+          resolve(response);
+        } else {
+          reject(new Error('Invalid response from background'));
+        }
+      });
+    });
+  }
+  
+  async processRetryQueue() {
+    console.log(`[EventDispatcher] Processing ${this.retryQueue.length} queued messages`);
+    
+    // Process all queued messages
+    while (this.retryQueue.length > 0) {
+      const retryInfo = this.retryQueue.shift();
+      
+      try {
+        // Retry the message with incremented retry count
+        const result = await this.sendChromeMessage(
+          retryInfo.message,
+          retryInfo.timeout,
+          retryInfo.retryCount + 1
+        );
+        
+        // Success! Resolve the original promise
+        retryInfo.resolve(result);
+        console.log('[EventDispatcher] Successfully retried message');
+        
+      } catch (error) {
+        console.error('[EventDispatcher] Retry failed:', error);
+        
+        // If it's another invalidation, it will be re-queued
+        // Otherwise, reject the original promise
+        if (!error.message.includes('Extension context invalidated')) {
+          retryInfo.reject(error);
+        }
+      }
+    }
+    
+    // Reset retry delay after successful processing
+    this.retryDelay = 100;
+  }
+
   getStats() {
     return {
       context: this.context,
       pendingRequests: this.pendingRequests.size,
+      retryQueueSize: this.retryQueue.length,
+      isReconnecting: this.isReconnecting,
       errorBoundaryStats: this.errorBoundary.getErrorStats(),
       eventBusStats: this.eventBus.getTotalListeners()
     };
@@ -531,6 +671,12 @@ export class EventDispatcher {
       pending.reject(new Error('EventDispatcher destroyed'));
     }
     this.pendingRequests.clear();
+    
+    // Clear retry queue
+    for (const retryInfo of this.retryQueue) {
+      retryInfo.reject(new Error('EventDispatcher destroyed'));
+    }
+    this.retryQueue = [];
 
     // Cleanup event bus
     this.eventBus.destroy();
