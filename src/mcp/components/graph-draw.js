@@ -231,13 +231,13 @@ export class GraphDraw {
      */
     setupEventListeners() {
         // Mouse events
-        this.canvas.addEventListener('mousedown', this.handleMouseDown.bind(this));
-        this.canvas.addEventListener('mousemove', this.handleMouseMove.bind(this));
-        this.canvas.addEventListener('mouseup', this.handleMouseUp.bind(this));
-        this.canvas.addEventListener('dblclick', this.handleDoubleClick.bind(this));
+        this.canvas.addEventListener('mousedown', (e) => this.handleMouseDown(e));
+        this.canvas.addEventListener('mousemove', (e) => this.handleMouseMove(e));
+        this.canvas.addEventListener('mouseup', (e) => this.handleMouseUp(e));
+        this.canvas.addEventListener('dblclick', (e) => this.handleDoubleClick(e));
         
         // Wheel for zoom
-        this.canvas.addEventListener('wheel', this.handleWheel.bind(this));
+        this.canvas.addEventListener('wheel', (e) => this.handleWheel(e));
         
         // Window resize
         window.addEventListener('resize', () => {

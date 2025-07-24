@@ -1,10 +1,13 @@
+import { EventBindableComponent } from '../../js/core/event-bindable-panel.js';
+import { EVENTS } from '../../js/core/events.js';
+
 /**
  * StashButton - A reusable component for adding/removing items from the MCP stash
  * Uses EventBus to communicate with MCP system for content fetching and storage
  */
-export class StashButton {
+export class StashButton extends EventBindableComponent {
     constructor(eventBus, stateService) {
-        this.eventBus = eventBus;
+        super(eventBus);
         this.stateService = stateService;
         this.button = null;
         this.currentUri = null;
@@ -20,7 +23,7 @@ export class StashButton {
      */
     setupEventListeners() {
         // Listen for stash updates to refresh button state
-        this.eventBus.on('stash:updated', (data) => {
+        this.on('stash:updated', (data) => {
             if (data.uri === this.currentUri) {
                 this._updateButton();
             }
@@ -184,14 +187,14 @@ export class StashButton {
         if (isStashed) {
             // Emit remove event
             console.log(`[StashButton] Requesting remove from stash: ${this.currentUri}`);
-            this.eventBus.emit('stash:remove', {
+            this.eventBus.emit(EVENTS.STASH.REMOVE, {
                 uri: this.currentUri,
                 source: this.currentSource
             });
         } else {
             // Emit add event
             console.log(`[StashButton] Requesting add to stash: ${this.currentUri} (${this.currentSource})`);
-            this.eventBus.emit('stash:add', {
+            this.eventBus.emit(EVENTS.STASH.ADD, {
                 uri: this.currentUri,
                 source: this.currentSource
             });
@@ -229,7 +232,7 @@ export class StashButton {
      */
     clearAll() {
         console.log('[StashButton] Requesting clear all stashed items');
-        this.eventBus.emit('stash:clear-all');
+        this.eventBus.emit(EVENTS.STASH.CLEAR_ALL);
         this._updateButton();
     }
 

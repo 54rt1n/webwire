@@ -459,10 +459,10 @@ export class WebChatPanel {
             const errorContent = `
                 <div class="ww-error-content">
                     <div class="ww-error-icon">⚠️</div>
-                    <div class="ww-error-text">${this.renderer.escapeHtml(error)}</div>
+                    <div class="ww-error-text">${this.renderer.escapeHTML(error)}</div>
                     ${options.actionButton ? `
                         <button class="ww-error-action-btn ww-button">
-                            ${this.renderer.escapeHtml(options.actionButton.text)}
+                            ${this.renderer.escapeHTML(options.actionButton.text)}
                         </button>
                     ` : ''}
                 </div>

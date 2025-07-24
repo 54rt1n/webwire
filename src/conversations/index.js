@@ -1,4 +1,5 @@
 import { EVENTS, EVENT_CONTEXT } from '../js/core/events.js';
+import { EventBindableComponent } from '../js/core/event-bindable-panel.js';
 import { ConversationsPanel } from './panel.js';
 import { WebWireClientCore } from '../js/client/webwire-client-core.js';
 import { PanelEventHandlers } from '../js/client/panel-event-handlers.js';
@@ -10,9 +11,10 @@ import { ConversationModal } from './components/conversation-modal.js';
  * The main controller for the Conversations Panel. This class wires together the
  * state management (data/business logic) and the ConversationsPanel (UI/view logic).
  */
-class ConversationsPanelApp {
+class ConversationsPanelApp extends EventBindableComponent {
     constructor() {
-        this.eventBus = new EventBus({domain: 'conversations', debug: true});
+        const eventBus = new EventBus({domain: 'conversations', debug: true});
+        super(eventBus);
         this.core = new WebWireClientCore(this.eventBus);
         this.panelEventHandlers = null;
         this.panel = new ConversationsPanel(this.eventBus);
@@ -40,11 +42,11 @@ class ConversationsPanelApp {
 
         // Setup UI event handlers
         const handlers = {
-            onDeleteConversation: this.deleteConversation.bind(this),
-            onViewConversation: this.viewConversation.bind(this),
-            onSetActiveConversation: this.setActiveConversation.bind(this),
-            onRefreshConversations: this.refreshConversations.bind(this),
-            onCreateNewConversation: this.createNewConversation.bind(this),
+            onDeleteConversation: this.deleteConversation,
+            onViewConversation: this.viewConversation,
+            onSetActiveConversation: this.setActiveConversation,
+            onRefreshConversations: this.refreshConversations,
+            onCreateNewConversation: this.createNewConversation,
         };
         this.panel.initialize(handlers);
 
@@ -59,13 +61,13 @@ class ConversationsPanelApp {
      */
     setupEventListeners() {
         // Listen for conversation updates
-        this.eventBus.on(EVENTS.CONVERSATION.UPDATED, (payload) => {
+        this.on(EVENTS.CONVERSATION.UPDATED, (payload) => {
             console.log('[ConversationsApp] Conversation updated:', payload);
             this.refreshConversations();
         });
 
         // Listen for conversation activation (when one is set as active)
-        this.eventBus.on(EVENTS.CONVERSATION.ACTIVATED, (payload) => {
+        this.on(EVENTS.CONVERSATION.ACTIVATED, (payload) => {
             console.log('[ConversationsApp] Conversation activated:', payload);
             this.refreshConversations();
         });

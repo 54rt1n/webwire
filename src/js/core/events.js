@@ -12,7 +12,8 @@ export const EVENTS = {
     SETTINGS: {
         CHANGE: 'settings:change',
         CHANGED: 'settings:changed',
-        CLEARED: 'settings:cleared'
+        CLEARED: 'settings:cleared',
+        UPDATED: 'SETTINGS_UPDATED'
     },
     STATE: {
         SAVED: 'state:saved',
@@ -61,6 +62,7 @@ export const EVENTS = {
         CONNECTED: 'mcp:connected',
         DISCONNECTED: 'mcp:disconnected',
         CONNECTION_ERROR: 'mcp:connection_error',
+        CONNECTION_CHANGED: 'mcp:connection-changed',
         INITIALIZED: 'mcp:initialized',
         TOOLS_UPDATED: 'mcp:tools_updated',
         REQUEST_STARTED: 'mcp:request_started',
@@ -86,6 +88,7 @@ export const EVENTS = {
         ADD: 'stash:add',
         REMOVE: 'stash:remove',
         CLEAR: 'stash:clear',
+        CLEAR_ALL: 'stash:clear-all',
         SAVE: 'stash:save',
         LOAD: 'stash:load',
         UPDATED: 'stash:updated',

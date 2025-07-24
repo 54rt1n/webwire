@@ -1,11 +1,12 @@
 // src/js/client/panel-event-handlers.js
 import { EVENTS } from '../core/events.js';
 import { CONTENT_ACTIONS, BACKGROUND_ACTIONS } from '../core/cc-actions.js';
+import { EventBindableComponent } from '../core/event-bindable-panel.js';
 
-export class ContentEventHandlers {
+export class ContentEventHandlers extends EventBindableComponent {
     constructor(core) {
+        super(core.eventBus);
         this.core = core;
-        this.eventBus = core.eventBus;
         this.stateService = core.stateService;
         this.dispatcher = core.dispatcher;
     }
@@ -25,21 +26,21 @@ export class ContentEventHandlers {
     setupEarlyBindListeners() {
         console.log('[ContentEventHandlers] Setting up early-bind listeners');
         // Register ping event - must be available immediately
-        this.eventBus.onAsync(CONTENT_ACTIONS.PING, this.handlePing.bind(this));
+        this.onAsync(CONTENT_ACTIONS.PING, this.handlePing);
         
         // Register state query - needed during initialization
-        this.eventBus.onAsync(CONTENT_ACTIONS.GET_WEBWIRE_STATE, this.handleGetWebwireState.bind(this));
+        this.onAsync(CONTENT_ACTIONS.GET_WEBWIRE_STATE, this.handleGetWebwireState);
     }
 
     /**
      * Setup Event Listeners
      */
     setupStashListeners() {
-        this.eventBus.onAsync(EVENTS.STASH.ADD, this.handleStashAdd.bind(this));
-        this.eventBus.onAsync(EVENTS.STASH.SAVE, this.handleSaveStash.bind(this));
-        this.eventBus.onAsync(EVENTS.STASH.CLEAR, this.handleStashClearAll.bind(this));
-        this.eventBus.onAsync(EVENTS.STASH.REMOVE, this.handleStashRemove.bind(this));
-        this.eventBus.onAsync(EVENTS.STASH.LOAD, this.handleLoadStash.bind(this));
+        this.onAsync(EVENTS.STASH.ADD, this.handleStashAdd);
+        this.onAsync(EVENTS.STASH.SAVE, this.handleSaveStash);
+        this.onAsync(EVENTS.STASH.CLEAR, this.handleStashClearAll);
+        this.onAsync(EVENTS.STASH.REMOVE, this.handleStashRemove);
+        this.onAsync(EVENTS.STASH.LOAD, this.handleLoadStash);
     }
 
     /**
@@ -148,7 +149,7 @@ export class ContentEventHandlers {
      * Setup settings listeners
      */
     setupSettingsListeners() {
-        this.eventBus.onAsync(EVENTS.SETTINGS.CHANGE, this.handleSettingsChange.bind(this));
+        this.onAsync(EVENTS.SETTINGS.CHANGE, this.handleSettingsChange);
     }
 
     /**
@@ -162,16 +163,16 @@ export class ContentEventHandlers {
      * Setup chat listeners
      */
     setupChatListeners() {
-        this.eventBus.onAsync(EVENTS.CHAT.CANCEL_TOOL, this.handleCancelTool.bind(this));
-        this.eventBus.onAsync(EVENTS.CHAT.EXECUTE_TOOL, this.handleExecuteTool.bind(this));
-        this.eventBus.onAsync(EVENTS.CHAT.SAVE_MESSAGE, this.handleSaveMessage.bind(this));
-        this.eventBus.onAsync(EVENTS.CHAT.SAVE_PANEL_VISIBILITY, this.handleSavePanelVisibility.bind(this));
-        this.eventBus.onAsync(EVENTS.CHAT.END_CONVERSATION, this.handleEndConversation.bind(this));
-        this.eventBus.onAsync(EVENTS.CHAT.UPDATE_SETTINGS, this.handleUpdateSettings.bind(this));
-        this.eventBus.onAsync(EVENTS.CHAT.GET_OR_CREATE_THREAD, this.handleGetOrCreateThread.bind(this));
-        this.eventBus.onAsync(EVENTS.CHAT.CREATE_NEW_THREAD, this.handleCreateNewThread.bind(this));
-        this.eventBus.onAsync(EVENTS.CHAT.RESYNC, this.handleResync.bind(this));
-        this.eventBus.onAsync(EVENTS.CHAT.UPDATE_CONVERSATION, this.handleUpdateConversation.bind(this));
+        this.onAsync(EVENTS.CHAT.CANCEL_TOOL, this.handleCancelTool);
+        this.onAsync(EVENTS.CHAT.EXECUTE_TOOL, this.handleExecuteTool);
+        this.onAsync(EVENTS.CHAT.SAVE_MESSAGE, this.handleSaveMessage);
+        this.onAsync(EVENTS.CHAT.SAVE_PANEL_VISIBILITY, this.handleSavePanelVisibility);
+        this.onAsync(EVENTS.CHAT.END_CONVERSATION, this.handleEndConversation);
+        this.onAsync(EVENTS.CHAT.UPDATE_SETTINGS, this.handleUpdateSettings);
+        this.onAsync(EVENTS.CHAT.GET_OR_CREATE_THREAD, this.handleGetOrCreateThread);
+        this.onAsync(EVENTS.CHAT.CREATE_NEW_THREAD, this.handleCreateNewThread);
+        this.onAsync(EVENTS.CHAT.RESYNC, this.handleResync);
+        this.onAsync(EVENTS.CHAT.UPDATE_CONVERSATION, this.handleUpdateConversation);
     }
 
     /**
@@ -452,8 +453,8 @@ export class ContentEventHandlers {
 
     setupContentActions() {
         // Late-bind content actions that depend on services
-        this.eventBus.onAsync(CONTENT_ACTIONS.SETTINGS_CHANGED, this.handleSettingsChanged.bind(this));
-        this.eventBus.onAsync(CONTENT_ACTIONS.CONVERSATION_UPDATED, this.handleConversationUpdated.bind(this));
+        this.onAsync(CONTENT_ACTIONS.SETTINGS_CHANGED, this.handleSettingsChanged);
+        this.onAsync(CONTENT_ACTIONS.CONVERSATION_UPDATED, this.handleConversationUpdated);
     }
 
     /**
@@ -540,19 +541,19 @@ export class ContentEventHandlers {
     }
 }
 
-export class EarlyEventHandlers {
+export class EarlyEventHandlers extends EventBindableComponent {
     constructor(eventBus, contentHost) {
-        this.eventBus = eventBus;
+        super(eventBus);
         this.contentHost = contentHost;
         this.chatService = contentHost.chatService;
     }
 
     setupEventListeners() {
         console.log('[EarlyEventHandlers] Setting up event listeners');
-        this.eventBus.onAsync(CONTENT_ACTIONS.PING, this.handlePing.bind(this));
-        this.eventBus.onAsync(CONTENT_ACTIONS.GET_WEBWIRE_STATE, this.handleGetWebwireState.bind(this));
-        this.eventBus.onAsync(CONTENT_ACTIONS.INJECT_WEBWIRE_PANEL, this.handleInjectPanel.bind(this));
-        this.eventBus.onAsync(CONTENT_ACTIONS.TOGGLE_WEBWIRE_PANEL, this.handleTogglePanel.bind(this));
+        this.onAsync(CONTENT_ACTIONS.PING, this.handlePing);
+        this.onAsync(CONTENT_ACTIONS.GET_WEBWIRE_STATE, this.handleGetWebwireState);
+        this.onAsync(CONTENT_ACTIONS.INJECT_WEBWIRE_PANEL, this.handleInjectPanel);
+        this.onAsync(CONTENT_ACTIONS.TOGGLE_WEBWIRE_PANEL, this.handleTogglePanel);
     }
 
     /**

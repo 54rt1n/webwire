@@ -1,14 +1,14 @@
 // StashPanel - Floating stash viewer for MCP
 import './stash-panel.scss';
+import { EventBindableComponent } from '../../js/core/event-bindable-panel.js';
+import { EVENTS } from '../../js/core/events.js';
 
-export class StashPanel {
+export class StashPanel extends EventBindableComponent {
     constructor(eventBus, stateService) {
-        this.eventBus = eventBus;
+        super(eventBus);
         this.stateService = stateService;
         this.panel = null;
         this.isVisible = false;
-        this._onStashUpdated = this._onStashUpdated.bind(this);
-        this._onRemoveClick = this._onRemoveClick.bind(this);
     }
 
     initialize() {
@@ -72,15 +72,15 @@ export class StashPanel {
 
     _attachListeners() {
         if (!this.eventBus) return;
-        this.eventBus.on('stash:updated', this._onStashUpdated);
+        this.on('stash:updated', this._onStashUpdated);
         if (this.panel) {
             this.panel.addEventListener('click', this._onRemoveClick);
         }
     }
 
     _detachListeners() {
-        if (!this.eventBus) return;
-        this.eventBus.off('stash:updated', this._onStashUpdated);
+        // EventBindableComponent's cleanup() handles event unsubscription
+        this.cleanup();
         if (this.panel) {
             this.panel.removeEventListener('click', this._onRemoveClick);
         }
@@ -95,7 +95,7 @@ export class StashPanel {
             const li = e.target.closest('.stash-panel-item');
             if (li) {
                 const uri = li.getAttribute('data-uri');
-                this.eventBus.emit('stash:remove', { uri });
+                this.eventBus.emit(EVENTS.STASH.REMOVE, { uri });
             }
         }
     }

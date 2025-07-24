@@ -8,10 +8,11 @@
 
 import { generateUUID } from '../utils/id-generator.js';
 import { EVENTS } from '../core/events.js';
+import { EventBindableComponent } from '../core/event-bindable-panel.js';
 
-export class DOMConnector {
+export class DOMConnector extends EventBindableComponent {
     constructor(eventBus) {
-        this.eventBus = eventBus;
+        super(eventBus);
         this.sessionId = generateUUID();
         this.pendingOperations = new Map(); // Track pending DOM operations
         
@@ -81,8 +82,8 @@ export class DOMConnector {
      */
     setupEventListeners() {
         // Listen for DOM operation results from content script
-        this.eventBus.on(EVENTS.DOM.OPERATION_COMPLETE, this.handleOperationComplete.bind(this));
-        this.eventBus.on(EVENTS.DOM.OPERATION_ERROR, this.handleOperationError.bind(this));
+        this.on(EVENTS.DOM.OPERATION_COMPLETE, this.handleOperationComplete);
+        this.on(EVENTS.DOM.OPERATION_ERROR, this.handleOperationError);
     }
 
     /**

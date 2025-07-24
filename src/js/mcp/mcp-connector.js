@@ -34,10 +34,7 @@ export class MCPConnector {
       this.errorState = null;
       this.isAvailable = false;
       this.connectionTimeout = null;
-      this.onOpenBound = this.handleOpen.bind(this);
-      this.onMessageBound = this.handleMessage.bind(this);
-      this.onErrorBound = this.handleError.bind(this);
-      this.onEndpointBound = this.handleEndpoint.bind(this);
+      // Event handlers will be bound as arrow functions when assigned
     }
   
     /**
@@ -115,13 +112,13 @@ export class MCPConnector {
           reject(error);
         }, 10000);
   
-        // Use bound listeners for proper cleanup
-        this.eventSource.onopen = this.onOpenBound;
-        this.eventSource.onmessage = this.onMessageBound;
-        this.eventSource.onerror = this.onErrorBound; // This emits an Event object that contains some unhelpful errors
+        // Use arrow functions for proper context binding
+        this.eventSource.onopen = () => this.handleOpen();
+        this.eventSource.onmessage = (event) => this.handleMessage(event);
+        this.eventSource.onerror = (event) => this.handleError(event); // This emits an Event object that contains some unhelpful errors
         
         // Listen for the 'endpoint' event to get the POST URL
-        this.eventSource.addEventListener('endpoint', this.onEndpointBound);
+        this.eventSource.addEventListener('endpoint', (event) => this.handleEndpoint(event));
       });
     }
   
@@ -464,7 +461,7 @@ export class MCPConnector {
     disconnect() {
       if (this.eventSource) {
         // Remove all listeners before closing to prevent memory leaks and race conditions
-        this.eventSource.removeEventListener('endpoint', this.onEndpointBound);
+        // Note: We can't remove anonymous arrow functions, but setting to null is sufficient
         this.eventSource.onopen = null;
         this.eventSource.onmessage = null;
         this.eventSource.onerror = null;

@@ -334,7 +334,8 @@ export const BACKGROUND_ACTIONS = {
 3. **Content script integration**:
 ```javascript
 // In content script setupChatServiceEvents()
-this.eventBus.onAsync(EVENTS.CHAT.NEW_EVENT, this.handleNewEvent.bind(this));
+// If ContentEventHandlers extends EventBindableComponent:
+this.onAsync(EVENTS.CHAT.NEW_EVENT, this.handleNewEvent);
 
 async handleNewEvent(data) {
     return await this.core.dispatcher.dispatch(

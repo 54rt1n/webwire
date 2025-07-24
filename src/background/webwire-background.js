@@ -1,4 +1,4 @@
-import { EVENT_TYPES, EVENT_CONTEXT } from '../js/core/events.js';
+import { EVENT_TYPES, EVENT_CONTEXT, EVENTS } from '../js/core/events.js';
 import { initializeContext } from '../js/context/context-init.js';
 import { EventBus } from '../js/core/event-bus.js';
 import { BACKGROUND_ACTIONS, CONTENT_ACTIONS } from '../js/core/cc-actions.js';
@@ -177,7 +177,7 @@ class WebWireBackground {
         });
         
         // Handle settings updates from options page
-        this.eventBus.onAsync('SETTINGS_UPDATED', async (data, options) => {
+        this.eventBus.onAsync(EVENTS.SETTINGS.UPDATED, async (data, options) => {
             console.log('[WebWireBackground] Handling SETTINGS_UPDATED event');
             await this.handleSettingsUpdated(data, options.sender);
             return { success: true };

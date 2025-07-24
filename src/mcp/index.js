@@ -7,6 +7,7 @@ import { documentModal } from './components/document-modal.js';
 import { ChatService } from '../chat/chat-service.js';
 import { EventBus } from '../js/core/event-bus.js';
 import { StashPanel } from './components/stash-panel.js';
+import { EventBindableComponent } from '../js/core/event-bindable-panel.js';
 import '../chat/chat.scss';
 
 /**
@@ -15,10 +16,13 @@ import '../chat/chat.scss';
  * MCPConnector (data/business logic) and the MCPControlPanel (UI/view logic).
  * Now also includes WebWire ChatService integration.
  */
-class MCPControlPanelApp {
+class MCPControlPanelApp extends EventBindableComponent {
     constructor() {
+        // Create EventBus first, then pass to parent
+        const eventBus = new EventBus({domain: 'mcp', debug: true});
+        super(eventBus);
+        
         // Add ChatService integration
-        this.eventBus = new EventBus({domain: 'mcp', debug: true});
         this.core = new WebWireClientCore(this.eventBus);
         this.panelEventHandlers = null;
         this.panel = new MCPControlPanel(this.eventBus);
@@ -75,15 +79,15 @@ class MCPControlPanelApp {
         
         // 6. Setup UI event handlers
         const handlers = {
-            onReconnect: this.connect.bind(this),
-            onRefreshHealth: this.fetchHealthCheck.bind(this),
-            onRefreshFs: this.fetchFilesystem.bind(this),
-            onOpenFile: this.openFile.bind(this),
-            onRefreshKb: this.fetchKnowledgeBase.bind(this),
-            onRefreshLists: this.fetchLists.bind(this),
-            onSelectList: this.fetchListContent.bind(this),
-            onOpenKbDocument: this.openKbDocument.bind(this),
-            onToggleChat: this.toggleChat.bind(this),
+            onReconnect: () => this.connect(),
+            onRefreshHealth: () => this.fetchHealthCheck(),
+            onRefreshFs: () => this.fetchFilesystem(),
+            onOpenFile: (filePath) => this.openFile(filePath),
+            onRefreshKb: () => this.fetchKnowledgeBase(),
+            onRefreshLists: () => this.fetchLists(),
+            onSelectList: (listName) => this.fetchListContent(listName),
+            onOpenKbDocument: (node) => this.openKbDocument(node),
+            onToggleChat: () => this.toggleChat(),
         };
         this.panel.initialize(handlers);
 
@@ -97,11 +101,11 @@ class MCPControlPanelApp {
      * Setup event listeners for MCP events
      */
     setupMCPListeners() {
-        this.eventBus.on(EVENTS.MCP.CONNECTED, (payload) => {
+        this.on(EVENTS.MCP.CONNECTED, (payload) => {
             console.log('[MCPApp] Handling MCP connected event:', this.core.mcpConnector);
             this.chatService.setMCPConnector(this.core.mcpConnector);
         });
-        this.eventBus.on(EVENTS.MCP.DISCONNECTED, (payload) => {
+        this.on(EVENTS.MCP.DISCONNECTED, (payload) => {
             console.log('[MCPApp] Handling MCP disconnected event:', this.core.mcpConnector);
             this.chatService.setMCPConnector(null);
         });
@@ -112,7 +116,7 @@ class MCPControlPanelApp {
      */
     setupStashEventHandlers() {
         // Handle stash add requests
-        this.eventBus.onExclusive(EVENTS.STASH.ADD, this.handleStashAdd.bind(this));
+        this.onExclusive(EVENTS.STASH.ADD, this.handleStashAdd);
     }
 
     /**
@@ -132,13 +136,13 @@ class MCPControlPanelApp {
                 
                 try {
                     const tools = await this.core.stateService.mcp.getMcpTools();
-                    this.eventBus.emit('mcp:connection-changed', {
+                    this.eventBus.emit(EVENTS.MCP.CONNECTION_CHANGED, {
                         connected: true,
                         tools: tools || []
                     });
                 } catch (error) {
                     console.warn('[MCPApp] Failed to get MCP tools:', error);
-                    this.eventBus.emit('mcp:connection-changed', {
+                    this.eventBus.emit(EVENTS.MCP.CONNECTION_CHANGED, {
                         connected: true,
                         tools: []
                     });
@@ -150,7 +154,7 @@ class MCPControlPanelApp {
             this.panel.renderConnectionStatus('disconnected', `Failed to connect to MCP server`);
             
             // Notify ChatService about MCP disconnection
-            this.eventBus.emit('mcp:connection-changed', {
+            this.eventBus.emit(EVENTS.MCP.CONNECTION_CHANGED, {
                 connected: false,
                 tools: []
             });
@@ -412,7 +416,7 @@ class MCPControlPanelApp {
             console.log('[MCPApp] Created new conversation:', newConversationId);
             
             // Notify ChatService about the new conversation
-            this.eventBus.emit('chat:conversation-loaded', {
+            this.eventBus.emit(EVENTS.CHAT.CONVERSATION_LOADED, {
                 conversation: {
                     threadId: newConversationId,
                     messages: []
@@ -429,10 +433,10 @@ class MCPControlPanelApp {
      */
     setupChatServiceEvents() {
         // Handle outbound requests from ChatService
-        this.eventBus.onAsync(EVENTS.CHAT.SAVE_MESSAGE, this.handleSaveMessage.bind(this));
-        this.eventBus.onAsync(EVENTS.CHAT.GET_OR_CREATE_THREAD, this.handleGetOrCreateThread.bind(this));
+        this.onAsync(EVENTS.CHAT.SAVE_MESSAGE, this.handleSaveMessage);
+        this.onAsync(EVENTS.CHAT.GET_OR_CREATE_THREAD, this.handleGetOrCreateThread);
 
-        this.eventBus.on(EVENTS.CHAT.TOGGLE_UI_SETTING, this.handleUISettingsToggle.bind(this));
+        this.on(EVENTS.CHAT.TOGGLE_UI_SETTING, this.handleUISettingsToggle);
     }
 
 

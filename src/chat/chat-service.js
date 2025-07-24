@@ -1,4 +1,5 @@
 import { EVENTS, EVENT_CONTEXT } from '../js/core/events.js';
+import { EventBindableComponent } from '../js/core/event-bindable-panel.js';
 import { ToolParser } from '../js/mcp/tool-parser.js';
 import { ToolFormatter } from '../js/mcp/tool-formatter.js';
 import { WebChatPanel } from './chat-panel.js';
@@ -31,9 +32,9 @@ const MESSAGE_ROLES = {
     ERROR: 'error'
 };
 
-export class ChatService {
+export class ChatService extends EventBindableComponent {
     constructor(eventBus) {
-        this.eventBus = eventBus;
+        super(eventBus);
         
         // UI Components
         this.panel = new WebChatPanel(this.eventBus);
@@ -111,31 +112,31 @@ export class ChatService {
      */
     setupEventListeners() {
         // Listen for chat events
-        this.eventBus.on(EVENTS.CHAT.SEND_MESSAGE, this.handleUserMessage.bind(this));
-        this.eventBus.on(EVENTS.CHAT.ANALYZE_PAGE, this.handlePageAnalysisRequest.bind(this));
-        this.eventBus.on(EVENTS.CHAT.UPDATE_SETTINGS, this.handleSettingsRefresh.bind(this));
-        this.eventBus.on(EVENTS.MCP.CONNECTED, this.handleMCPStatusUpdate.bind(this));
-        this.eventBus.on(EVENTS.MCP.DISCONNECTED, this.handleMCPStatusUpdate.bind(this));
-        this.eventBus.on(EVENTS.MCP.INITIALIZED, this.handleMCPStatusUpdate.bind(this));
-        this.eventBus.on(EVENTS.MCP.TOOLS_UPDATED, this.handleMCPStatusUpdate.bind(this));
-        this.eventBus.on(EVENTS.MCP.CONNECTION_ERROR, this.handleMCPStatusUpdate.bind(this));
-        this.eventBus.on(EVENTS.CHAT.CONVERSATION_LOADED, this.handleConversationLoaded.bind(this));
-        this.eventBus.on(EVENTS.CHAT.CONVERSATION_UPDATED, this.handleConversationUpdated.bind(this));
-        this.eventBus.on(EVENTS.CHAT.START_NEW_CONVERSATION, this.handleNewConversationRequest.bind(this));
-        this.eventBus.on(EVENTS.CHAT.REPLAY_LAST_TURN, this.handleReplayLastTurn.bind(this));
-        this.eventBus.on(EVENTS.CHAT.REPARSE_MESSAGE, this.handleReparseMessage.bind(this));
-        this.eventBus.on(EVENTS.CHAT.TOOL_RESULT, this.handleToolResult.bind(this));
-        this.eventBus.on(EVENTS.CHAT.TOGGLE_UI_SETTING, this.handleUISettingsToggle.bind(this));
-        this.eventBus.on(EVENTS.CHAT.CANCEL_STREAM, this.cancelStreamingResponse.bind(this));
-        this.eventBus.on(EVENTS.CHAT.COPY_MESSAGE, this.handleCopyMessage.bind(this));
+        this.on(EVENTS.CHAT.SEND_MESSAGE, this.handleUserMessage);
+        this.on(EVENTS.CHAT.ANALYZE_PAGE, this.handlePageAnalysisRequest);
+        this.on(EVENTS.CHAT.UPDATE_SETTINGS, this.handleSettingsRefresh);
+        this.on(EVENTS.MCP.CONNECTED, this.handleMCPStatusUpdate);
+        this.on(EVENTS.MCP.DISCONNECTED, this.handleMCPStatusUpdate);
+        this.on(EVENTS.MCP.INITIALIZED, this.handleMCPStatusUpdate);
+        this.on(EVENTS.MCP.TOOLS_UPDATED, this.handleMCPStatusUpdate);
+        this.on(EVENTS.MCP.CONNECTION_ERROR, this.handleMCPStatusUpdate);
+        this.on(EVENTS.CHAT.CONVERSATION_LOADED, this.handleConversationLoaded);
+        this.on(EVENTS.CHAT.CONVERSATION_UPDATED, this.handleConversationUpdated);
+        this.on(EVENTS.CHAT.START_NEW_CONVERSATION, this.handleNewConversationRequest);
+        this.on(EVENTS.CHAT.REPLAY_LAST_TURN, this.handleReplayLastTurn);
+        this.on(EVENTS.CHAT.REPARSE_MESSAGE, this.handleReparseMessage);
+        this.on(EVENTS.CHAT.TOOL_RESULT, this.handleToolResult);
+        this.on(EVENTS.CHAT.TOGGLE_UI_SETTING, this.handleUISettingsToggle);
+        this.on(EVENTS.CHAT.CANCEL_STREAM, this.cancelStreamingResponse);
+        this.on(EVENTS.CHAT.COPY_MESSAGE, this.handleCopyMessage);
         
         // Listen for AI streaming events
-        this.eventBus.on(EVENTS.AI.STREAM_CHUNK, this.handleStreamingChunk.bind(this));
-        this.eventBus.on(EVENTS.AI.STREAM_STARTED, this.handleStreamStarted.bind(this));
-        this.eventBus.on(EVENTS.AI.STREAM_COMPLETED, this.handleStreamCompleted.bind(this));
+        this.on(EVENTS.AI.STREAM_CHUNK, this.handleStreamingChunk);
+        this.on(EVENTS.AI.STREAM_STARTED, this.handleStreamStarted);
+        this.on(EVENTS.AI.STREAM_COMPLETED, this.handleStreamCompleted);
         
         // Listen for save status events
-        this.eventBus.on(EVENTS.UI.THREAD_SAVED, this.handleThreadSaved.bind(this));
+        this.on(EVENTS.UI.THREAD_SAVED, this.handleThreadSaved);
     }
 
     /**

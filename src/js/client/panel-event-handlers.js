@@ -1,10 +1,11 @@
 // src/js/client/panel-event-handlers.js
 import { EVENTS } from '../core/events.js';
+import { EventBindableComponent } from '../core/event-bindable-panel.js';
 
-export class PanelEventHandlers {
+export class PanelEventHandlers extends EventBindableComponent {
     constructor(core) {
+        super(core.eventBus);
         this.core = core;
-        this.eventBus = core.eventBus;
         this.stateService = core.stateService;
     }
 
@@ -18,11 +19,11 @@ export class PanelEventHandlers {
      * Setup Event Listeners
      */
     setupStashListeners() {
-        this.eventBus.onAsync(EVENTS.STASH.ADD, this.handleStashAdd.bind(this));
-        this.eventBus.onAsync(EVENTS.STASH.SAVE, this.handleSaveStash.bind(this));
-        this.eventBus.onAsync(EVENTS.STASH.CLEAR, this.handleStashClearAll.bind(this));
-        this.eventBus.onAsync(EVENTS.STASH.REMOVE, this.handleStashRemove.bind(this));
-        this.eventBus.onAsync(EVENTS.STASH.LOAD, this.handleLoadStash.bind(this));
+        this.onAsync(EVENTS.STASH.ADD, this.handleStashAdd);
+        this.onAsync(EVENTS.STASH.SAVE, this.handleSaveStash);
+        this.onAsync(EVENTS.STASH.CLEAR, this.handleStashClearAll);
+        this.onAsync(EVENTS.STASH.REMOVE, this.handleStashRemove);
+        this.onAsync(EVENTS.STASH.LOAD, this.handleLoadStash);
     }
 
     /**
@@ -135,7 +136,7 @@ export class PanelEventHandlers {
      * Setup settings listeners
      */
     setupSettingsListeners() {
-        this.eventBus.onAsync(EVENTS.SETTINGS.CHANGE, this.handleSettingsChange.bind(this));
+        this.onAsync(EVENTS.SETTINGS.CHANGE, this.handleSettingsChange);
     }
 
     /**
@@ -158,9 +159,9 @@ export class PanelEventHandlers {
      * Setup chat listeners
      */
     setupChatListeners() {
-        this.eventBus.onAsync(EVENTS.CHAT.CREATE_NEW_THREAD, this.handleCreateNewThread.bind(this));
-        this.eventBus.onAsync(EVENTS.CHAT.EXECUTE_TOOL, this.handleExecuteTool.bind(this));
-        this.eventBus.onAsync(EVENTS.CHAT.CANCEL_TOOL, this.handleCancelTool.bind(this));
+        this.onAsync(EVENTS.CHAT.CREATE_NEW_THREAD, this.handleCreateNewThread);
+        this.onAsync(EVENTS.CHAT.EXECUTE_TOOL, this.handleExecuteTool);
+        this.onAsync(EVENTS.CHAT.CANCEL_TOOL, this.handleCancelTool);
     }
 
     /**

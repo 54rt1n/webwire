@@ -1,12 +1,13 @@
 import { EVENTS } from '../js/core/events.js';
+import { EventBindableComponent } from '../js/core/event-bindable-panel.js';
 
 /**
  * TabIndicator - Manages tab title animations for streaming status
  * Shows animated indicator in the document title when AI is streaming
  */
-export class TabIndicator {
+export class TabIndicator extends EventBindableComponent {
     constructor(eventBus) {
-        this.eventBus = eventBus;
+        super(eventBus);
         this.originalTitle = '';
         this.isStreaming = false;
         this.animationInterval = null;
@@ -22,11 +23,11 @@ export class TabIndicator {
      * Set up event listeners for streaming events
      */
     setupEventListeners() {
-        this.eventBus.on(EVENTS.AI.STREAM_STARTED, () => {
+        this.on(EVENTS.AI.STREAM_STARTED, () => {
             this.startAnimation();
         });
         
-        this.eventBus.on(EVENTS.AI.STREAM_COMPLETED, () => {
+        this.on(EVENTS.AI.STREAM_COMPLETED, () => {
             this.stopAnimation();
         });
     }

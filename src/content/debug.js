@@ -6,6 +6,7 @@
  */
 
 import { PageUtils } from '../js/browser/page-utils.js';
+import { EVENTS } from '../js/core/events.js';
 
 // Export functions for testing and debugging
 let webwireContentHost = null;
@@ -165,15 +166,15 @@ export function setupDebugMethods(WebWireContentHost) {
             const testActions = {
                 sendTestMessage: (message = 'Test message from debug') => {
                     console.log('Testing: Send test message to ChatService');
-                    this.eventBus.emit('chat:send-message', { message });
+                    this.eventBus.emit(EVENTS.CHAT.SEND_MESSAGE, { message });
                 },
                 triggerPageAnalysis: () => {
                     console.log('Testing: Trigger page analysis');
-                    this.eventBus.emit('chat:analyze-page', {});
+                    this.eventBus.emit(EVENTS.CHAT.ANALYZE_PAGE, {});
                 },
                 testSettingsUpdate: (testSettings = { test: true }) => {
                     console.log('Testing: Settings update event');
-                    this.eventBus.emit('chat:update-settings', { settings: testSettings });
+                    this.eventBus.emit(EVENTS.CHAT.UPDATE_SETTINGS, { settings: testSettings });
                 },
                 listAllEvents: () => {
                     console.log('All registered events:', this.eventBus.getEventNames());

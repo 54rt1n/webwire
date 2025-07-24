@@ -1,21 +1,29 @@
 import './conversation-modal.scss';
 import { EVENTS } from '../../js/core/events.js';
 import { buildToolMessages } from '../../chat/message-utils.js';
+import { EventBindableComponent } from '../../js/core/event-bindable-panel.js';
 
 /**
  * ConversationModal
  * A modal component for displaying conversation messages with tool calls and metadata.
  * Shows a chronological list of messages with user and assistant interactions.
  */
-export class ConversationModal {
+export class ConversationModal extends EventBindableComponent {
     constructor(stateService = null, eventBus = null) {
+        // If eventBus is provided, pass it to parent
+        if (eventBus) {
+            super(eventBus);
+        } else {
+            // For backward compatibility when no eventBus is provided
+            super({ on: () => {}, emit: () => {} }); // Dummy eventBus
+        }
+        
         this.modal = null;
         this.isOpen = false;
         this.onClose = null;
         this.currentConversation = null;
         this.stateService = stateService;
         this.onSetActive = null;
-        this.eventBus = eventBus;
         this.eventListeners = [];
     }
 
@@ -32,7 +40,13 @@ export class ConversationModal {
      * @param {object} eventBus - The event bus instance
      */
     setEventBus(eventBus) {
-        this.eventBus = eventBus;
+        // Update the eventBus if a new one is provided
+        if (eventBus && eventBus !== this.eventBus) {
+            // Clean up old listeners first
+            this.cleanup();
+            this.eventBus = eventBus;
+            this.setupEventListeners();
+        }
     }
 
     /**
@@ -434,8 +448,8 @@ export class ConversationModal {
                 this._updateButtonState();
             };
             
-            this.eventBus.on(EVENTS.CONVERSATION.ACTIVATED, conversationUpdateListener);
-            this.eventBus.on(EVENTS.CONVERSATION.UPDATED, conversationUpdateListener);
+            this.on(EVENTS.CONVERSATION.ACTIVATED, conversationUpdateListener);
+            this.on(EVENTS.CONVERSATION.UPDATED, conversationUpdateListener);
             
             // Store listeners for cleanup
             this.eventListeners.push({
@@ -454,12 +468,9 @@ export class ConversationModal {
      * @private
      */
     _cleanupEventListeners() {
-        if (this.eventBus && this.eventListeners.length > 0) {
-            this.eventListeners.forEach(({ event, listener }) => {
-                this.eventBus.off(event, listener);
-            });
-            this.eventListeners = [];
-        }
+        // Clean up is now handled by parent class
+        this.cleanup();
+        this.eventListeners = [];
     }
 
     /**

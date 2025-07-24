@@ -75,7 +75,8 @@ For communication within the content script context:
 this.eventBus.emit(EVENTS.STASH.ADD, { uri, content });
 
 // ContentEventHandlers listens and responds
-this.eventBus.onAsync(EVENTS.STASH.ADD, this.handleStashAdd.bind(this));
+// ContentEventHandlers extends EventBindableComponent, so:
+this.onAsync(EVENTS.STASH.ADD, this.handleStashAdd);
 ```
 
 #### Pattern 2: Cross-Context EventDispatcher
@@ -249,7 +250,8 @@ window.webwire.debugEventSystem() // Test event system
 2. **Add Event Listener:**
 ```javascript
 // In ContentEventHandlers.setupEventListeners()
-this.eventBus.onAsync(EVENTS.NEW.EVENT, this.handleNewEvent.bind(this));
+// ContentEventHandlers extends EventBindableComponent, so:
+this.onAsync(EVENTS.NEW.EVENT, this.handleNewEvent);
 ```
 
 3. **Implement Handler:**
