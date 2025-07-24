@@ -4,18 +4,18 @@ This file provides guidance for working with the WebWire state management system
 
 ## Directory Structure
 ```
-src/js/state
-├── plugins/                # Domain-specific state managers
-│   ├── aim-state.js       # AIM-specific state (personas, workspace)
-│   ├── conversation-state.js  # Chat threads and message history
-│   ├── disk-state.js      # Persistent storage coordination
-│   ├── mcp-state.js       # MCP server connections and tool state
-│   ├── settings-state.js  # User preferences and AI configuration
-│   ├── stash-state.js     # Document stashing functionality
-│   └── ui-state.js        # Panel visibility and UI preferences
-├── state-container.js     # Core state container with plugin system
-├── state-service.js       # High-level state operations and coordination
-└── state-validator.js     # State validation and integrity checking
+src/js/state/
+├── plugins/                     # Domain-specific state managers
+│   ├── aim-state.js            # AIM-specific state (personas, workspace)
+│   ├── conversation-state.js   # Chat threads and message history
+│   ├── disk-state.js           # Persistent storage coordination
+│   ├── mcp-state.js            # MCP server connections and tool state
+│   ├── settings-state.js       # User preferences and AI configuration
+│   ├── stash-state.js          # Document stashing functionality
+│   └── ui-state.js             # Panel visibility and UI preferences
+├── state-container.js          # Core state container with initial state factory
+├── state-service.js            # High-level state operations and plugin coordination
+└── state-validator.js          # State validation and integrity checking
 ```
 
 ## Overview
@@ -54,26 +54,37 @@ class StateContainer {
 ### State Service (`state-service.js`)
 
 High-level coordination layer providing:
-- Plugin lifecycle management
-- State persistence orchestration
-- Cross-plugin communication
-- Validation and error handling
+- Plugin lifecycle management with automatic initialization
+- State persistence orchestration across all plugins
+- Cross-plugin communication via shared state and event bus
+- Validation and error handling with state recovery
 
 ```javascript
 class StateService {
     constructor(eventBus, storage) {
-        this.container = new StateContainer();
+        if (!eventBus || !storage) {
+            throw new Error('Event bus and storage are required');
+        }
+        
         this.eventBus = eventBus;
         this.storage = storage;
         
-        // Plugin registration
+        // Initialize state with default structure
+        this.state = createInitialState();
+        
+        // Initialize plugins with proper dependencies
+        this.disk = new DiskStatePlugin(this);
         this.settings = new SettingsStatePlugin(this);
+        this.aim = new AIMStatePlugin(this);
         this.conversation = new ConversationStatePlugin(this);
         this.mcp = new MCPStatePlugin(this);
-        this.ui = new UIStatePlugin(this);
-        this.aim = new AIMStatePlugin(this);
+        this.ui = new UiStatePlugin(this);
         this.stash = new StashStatePlugin(this);
-        this.disk = new DiskStatePlugin(this);
+    }
+    
+    async initialize() {
+        // Load state from storage via disk plugin
+        await this.disk.loadFromStorage();
     }
 }
 ```
@@ -239,9 +250,13 @@ class ConversationStatePlugin {
     createThreadId(userName, personaName)
     getOrCreateCurrentConversation(options)
     setActiveConversation(threadId)
-    getActiveConversationId()
+    getActiveConversationId() / getActiveThreadId()
     
-    // Thread queries
+    // Thread queries and management
+    getConversation(threadId)
+    getConversationMetadata(threadId)
+    updateConversation(threadId, messages, metadata)
+    getActiveThread()
     listConversations(filters)
     getConversationsByPersona(personaName)
     clearConversationHistory(threadId)
@@ -662,9 +677,24 @@ The conversation plugin supports both single-call (`storeMessage`) and two-part 
 - Model and provider fields in chat config are commented out in initial state (must be set by user)
 - All provider API keys are initially undefined (require user configuration)
 - The `useMCP` flag in UI settings defaults to `true`
+- Plugins are initialized in a specific order to handle dependencies
 
 ### Cross-Plugin Dependencies
 - Settings plugin may need to update when MCP connection status changes
 - UI plugin listens for conversation updates to refresh display
 - Disk plugin coordinates saves across all other plugins
 - Storage adapters are passed through from StateService to each plugin
+- All plugins receive the full StateService instance, enabling cross-plugin communication
+
+### State Access Pattern
+All plugins access the shared state `this.stateService.state` through plugin methods, ensuring a single source of truth:
+```javascript
+// In any plugin
+const settings = this.stateService.state.settings;
+const conversations = this.stateService.state.conversation.history;
+```
+
+### Error Handling
+- StateService constructor throws if eventBus or storage are not provided
+- Plugins should handle missing state gracefully by providing defaults
+- State validation ensures required fields are present before operations

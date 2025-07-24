@@ -1,4 +1,4 @@
-# Browser Module - DOM Interaction & Page Tools
+# CLAUDE.md - Browser Module (DOM Interaction & Page Tools)
 
 The browser module provides comprehensive DOM manipulation and page interaction capabilities for WebWire's AI-powered web automation. This module acts as the bridge between AI tool requests and actual browser operations.
 

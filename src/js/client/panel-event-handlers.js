@@ -31,28 +31,28 @@ export class PanelEventHandlers {
      * @param {Object} options - { autoSave: boolean }
      */
     async handleStashAdd(data, { autoSave = true, ...options } = {}) {
-        console.log('[MCPApp] Handling stash add request:', data);
+        console.log('[PanelEventHandlers] Handling stash add request:', data);
         if (!this.stateService || !this.stateService.stash) {
-            console.error('[MCPApp] No stash service available');
+            console.error('[PanelEventHandlers] No stash service available');
             return;
         }
 
         const { uri, content } = data;
         if (!uri || !content) {
-            console.error('[MCPApp] Invalid stash add request:', data);
+            console.error('[PanelEventHandlers] Invalid stash add request:', data);
             return;
         }
 
         const added = this.stateService.stash.set(uri, content);
 
         if (added) {
-            console.log(`[MCPApp] Added ${uri} to stash`);
+            console.log(`[PanelEventHandlers] Added ${uri} to stash`);
             if (autoSave) {
                 await this.handleSaveStash(false);
             }
             this.eventBus.emit(EVENTS.STASH.UPDATED, { uri, added: true, saved: true, ...options });
         } else {
-            console.log(`[MCPApp] ${uri} was already in stash`);
+            console.log(`[PanelEventHandlers] ${uri} was already in stash`);
         }
     }
 
@@ -63,26 +63,26 @@ export class PanelEventHandlers {
      */
     async handleStashRemove(data, { autoSave = true, ...options } = {}) {
         if (!this.stateService || !this.stateService.stash) {
-            console.error('[MCPApp] No stash service available', this.stateService, this.stateService?.stash);
+            console.error('[PanelEventHandlers] No stash service available', this.stateService, this.stateService?.stash);
             return;
         }
 
         const { uri } = data;
         if (!uri) {
-            console.error('[MCPApp] Invalid stash remove request:', data);
+            console.error('[PanelEventHandlers] Invalid stash remove request:', data);
             return;
         }
 
         const removed = this.stateService.stash.delete(uri);
         
         if (removed) {
-            console.log(`[MCPApp] Removed ${uri} from stash`);
+            console.log(`[PanelEventHandlers] Removed ${uri} from stash`);
             if (autoSave) {
                 await this.handleSaveStash(false);
             }
             this.eventBus.emit(EVENTS.STASH.UPDATED, { uri, removed: true, saved: true, ...options });
         } else {
-            console.log(`[MCPApp] ${uri} was not in stash`);
+            console.log(`[PanelEventHandlers] ${uri} was not in stash`);
         }
     }
 
@@ -91,12 +91,12 @@ export class PanelEventHandlers {
      */
     async handleStashClearAll() {
         if (!this.stateService || !this.stateService.stash) {
-            console.error('[MCPApp] No stash service available');
+            console.error('[PanelEventHandlers] No stash service available');
             return;
         }
 
         this.stateService.stash.clearAll();
-        console.log('[MCPApp] Cleared all stash content');
+        console.log('[PanelEventHandlers] Cleared all stash content');
         await this.handleSaveStash(false);
         this.eventBus.emit(EVENTS.STASH.UPDATED, { uri: 'all', cleared: true, saved: true, ...options });
     }
@@ -109,12 +109,12 @@ export class PanelEventHandlers {
         
         try {
             await this.stateService.stash.saveToStorage();
-            console.log('[MCPApp] Stash data saved successfully');
+            console.log('[PanelEventHandlers] Stash data saved successfully');
             if (announce) {
                 this.eventBus.emit(EVENTS.STASH.SAVED, options);
             }
         } catch (error) {
-            console.error('[MCPApp] Failed to save stash data:', error);
+            console.error('[PanelEventHandlers] Failed to save stash data:', error);
         }
     }
 
@@ -127,7 +127,7 @@ export class PanelEventHandlers {
             await this.stateService.stash.loadFromStorage();
             this.eventBus.emit(EVENTS.STASH.UPDATED, { uri: 'all', loaded: true, saved: true, ...options });
         } catch (error) {
-            console.error('[MCPApp] Failed to load stash data:', error);
+            console.error('[PanelEventHandlers] Failed to load stash data:', error);
         }
     }
 
@@ -143,14 +143,14 @@ export class PanelEventHandlers {
      */
     async handleSettingsChange(data) {
         if (!this.stateService || !this.stateService.settings) {
-            console.error('[MCPApp] No settings service available');
+            console.error('[PanelEventHandlers] No settings service available');
             return;
         }
         try {
-            console.log('[MCPApp] Handling settings changed event:', data);
+            console.log('[PanelEventHandlers] Handling settings changed event:', data);
             await this.stateService.settings.saveToStorage();
         } catch (error) {
-            console.error('[MCPApp] Failed to save settings:', error);
+            console.error('[PanelEventHandlers] Failed to save settings:', error);
         }
     }
 
@@ -167,9 +167,9 @@ export class PanelEventHandlers {
      * Handle create new thread event
      */
     async handleCreateNewThread(data) {
-        console.log('[MCPApp] Handling create new thread event:', data);
+        console.log('[PanelEventHandlers] Handling create new thread event:', data);
         if (!this.stateService || !this.stateService.conversation || !this.stateService.disk) {
-            console.error('[MCPApp] State service or required plugins missing');
+            console.error('[PanelEventHandlers] State service or required plugins missing');
             return;
         }
         const threadId = this.stateService.conversation.createNewConversation();
@@ -193,7 +193,7 @@ export class PanelEventHandlers {
      * Handle execute tool event
      */
     async handleExecuteTool(data) {
-        console.log('[MCPApp] Handling execute tool event:', data);
+        console.log('[PanelEventHandlers] Handling execute tool event:', data);
         try {
             const { callId, name } = data;
             // We need to look up the threadId and the messageId for the callId
@@ -201,7 +201,7 @@ export class PanelEventHandlers {
             const toolResult = await this.core.mcpConnector.executeTool(name, {}, {callId});
             // Update the conversation state with the tool result
             this.stateService.conversation.updateToolResult(threadId, messageId, callId, toolResult);
-            console.log('[MCPApp] Updated tool result (saving to disk):', this.stateService.state.conversation.history[threadId]);
+            console.log('[PanelEventHandlers] Updated tool result (saving to disk):', this.stateService.state.conversation.history[threadId]);
             // Save to disk
             await this.stateService.disk.saveToStorage();
 
@@ -215,7 +215,7 @@ export class PanelEventHandlers {
                 toolResult: toolResult
             };
         } catch (error) {
-            console.error('[MCPApp] Failed to execute tool:', error);
+            console.error('[PanelEventHandlers] Failed to execute tool:', error);
         }
     }
 
@@ -223,7 +223,7 @@ export class PanelEventHandlers {
      * Handle cancel tool event
      */
     async handleCancelTool(data) {
-        console.log('[MCPApp] Handling cancel tool event:', data);
+        console.log('[PanelEventHandlers] Handling cancel tool event:', data);
         return {
             success: true,
             threadId: data.threadId,

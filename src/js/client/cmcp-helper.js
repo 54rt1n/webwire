@@ -29,12 +29,12 @@ export class CMCPHelper {
      */
     async fetchKbContent(uri, { includeIndex = true, forceRefresh = false } = {}) {
         if (!this.mcpConnector) {
-            console.error('[StateService::StashState] No MCP connector available for KB fetch');
+            console.error('[CMCPHelper] No MCP connector available for KB fetch');
             return null;
         }
 
         try {
-            console.log(`[StateService::StashState] Fetching KB content for '${uri}'`);
+            console.log(`[CMCPHelper] Fetching KB content for '${uri}'`);
             const result = await this.mcpConnector.executeTool('kb_read', {
                 uri: uri,
                 include_content: true,
@@ -43,14 +43,14 @@ export class CMCPHelper {
 
             if (result.success && result.content) {
                 const content = result.content;
-                console.log(`[StateService::StashState] Fetched and cached KB content: ${content.length} chars`);
+                console.log(`[CMCPHelper] Fetched and cached KB content: ${content.length} chars`);
                 return content;
             } else {
-                console.warn(`[StateService::StashState] Failed to fetch KB content for '${uri}':`, result.error);
+                console.warn(`[CMCPHelper] Failed to fetch KB content for '${uri}':`, result.error);
                 return null;
             }
         } catch (error) {
-            console.error(`[StateService::StashState] Error fetching KB content for '${uri}':`, error);
+            console.error(`[CMCPHelper] Error fetching KB content for '${uri}':`, error);
             return null;
         }
     }
@@ -65,14 +65,14 @@ export class CMCPHelper {
      */
     async fetchFsContent(path, { encoding = 'utf-8', forceRefresh = false } = {}) {
         if (!this.mcpConnector) {
-            console.error('[StateService::StashState] No MCP connector available for FS fetch');
+            console.error('[CMCPHelper] No MCP connector available for FS fetch');
             return null;
         }
 
         const uri = `fs://${path}`;
 
         try {
-            console.log(`[StateService::StashState] Fetching FS content for '${path}'`);
+            console.log(`[CMCPHelper] Fetching FS content for '${path}'`);
             const result = await this.mcpConnector.executeTool('fs_read', {
                 path: path,
                 encoding: encoding
@@ -80,14 +80,14 @@ export class CMCPHelper {
 
             if (result.success && result.content) {
                 const content = result.content;
-                console.log(`[StateService::StashState] Fetched and cached FS content: ${content.length} chars`);
+                console.log(`[CMCPHelper] Fetched and cached FS content: ${content.length} chars`);
                 return content;
             } else {
-                console.warn(`[StateService::StashState] Failed to fetch FS content for '${path}':`, result.error);
+                console.warn(`[CMCPHelper] Failed to fetch FS content for '${path}':`, result.error);
                 return null;
             }
         } catch (error) {
-            console.error(`[StateService::StashState] Error fetching FS content for '${path}':`, error);
+            console.error(`[CMCPHelper] Error fetching FS content for '${path}':`, error);
             return null;
         }
     }
