@@ -163,4 +163,22 @@ export class UiStatePlugin {
         if (!tab) return;
         tab.trackDefault = trackDefault;
     }
+    
+    /**
+     * Get tracked thread ID for the current tab
+     */
+    getTrackedThreadId() {
+        const tab = this._currentTab();
+        if (!tab) return null;
+        return tab.trackedThreadId;
+    }
+    
+    /**
+     * Set tracked thread ID for the current tab
+     */
+    setTrackedThreadId(threadId) {
+        const tab = this._currentTab();
+        if (!tab) return;
+        tab.trackedThreadId = threadId;
+    }
 } 

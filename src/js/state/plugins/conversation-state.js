@@ -264,7 +264,7 @@ export class ConversationStatePlugin {
             state.metadata[threadId].duration = timestamp - state.metadata[threadId].startTime;
         }
         
-        console.log(`Stored message in conversation ${threadId}.`);
+        console.log(`[ConversationState] Stored message in conversation ${threadId}.`);
         this.eventBus.emit(EVENTS.CONVERSATION.UPDATED, { threadId });
     }
 
@@ -382,45 +382,67 @@ export class ConversationStatePlugin {
         const state = this._safeConversationState();
 
         if (!tabId) {
+            console.log('[ConversationState] No tab ID provided, using current tab ID:', this.stateService.ui.getTabId());
             tabId = this.stateService.ui.getTabId();
         }
 
-        // Check if we are tracking the global active thread
-        const tabState = this.stateService.tab.getTabState(tabId);
-        console.log('[ConversationState] Tab state:', tabState, tabId, this.stateService.state.tabs);
-        if (tabState.trackDefault) {
-            console.log('[ConversationState] Tracking default active thread', state.active?.global);
-            return state.active?.global || null;
+        // Use the UI state's tracked thread ID if available
+        let trackedThreadId = this.stateService.ui.getTrackedThreadId();
+        console.log('[ConversationState] Tracked thread ID from UI state:', trackedThreadId, tabId);
+        
+        if (trackedThreadId) {
+            return trackedThreadId;
         }
         
-        // Use the new active.global field
-        const activeThreadId = state.active?.[tabId] || state.active?.global;
-        console.log('[ConversationState] Active thread ID from state.active.global:', activeThreadId, this.stateService.state, tabId);
-        
-        return activeThreadId || null;
+        // Fall back to global active thread if no tab-specific thread
+        console.log('[ConversationState] No tab trackedThreadId, using global:', state.active?.global);
+        trackedThreadId = state.active?.global;
+        if (trackedThreadId) {
+            return trackedThreadId;
+        }
+
+        // Try and recover the active thread
+        const recoveredThreadId = this.recoverGlobalActive();
+        if (recoveredThreadId) {
+            this.setActiveConversation(recoveredThreadId);
+            return recoveredThreadId;
+        }
+
+        return null;
     }
 
     /**
      * Set a conversation as active (and mark others as inactive)
      * @param {string} threadId - The thread ID to set as active
+     * @param {string} [tabId] - The tab ID to set as active (defaults to current tab)
      */
-    setActiveConversation(threadId) {
+    setActiveConversation(threadId, {tabId, setGlobal = false} = {}) {
         if (threadId !== null) {
-            const targetMetadata = this.stateService.state.conversation.metadata[threadId];
+            const targetMetadata = this.stateService.state.conversation?.metadata?.[threadId];
             if (!targetMetadata) {
                 throw new Error(`Conversation ${threadId} not found`);
             }
         }
 
+        if (!setGlobal && !tabId) {
+            throw new Error('setGlobal is false and tabId is not provided');
+        }
+
         // Set the active thread ID in the new location
         const state = this.stateService.state.conversation;
-        if (!state.active) {
-            state.active = {};
+        if (setGlobal) {
+            if (!state.active) {
+                state.active = {};
+            }
+
+            state.active.global = threadId;
+            this.stateService.ui.setTrackedThreadId(threadId);
+        } else {
+            this.stateService.ui.setTrackedThreadId(threadId);
         }
-        state.active.global = threadId;
         
-        console.log(`[StateService::ConversationState] Set active conversation to ${threadId}`);
-        this.eventBus.emit(EVENTS.CONVERSATION.ACTIVATED, { threadId });
+        console.log(`[StateService::ConversationState] Set active conversation to ${threadId} (tab: ${tabId})`);
+        this.eventBus.emit(EVENTS.CONVERSATION.ACTIVATED, { threadId, tabId });
     }
 
     /**
@@ -512,7 +534,7 @@ export class ConversationStatePlugin {
      * Recover the active conversation by finding the most recent one
      * @returns {string|null} The recovered thread ID or null if no conversations exist
      */
-    recoverActive() {
+    recoverGlobalActive() {
         console.log('[ConversationState] Recovering active conversation...');
 
         const conversations = this.stateService.conversation.listConversations();
@@ -520,12 +542,6 @@ export class ConversationStatePlugin {
         // Filter out conversations with zero messages
         const filteredConversations = conversations.filter((value) => value && value.messages && value.messages.length > 0);
         
-        if (filteredConversations.length === 0) {
-            console.log('[ConversationState] No conversations found to recover');
-            return null;
-        }
-        
-        // Use the filtered conversations
         if (filteredConversations.length === 0) {
             console.log('[ConversationState] No conversations found to recover');
             return null;
@@ -541,9 +557,6 @@ export class ConversationStatePlugin {
         // Get the most recent conversation
         const mostRecent = sortedConversations[0];
         console.log(`[ConversationState] Found most recent conversation: ${mostRecent.threadId} from ${new Date(mostRecent.startTime).toLocaleString()}`);
-        
-        // Set it as active
-        this.setActiveConversation(mostRecent.threadId);
         
         return mostRecent.threadId;
     }
@@ -713,7 +726,7 @@ export class ConversationStatePlugin {
             }
             
             // CRITICAL: Set this as the active thread in the new location
-            this.setActiveConversation(threadId);
+            this.setActiveConversation(threadId, {tabId: this.stateService.ui.getTabId()});
         }
         
         console.log(`[ConversationState] Successfully patched conversation ${threadId}`);

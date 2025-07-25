@@ -16,14 +16,10 @@ export class DiskStatePlugin {
     async saveToStorage() {
         try {
             const { mcp, aim, conversation, ...rest } = this.stateService.state;
-            // Filter our conversations to remove any with zero messages
-            const filteredConversations = Object.fromEntries(
-                Object.entries(conversation).filter(([_, value]) => value && value.messages && value.messages.length > 0)
-            );
             const saveData = serializeState({
                 mcp,
                 aim,
-                conversation: filteredConversations,
+                conversation,
                 ...rest,
             });
             saveData.timestamp = Date.now();

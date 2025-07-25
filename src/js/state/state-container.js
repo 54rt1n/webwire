@@ -196,6 +196,7 @@ export function createInitialUiState(tabId = undefined) {
 
 export function createInitialTabState() {
     return {
+        trackedThreadId: undefined,
         trackDefault: true,
         selectedModel: 'chat',
         includePageContent: true,
