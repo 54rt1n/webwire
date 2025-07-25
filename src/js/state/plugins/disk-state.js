@@ -16,17 +16,21 @@ export class DiskStatePlugin {
     async saveToStorage() {
         try {
             const { mcp, aim, conversation, ...rest } = this.stateService.state;
+            // Filter our conversations to remove any with zero messages
+            const filteredConversations = Object.fromEntries(
+                Object.entries(conversation).filter(([_, value]) => value && value.messages && value.messages.length > 0)
+            );
             const saveData = serializeState({
                 mcp,
                 aim,
-                conversation,
+                conversation: filteredConversations,
                 ...rest,
             });
             saveData.timestamp = Date.now();
 
             await this.stateAdapter.save(saveData);
             this.stateService.state.session.lastSaved = Date.now();
-            console.log('[StateService::DiskState] State saved', saveData);
+            console.log('[StateService::DiskState] State saved', saveData, conversation);
 
         } catch (error) {
             console.error('[StateService::DiskState] Save failed:', error);

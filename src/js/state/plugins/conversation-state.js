@@ -69,8 +69,8 @@ export class ConversationStatePlugin {
      * Get active thread
      * @returns {object} Conversation object
      */
-    getActiveThread() {
-        const threadId = this.getActiveThreadId();
+    getActiveThread(tabId) {
+        const threadId = this.getActiveThreadId(tabId);
         if (threadId) {
             return this.getConversation(threadId);
         }
@@ -347,12 +347,19 @@ export class ConversationStatePlugin {
      * Get the current active thread ID
      * @returns {string|null} Active thread ID or null
      */
-    getActiveThreadId() {
+    getActiveThreadId(tabId) {
         const state = this.stateService.state.conversation;
+
+        // Check if we are tracking the global active thread
+        const tabState = this.stateService.tab.getTabState(tabId);
+        if (tabState.trackDefault) {
+            console.log('[ConversationState] Tracking default active thread', state.active?.global);
+            return state.active?.global || null;
+        }
         
         // Use the new active.global field
-        const activeThreadId = state.active?.global;
-        console.log('[ConversationState] Active thread ID from state.active.global:', activeThreadId);
+        const activeThreadId = state.active?.[tabId] || state.active?.global;
+        console.log('[ConversationState] Active thread ID from state.active.global:', activeThreadId, this.stateService.state, tabId);
         
         return activeThreadId || null;
     }
@@ -388,9 +395,10 @@ export class ConversationStatePlugin {
      */
     getCurrentConversation(options = {}) {
         console.log('[ConversationState] getCurrentConversation called with options:', options);
+        const { tabId } = options;
         
         // Try to get existing active conversation
-        let threadId = this.getActiveThreadId();
+        let threadId = this.getActiveThreadId(tabId);
         console.log('[ConversationState] Active thread ID:', threadId);
 
         if (threadId) {
@@ -437,6 +445,18 @@ export class ConversationStatePlugin {
         const threadId = this.createThreadId(currentUser, currentPersona);
         
         const timestamp = Date.now();
+
+        // Guard just in case
+        if (!this.stateService.state.conversation) {
+            this.stateService.state.conversation = {};
+        }
+        if (!this.stateService.state.conversation.history) {
+            this.stateService.state.conversation.history = {};
+        }
+        if (!this.stateService.state.conversation.metadata) {
+            this.stateService.state.conversation.metadata = {};
+        }
+
         // Initialize the conversation metadata as active in an empty conversation
         this.stateService.state.conversation.history[threadId] = [];
         this.stateService.state.conversation.metadata[threadId] = {
@@ -467,16 +487,25 @@ export class ConversationStatePlugin {
      */
     recoverActive() {
         console.log('[ConversationState] Recovering active conversation...');
+
+        const conversations = this.stateService.conversation.listConversations();
+
+        // Filter out conversations with zero messages
+        const filteredConversations = conversations.filter((value) => value && value.messages && value.messages.length > 0);
         
-        const conversations = Object.values(this.stateService.state.conversation.metadata);
+        if (filteredConversations.length === 0) {
+            console.log('[ConversationState] No conversations found to recover');
+            return null;
+        }
         
-        if (conversations.length === 0) {
+        // Use the filtered conversations
+        if (filteredConversations.length === 0) {
             console.log('[ConversationState] No conversations found to recover');
             return null;
         }
         
         // Sort by most recent activity (endTime or startTime), newest first
-        const sortedConversations = conversations.sort((a, b) => {
+        const sortedConversations = filteredConversations.sort((a, b) => {
             const timeA = a.endTime || a.startTime || 0;
             const timeB = b.endTime || b.startTime || 0;
             return timeB - timeA;
@@ -501,6 +530,10 @@ export class ConversationStatePlugin {
      * @returns {Array} Array of conversation metadata objects
      */
     listConversations({ userName, personaName, status } = {}) {
+        if (!this.stateService.state.conversation || !this.stateService.state.conversation.metadata) {
+            console.log('[ConversationState] No conversations found', this.stateService.state);
+            return [];
+        }
         let conversations = Object.values(this.stateService.state.conversation.metadata);
 
         if (userName) {
@@ -664,5 +697,30 @@ export class ConversationStatePlugin {
         
         console.log(`[ConversationState] Successfully patched conversation ${threadId}`);
         this.eventBus.emit(EVENTS.CONVERSATION.UPDATED, { threadId });
+    }
+
+    /**
+     * Marks a message as retried by setting its status.
+     * @param {string} threadId - The thread ID
+     * @param {string} messageId - The message ID to mark as retried
+     */
+    markMessageAsRetried(threadId, messageId) {
+        const state = this.stateService.state.conversation;
+        
+        if (!state.history[threadId]) {
+            console.warn(`[ConversationState] Thread ${threadId} not found`);
+            return;
+        }
+        
+        const messages = state.history[threadId];
+        const message = messages.find(m => m.messageId === messageId);
+        
+        if (message) {
+            message.status = 'retried';
+            console.log(`[ConversationState] Marked message ${messageId} as retried`);
+            this.eventBus.emit(EVENTS.CONVERSATION.UPDATED, { threadId });
+        } else {
+            console.warn(`[ConversationState] Message ${messageId} not found in thread ${threadId}`);
+        }
     }
 }

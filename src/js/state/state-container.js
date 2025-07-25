@@ -199,9 +199,9 @@ export function createInitialTabState() {
         trackDefault: true,
         selectedModel: 'chat',
         includePageContent: true,
-        useMCP: true,
-        useBrowserTools: true,
-        autoExecuteTools: true,
+        useMCP: false,
+        useBrowserTools: false,
+        autoExecuteTools: false,
     };
 }
 

@@ -541,6 +541,9 @@ export class WebChatPanel {
 
         conversation.messages.forEach(message => {
             if (message.role === 'system') return;
+            
+            // Skip messages marked as retried
+            if (message.status === 'retried') return;
 
             const toolMessages = buildToolMessages(message.toolCalls, message.toolResults);
             console.log('[WebChatPanel] displayConversation toolMessages:', message.role, toolMessages);
@@ -578,6 +581,10 @@ export class WebChatPanel {
 
         conversation.messages.forEach(message => {
             if (message.role === 'system') return;
+            
+            // Skip messages marked as retried
+            if (message.status === 'retried') return;
+            
             const toolMessages = buildToolMessages(message.toolCalls, message.toolResults);
             console.log('[WebChatPanel] loadConversation:', toolMessages);
 

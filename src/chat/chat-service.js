@@ -269,8 +269,11 @@ export class ChatService extends EventBindableComponent {
 
         this.panel.removeErrorMessages();
 
+        const threadId = this.stateService.conversation.getActiveThreadId();
+        const location = typeof window !== 'undefined' ? window.location.href : undefined;
+        const persona = this.stateService.aim.getAimMessageOptions();
+
         try {
-            const threadId = this.stateService.conversation.getActiveThreadId();
 
             if (!threadId) {
                 console.log('[ChatService] No active thread found', this.stateService);
@@ -323,8 +326,6 @@ export class ChatService extends EventBindableComponent {
             }
 
             // Store user message immediately in conversation state (part 1 of 2-part creation)
-            const location = typeof window !== 'undefined' ? window.location.href : undefined;
-            const persona = this.stateService.aim.getAimMessageOptions();
             this.stateService.conversation.storePartialUserMessage(threadId, {
                 ...userMessage,
                 url: location,
@@ -418,6 +419,20 @@ export class ChatService extends EventBindableComponent {
                         cancelledContent,
                         []
                     );
+                    
+                    // Store the cancelled message in conversation state
+                    const assistantMsg = { 
+                        role: MESSAGE_ROLES.ASSISTANT, 
+                        content: cancelledContent,
+                        timestamp: Date.now(),
+                        cancelled: true  // Mark as cancelled
+                    };
+                    
+                    this.stateService.conversation.storeAssistantMessage(threadId, assistantMsg, {
+                        ...persona,
+                        url: location,
+                        title: document.title,
+                    });
                 }
                 // Re-enable retry button after cancellation
                 this.panel.updateRetryButton(true);
@@ -649,18 +664,25 @@ export class ChatService extends EventBindableComponent {
             return;
         }
 
-        // Remove the last assistant message from the conversation ONLY if the assistant
-        // was actually the last message in the conversation (not if last message was user message with error)
+        // Mark the last assistant message as 'retried' instead of removing it
         const conversation = this.stateService.conversation.getConversation(threadId);
         if (conversation && conversation.messages && conversation.messages.length > 0) {
             const lastMessage = conversation.messages[conversation.messages.length - 1];
             if (lastMessage.role === MESSAGE_ROLES.ASSISTANT) {
-                conversation.messages.pop();
-                // Update the panel
+                // Mark the message as retried in the state
+                this.stateService.conversation.markMessageAsRetried(threadId, lastMessage.messageId);
+                // Update the panel to hide the retried message
                 if (this.panel.isReady()) {
                     this.panel.updateConversation(conversation);
                 }
             }
+        }
+        
+        // Also check for any "thinking" messages that might be stuck in the UI
+        const thinkingMessages = this.panel.container?.querySelectorAll('.ww-thinking');
+        if (thinkingMessages && thinkingMessages.length > 0) {
+            console.log('[ChatService] Found thinking messages during retry, removing them');
+            thinkingMessages.forEach(msg => msg.remove());
         }
 
         // Re-send the message through the normal flow

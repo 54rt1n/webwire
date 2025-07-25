@@ -26,7 +26,7 @@ export class EventDispatcher {
   // ── Core Dispatch Method ──────────────────────────────────────────
   
   async dispatch(event, data, options = {}) {
-    const { target = 'local', timeout = 5000, priority = 'normal' } = options;
+    const { target = 'local', timeout = 5000, priority = 'normal', tabId = undefined } = options;
     
     try {
       if (target === EVENT_CONTEXT.LOCAL) {
@@ -35,17 +35,17 @@ export class EventDispatcher {
       
       if (target === EVENT_CONTEXT.BACKGROUND) {
         if (this.backgroundIsLocal) {
-          return this.eventBus.emit(event, data, {source: EVENT_CONTEXT.BACKGROUND});
+          return this.eventBus.emit(event, data, {source: EVENT_CONTEXT.BACKGROUND, tabId});
         }
-        return this.sendToBackground(event, data, timeout);
+        return this.sendToBackground(event, data, timeout, tabId);
       }
 
       if (target === EVENT_CONTEXT.CONTENT) {
-        return this.sendToContent(event, data, timeout);
+        return this.sendToContent(event, data, timeout, tabId);
       }
       
       if (target === EVENT_CONTEXT.PANEL) {
-        return this.sendToPanel(event, data, timeout);
+        return this.sendToPanel(event, data, timeout, tabId);
       }
       
       if (target === EVENT_CONTEXT.BROADCAST) {
@@ -66,7 +66,8 @@ export class EventDispatcher {
 
   // ── Cross-Context Communication ──────────────────────────────────
 
-  async sendToBackground(event, data, timeout = 5000) {
+  async sendToBackground(event, data, timeout = 5000, tabId = null) {
+    console.log('[EventDispatcher] sendToBackground', event, data, timeout, tabId);
     if (this.context === EVENT_CONTEXT.BACKGROUND && this.backgroundIsLocal) {
       // Already in background, dispatch locally
       return this.eventBus.emit(event, data, {source: EVENT_CONTEXT.BACKGROUND});
@@ -85,7 +86,8 @@ export class EventDispatcher {
     }, timeout);
   }
 
-  async sendToContent(event, data, timeout = 5000, tabId = null) {
+  async sendToContent(event, data, timeout = 5000, tabId = undefined) {
+    console.log('[EventDispatcher] sendToContent', event, data, timeout, tabId);
     if (this.context === EVENT_CONTEXT.CONTENT) {
       // Already in content, dispatch locally
       return this.eventBus.emit(event, data);
@@ -111,27 +113,29 @@ export class EventDispatcher {
 
     if (this.context === EVENT_CONTEXT.PANEL) {
       // Send to parent content script via postMessage
-      return this.sendToParentContent(event, data, timeout);
+      return this.sendToParentContent(event, data, timeout, tabId);
     }
 
     throw new Error(`Cannot send to content from context: ${this.context}`);
   }
 
-  async sendToPanel(event, data, timeout = 5000) {
+  async sendToPanel(event, data, timeout = 5000, tabId = undefined) {
+    console.log('[EventDispatcher] sendToPanel', event, data, timeout, tabId);
     if (this.context === EVENT_CONTEXT.PANEL) {
       // Already in panel, dispatch locally
-      return this.eventBus.emit(event, data);
+      return this.eventBus.emit(event, data, { tabId });
     }
 
     if (this.context === EVENT_CONTEXT.CONTENT) {
       // Send to injected panel via postMessage
-      return this.sendToInjectedPanel(event, data, timeout);
+      return this.sendToInjectedPanel(event, data, timeout, tabId);
     }
 
     // Route through content script
     return this.sendToContent('ROUTE_TO_PANEL', {
       event,
-      data
+      data,
+      tabId
     }, timeout);
   }
 
@@ -297,7 +301,7 @@ export class EventDispatcher {
 
   // ── PostMessage Communication (Panel ↔ Content) ─────────────────
 
-  async sendToInjectedPanel(event, data, timeout = 5000) {
+  async sendToInjectedPanel(event, data, timeout = 5000, tabId = undefined) {
     return new Promise((resolve, reject) => {
       const requestId = ++this.requestId;
       
@@ -322,12 +326,13 @@ export class EventDispatcher {
         event,
         data,
         requestId,
-        source: 'content'
+        source: 'content',
+        tabId
       }, '*');
     });
   }
 
-  async sendToParentContent(event, data, timeout = 5000) {
+  async sendToParentContent(event, data, timeout = 5000, tabId = undefined) {
     return new Promise((resolve, reject) => {
       const requestId = ++this.requestId;
       
@@ -343,7 +348,8 @@ export class EventDispatcher {
         event,
         data,
         requestId,
-        source: 'panel'
+        source: 'panel',
+        tabId
       }, '*');
     });
   }

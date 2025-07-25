@@ -95,10 +95,15 @@ class WebWireBackground {
         });
 
         this.eventBus.onAsync(BACKGROUND_ACTIONS.GET_OR_CREATE_CURRENT_THREAD, async (data, options) => {
-            let threadId = this.stateService.conversation.getCurrentConversation();
+            let tabId = options.tabId;
+            if (!tabId) {
+                tabId = await this.resolveTabId(options.sender, data);
+            }
+            console.log('[WebWireBackground] GET_OR_CREATE_CURRENT_THREAD', tabId, data, options);
+            let threadId = this.stateService.conversation.getCurrentConversation({tabId});
             let reason = null;
             if (!threadId) {
-                threadId = this.stateService.conversation.createNewConversation();
+                threadId = this.stateService.conversation.createNewConversation({tabId});
                 reason = 'new_conversation';
             } else {
                 reason = 'existing_conversation';

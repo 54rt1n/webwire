@@ -113,7 +113,7 @@ export class ContentEventHandlers extends EventBindableComponent {
         if (!this.stateService || !this.stateService.stash) return;
         
         try {
-            await this.dispatcher.dispatch(BACKGROUND_ACTIONS.SAVE_STASH, { announce, options }, { target: 'background' });
+            await this.dispatcher.dispatch(BACKGROUND_ACTIONS.SAVE_STASH, { announce, options }, { target: 'background', tabId: this.stateService.ui.getTabId() });
         } catch (error) {
             console.error('[MCPApp] Failed to save stash data:', error);
         }
@@ -125,7 +125,7 @@ export class ContentEventHandlers extends EventBindableComponent {
     async handleLoadStash(options) {
         if (!this.stateService || !this.stateService.stash) return;
         try {
-            const response = await this.dispatcher.dispatch(BACKGROUND_ACTIONS.LOAD_STASH, options, { target: 'background' });
+            const response = await this.dispatcher.dispatch(BACKGROUND_ACTIONS.LOAD_STASH, options, { target: 'background', tabId: this.stateService.ui.getTabId() });
             // TODO Patch the state with the stash response
         } catch (error) {
             console.error('[MCPApp] Failed to load stash data:', error);
@@ -181,7 +181,7 @@ export class ContentEventHandlers extends EventBindableComponent {
             const response = await this.dispatcher.dispatch(
                 BACKGROUND_ACTIONS.GET_WEBWIRE_STATE,
                 { contentState: localState },
-                { target: 'background' }
+                { target: 'background', tabId: this.stateService.ui.getTabId() }
             );
             
             if (response.success && response.result) {
@@ -214,7 +214,7 @@ export class ContentEventHandlers extends EventBindableComponent {
             const response = await this.dispatcher.dispatch(
                 BACKGROUND_ACTIONS.END_CONVERSATION,
                 data,
-                { target: 'background' }
+                { target: 'background', tabId: this.stateService.ui.getTabId() }
             );
             
             console.log('[ContentEventHandlers] End conversation response:', response);
@@ -283,7 +283,7 @@ export class ContentEventHandlers extends EventBindableComponent {
             const response = await this.dispatcher.dispatch(
                 BACKGROUND_ACTIONS.SAVE_THREAD_MESSAGE,
                 data,
-                { target: 'background' }
+                { target: 'background', tabId: this.stateService.ui.getTabId() }
             );
 
             this.eventBus.emit(EVENTS.UI.THREAD_SAVED, { threadId, data, status: 'success' });
@@ -303,7 +303,7 @@ export class ContentEventHandlers extends EventBindableComponent {
             const response = await this.dispatcher.dispatch(
                 BACKGROUND_ACTIONS.SAVE_PANEL_VISIBILITY,
                 data,
-                { target: 'background' }
+                { target: 'background', tabId: this.stateService.ui.getTabId() }
             );
             return response;
         } catch (error) {
@@ -328,7 +328,7 @@ export class ContentEventHandlers extends EventBindableComponent {
             const response = await this.dispatcher.dispatch(
                 BACKGROUND_ACTIONS.SAVE_WEBWIRE_SETTINGS,
                 { tabId, ...updatedTabState },
-                { target: 'background' }
+                { target: 'background', tabId: this.stateService.ui.getTabId() }
             );
             console.log('[ContentEventHandlers] Settings update response from background:', response);
             return response;
@@ -353,7 +353,7 @@ export class ContentEventHandlers extends EventBindableComponent {
             const response = await this.dispatcher.dispatch(
                 BACKGROUND_ACTIONS.UPDATE_CONVERSATION,
                 { threadId, messages, metadata },
-                { target: 'background' }
+                { target: 'background', tabId: this.stateService.ui.getTabId() }
             );
             
             // Emit THREAD_SAVED event to update UI
@@ -387,8 +387,8 @@ export class ContentEventHandlers extends EventBindableComponent {
         try {
             const response = await this.dispatcher.dispatch(
                 BACKGROUND_ACTIONS.GET_OR_CREATE_CURRENT_THREAD,
-                data,
-                { target: 'background' }
+                data || {},
+                { target: 'background', tabId: this.stateService.ui.getTabId() }
             );
 
             console.log('[ContentEventHandlers] handleGetOrCreateThread', response);
@@ -430,7 +430,7 @@ export class ContentEventHandlers extends EventBindableComponent {
             const response = await this.dispatcher.dispatch(
                 BACKGROUND_ACTIONS.CREATE_NEW_THREAD,
                 data,
-                { target: 'background' }
+                { target: 'background', tabId: this.stateService.ui.getTabId() }
             );
             
             if (response.success && response.thread) {
