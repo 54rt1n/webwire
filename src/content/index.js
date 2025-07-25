@@ -176,11 +176,25 @@ class WebWireContentHost {
             const stateService = this.core.stateService;
             
             // Get active thread directly from state service
-            const currentThread = stateService.conversation.getActiveThread();
+            let currentThread = stateService.conversation.getActiveThread();
+            
+            // If no active thread, try to recover one
+            if (!currentThread) {
+                console.log('[WebWireContentHost] No active thread found, attempting to recover...');
+                const recoveredThreadId = stateService.conversation.recoverActive();
+                if (recoveredThreadId) {
+                    currentThread = stateService.conversation.getActiveThread();
+                } else {
+                    // No conversations to recover, create a new one
+                    console.log('[WebWireContentHost] No conversations to recover, creating new conversation...');
+                    const newThreadId = stateService.conversation.createNewConversation();
+                    currentThread = stateService.conversation.getActiveThread();
+                }
+            }
 
             const messageOptions = {
                 ...stateService.aim.getAimMessageOptions(),
-                ...currentThread.metadata
+                ...(currentThread?.metadata || {})
             };
             
             // Get connection states directly from services

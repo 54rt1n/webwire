@@ -20,19 +20,6 @@ export class ContentEventHandlers extends EventBindableComponent {
     }
 
     /**
-     * Setup early-bind listeners that must be available during initialization
-     * These handlers should not depend on any services being fully initialized
-     */
-    setupEarlyBindListeners() {
-        console.log('[ContentEventHandlers] Setting up early-bind listeners');
-        // Register ping event - must be available immediately
-        this.onAsync(CONTENT_ACTIONS.PING, this.handlePing);
-        
-        // Register state query - needed during initialization
-        this.onAsync(CONTENT_ACTIONS.GET_WEBWIRE_STATE, this.handleGetWebwireState);
-    }
-
-    /**
      * Setup Event Listeners
      */
     setupStashListeners() {
@@ -367,7 +354,11 @@ export class ContentEventHandlers extends EventBindableComponent {
             
             return response;
         } catch (error) {
-            console.error('[ContentEventHandlers] Failed to update conversation:', error);
+            if (error.message.includes('Extension context')) {
+                console.log('[ContentEventHandlers] Background gone. Reload required.');
+            } else {
+                console.error('[ContentEventHandlers] Failed to update conversation:', error);
+            }
             
             // Emit THREAD_SAVED event with error status
             this.eventBus.emit(EVENTS.UI.THREAD_SAVED, { 

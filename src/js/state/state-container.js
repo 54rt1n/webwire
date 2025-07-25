@@ -155,6 +155,9 @@ export function createInitialState() {
         },
 
         conversation: {
+            active: {
+                default: undefined
+            },
             /* message
                 {
                     role: string,

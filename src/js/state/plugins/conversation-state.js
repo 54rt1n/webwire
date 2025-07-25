@@ -350,15 +350,11 @@ export class ConversationStatePlugin {
     getActiveThreadId() {
         const state = this.stateService.state.conversation;
         
-        // Get the newest conversation
-        const activeConversations = Object.values(state.metadata)
-            .filter(conv => conv.status === 'active' && conv.threadId)
-            .sort((a, b) => (b.endTime || b.startTime) - (a.endTime || a.startTime));
-
-        const conversation = activeConversations.length > 0 ? activeConversations[0] : null;
-        console.log('[ConversationState] Found', activeConversations.length, 'active conversations', conversation);
-
-        return conversation ? conversation.threadId : null;
+        // Use the new active.default field
+        const activeThreadId = state.active?.default;
+        console.log('[ConversationState] Active thread ID from state.active.default:', activeThreadId);
+        
+        return activeThreadId || null;
     }
 
     /**
@@ -366,20 +362,19 @@ export class ConversationStatePlugin {
      * @param {string} threadId - The thread ID to set as active
      */
     setActiveConversation(threadId) {
-        const targetMetadata = this.stateService.state.conversation.metadata[threadId];
-        if (!targetMetadata) {
-            throw new Error(`Conversation ${threadId} not found`);
+        if (threadId !== null) {
+            const targetMetadata = this.stateService.state.conversation.metadata[threadId];
+            if (!targetMetadata) {
+                throw new Error(`Conversation ${threadId} not found`);
+            }
         }
 
-        // Mark other conversations for this user/persona as inactive
-        Object.values(this.stateService.state.conversation.metadata).forEach(metadata => {
-            if (metadata.status === 'active' && metadata.threadId !== threadId) {
-                this.updateConversationStatus(metadata.threadId, 'completed');
-            }
-        });
-
-        // Mark target conversation as active
-        this.updateConversationStatus(threadId, 'active');
+        // Set the active thread ID in the new location
+        const state = this.stateService.state.conversation;
+        if (!state.active) {
+            state.active = {};
+        }
+        state.active.default = threadId;
         
         console.log(`[StateService::ConversationState] Set active conversation to ${threadId}`);
         this.eventBus.emit(EVENTS.CONVERSATION.ACTIVATED, { threadId });
@@ -432,7 +427,7 @@ export class ConversationStatePlugin {
      * @param {Object} [options={}] - Options for conversation creation
      * @returns {string} The thread ID
      */
-    createNewConversation(options = {}) {
+    createNewConversation(options = {setActive: true}) {
         console.log('[ConversationState] createNewConversation called with options:', options);
         
         // No conversations exist, create new one
@@ -451,15 +446,50 @@ export class ConversationStatePlugin {
             startTime: timestamp,
             endTime: undefined,
             duration: undefined,
-            status: 'active',
             error: undefined,
             errorCode: undefined,
             errorType: undefined,
         };
 
         console.log(`[ConversationState] Created new conversation: ${threadId}`);
+        
+        if (options.setActive) {
+            // Set this as the active conversation
+            this.setActiveConversation(threadId);
+        }
 
         return threadId;
+    }
+
+    /**
+     * Recover the active conversation by finding the most recent one
+     * @returns {string|null} The recovered thread ID or null if no conversations exist
+     */
+    recoverActive() {
+        console.log('[ConversationState] Recovering active conversation...');
+        
+        const conversations = Object.values(this.stateService.state.conversation.metadata);
+        
+        if (conversations.length === 0) {
+            console.log('[ConversationState] No conversations found to recover');
+            return null;
+        }
+        
+        // Sort by most recent activity (endTime or startTime), newest first
+        const sortedConversations = conversations.sort((a, b) => {
+            const timeA = a.endTime || a.startTime || 0;
+            const timeB = b.endTime || b.startTime || 0;
+            return timeB - timeA;
+        });
+        
+        // Get the most recent conversation
+        const mostRecent = sortedConversations[0];
+        console.log(`[ConversationState] Found most recent conversation: ${mostRecent.threadId} from ${new Date(mostRecent.startTime).toLocaleString()}`);
+        
+        // Set it as active
+        this.setActiveConversation(mostRecent.threadId);
+        
+        return mostRecent.threadId;
     }
 
     /**
