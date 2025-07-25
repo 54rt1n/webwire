@@ -182,10 +182,18 @@ export class ContentEventHandlers extends EventBindableComponent {
         console.log('[ContentEventHandlers] Handling resync request');
         
         try {
-            // Get fresh state from background
+            // Gather local content state
+            const localState = {
+                panelInjected: this.core?.chatService?.isReady() || false,
+                mcpConnected: false, // TODO: Get from chatService when available
+                aiClientConfigured: false, // TODO: Get from chatService when available
+                servicesReady: !!(this.core && this.core.stateService)
+            };
+            
+            // Get fresh state from background, including our local state
             const response = await this.dispatcher.dispatch(
                 BACKGROUND_ACTIONS.GET_WEBWIRE_STATE,
-                {},
+                { contentState: localState },
                 { target: 'background' }
             );
             

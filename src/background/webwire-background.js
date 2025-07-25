@@ -61,7 +61,7 @@ class WebWireBackground {
         this.eventBus.onAsync(BACKGROUND_ACTIONS.GET_WEBWIRE_STATE, async (data, options) => {
             const { sender } = options;
             const tabId = await this.resolveTabId(sender, data);
-            const state = await this.getWebWireState(tabId);
+            const state = await this.getWebWireState(tabId, data.contentState);
             return state;
         });
 
@@ -394,7 +394,7 @@ class WebWireBackground {
 
     async handleGetState(message, sender) {
         const tabId = await this.resolveTabId(sender, message);
-        return this.getWebWireState(tabId);
+        return this.getWebWireState(tabId, message.contentState);
     }
 
     async handleTogglePanel(message, sender) {
@@ -728,7 +728,7 @@ class WebWireBackground {
         }
     }
 
-    async getWebWireState(tabId) {
+    async getWebWireState(tabId, contentState = null) {
         try {
             // Check if state service is available
             if (!this.stateService?.state) {
@@ -747,29 +747,18 @@ class WebWireBackground {
                 frameworkReady: true
             };
 
-            // Try to get additional state from content script if available
-            try {
-                await this.dispatcher.dispatch(
-                    CONTENT_ACTIONS.PING,
-                    {},
-                    { target: 'content', tabId: tabId }
-                );
-                const response = await this.dispatcher.dispatch(
-                    CONTENT_ACTIONS.GET_WEBWIRE_STATE,
-                    {},
-                    { target: 'content', tabId: tabId }
-                );
-                
-                if (response.success && response.state) {
-                    state.panelInjected = response.state.panelInjected || false;
-                    state.mcpConnected = response.state.mcpConnected || false;
-                    state.aiClientConfigured = response.state.aiClientConfigured || false;
-                }
-            } catch (error) {
-                // Content script not available, use defaults
+            // Use provided content state if available, otherwise use defaults
+            if (contentState) {
+                state.panelInjected = contentState.panelInjected || false;
+                state.mcpConnected = contentState.mcpConnected || false;
+                state.aiClientConfigured = contentState.aiClientConfigured || false;
+                state.servicesReady = contentState.servicesReady || false;
+            } else {
+                // No content state provided, use defaults
                 state.panelInjected = false;
                 state.mcpConnected = false;
                 state.aiClientConfigured = false;
+                state.servicesReady = false;
             }
             
             console.log('[WebWireBackground] Returning state:', state);

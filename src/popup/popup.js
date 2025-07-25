@@ -84,15 +84,18 @@ export class WebWirePopup {
      */
     async loadStatus() {
         try {
-            // Get WebWire state from background
+            // Get WebWire state from background using the proper event pattern
             const response = await chrome.runtime.sendMessage({
-                action: 'GET_WEBWIRE_STATE'
+                type: 'CROSS_CONTEXT_EVENT',
+                event: 'GET_WEBWIRE_STATE',
+                data: {},
+                source: 'popup'
             });
 
             console.log('response', response);
 
-            if (response && response.success) {
-                this.updateStatus(response.state);
+            if (response && response.success && response.result) {
+                this.updateStatus(response.result);
             } else {
                 this.updateStatus({});
             }
