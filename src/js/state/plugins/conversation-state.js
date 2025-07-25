@@ -11,6 +11,35 @@ export class ConversationStatePlugin {
     }
 
     /**
+     * Safe conversation state access
+     */
+    _safeConversationState({force = false} = {}) {
+        if (force) {
+            this.stateService.state.conversation = {};
+            this.stateService.state.conversation.history = {};
+            this.stateService.state.conversation.metadata = {};
+            this.stateService.state.conversation.active = {};
+            return this.stateService.state.conversation;
+        }
+        if (!this.stateService.state.conversation) {
+            this.stateService.state.conversation = {};
+        }
+        if (!this.stateService.state.conversation.history) {
+            this.stateService.state.conversation.history = {};
+        }
+        if (!this.stateService.state.conversation.metadata) {
+            this.stateService.state.conversation.metadata = {};
+        }
+        if (!this.stateService.state.conversation.active) {
+            this.stateService.state.conversation.active = {
+                global: null,
+                tabs: {}
+            };
+        }
+        return this.stateService.state.conversation;
+    }
+
+    /**
      * Gets all messages for a specific conversation.
      * @param {string} threadId
      * @returns {Array} Array of message objects
@@ -31,8 +60,7 @@ export class ConversationStatePlugin {
      * @returns {object} Conversation metadata
      */
     getConversationMetadata(threadId) {
-        const state = this.stateService.state.conversation;
-        return state.metadata[threadId];
+        return this._safeConversationState().metadata[threadId];
     }
 
     /**
@@ -41,7 +69,7 @@ export class ConversationStatePlugin {
      * @returns {object} Conversation object
      */
     getConversation(threadId) {
-        const state = this.stateService.state.conversation;
+        const state = this._safeConversationState();
         return {
             threadId: threadId,
             messages: state.history[threadId],
@@ -57,7 +85,7 @@ export class ConversationStatePlugin {
      * @returns {boolean} True if successful, false otherwise
      */
     updateConversation(threadId, messages, metadata) {
-        const state = this.stateService.state.conversation;
+        const state = this._safeConversationState();
 
         // TODO we should probably merge unique values or something here
         state.metadata[threadId] = metadata;
@@ -84,7 +112,8 @@ export class ConversationStatePlugin {
      * @param {object} options - { userName?, personaName?, mood?, location?, timestamp? }
      */
     storePartialUserMessage(threadId, userMessage, { userName, personaName, mood, location, timestamp, ...options } = {}) {
-        const state = this.stateService.state.conversation;
+        const state = this._safeConversationState();
+
         if (!timestamp) {
             timestamp = Date.now();
         }
@@ -133,7 +162,8 @@ export class ConversationStatePlugin {
      */
     storeAssistantMessage(threadId, assistantMessage, { userName, personaName, mood, location, timestamp,
         toolResults = [], toolCalls = [], parseErrors = [], ...options } = {}) {
-        const state = this.stateService.state.conversation;
+        const state = this._safeConversationState();
+
         if (!timestamp) {
             timestamp = Date.now();
         }
@@ -177,7 +207,8 @@ export class ConversationStatePlugin {
      */
     storeMessage(threadId, userMessage, assistantMessage, { userName, personaName, mood, location, timestamp,
         toolResults = [], toolCalls = [], parseErrors = [], ...options } = {}) {
-        const state = this.stateService.state.conversation;
+        const state = this._safeConversationState();
+
         if (!timestamp) {
             timestamp = Date.now();
         }
@@ -243,7 +274,7 @@ export class ConversationStatePlugin {
      * @returns {Array} A sorted list of conversation metadata objects.
      */
     getConversationsFor(personaName) {
-        const state = this.stateService.state.conversation;
+        const state = this._safeConversationState();
         const personaConvos = Object.values(state.metadata)
             .filter(meta => meta.personaName === personaName)
             .sort((a, b) => b.timestamp - a.timestamp); // Sort newest first
@@ -255,7 +286,7 @@ export class ConversationStatePlugin {
      * @param {string} threadId
      */
     clearConversationHistory(threadId) {
-        const state = this.stateService.state.conversation;
+        const state = this._safeConversationState();
         
         if (state.history[threadId]) {
             delete state.history[threadId];
@@ -275,7 +306,7 @@ export class ConversationStatePlugin {
      * @param {object} errorInfo - { error?, errorCode?, errorType? }
      */
     updateConversationStatus(threadId, status, errorInfo = {}) {
-        const state = this.stateService.state.conversation;
+        const state = this._safeConversationState();
         
         if (state.metadata[threadId]) {
             state.metadata[threadId].status = status;
@@ -347,11 +378,16 @@ export class ConversationStatePlugin {
      * Get the current active thread ID
      * @returns {string|null} Active thread ID or null
      */
-    getActiveThreadId(tabId) {
-        const state = this.stateService.state.conversation;
+    getActiveThreadId(tabId = undefined) {
+        const state = this._safeConversationState();
+
+        if (!tabId) {
+            tabId = this.stateService.ui.getTabId();
+        }
 
         // Check if we are tracking the global active thread
         const tabState = this.stateService.tab.getTabState(tabId);
+        console.log('[ConversationState] Tab state:', tabState, tabId, this.stateService.state.tabs);
         if (tabState.trackDefault) {
             console.log('[ConversationState] Tracking default active thread', state.active?.global);
             return state.active?.global || null;
@@ -393,9 +429,8 @@ export class ConversationStatePlugin {
      * @param {string} [options.title] - Conversation title
      * @returns {string} The thread ID
      */
-    getCurrentConversation(options = {}) {
-        console.log('[ConversationState] getCurrentConversation called with options:', options);
-        const { tabId } = options;
+    getCurrentConversation({tabId, ...options} = {}) {
+        console.log('[ConversationState] getCurrentConversation called with options:', options, tabId);
         
         // Try to get existing active conversation
         let threadId = this.getActiveThreadId(tabId);
@@ -446,16 +481,8 @@ export class ConversationStatePlugin {
         
         const timestamp = Date.now();
 
-        // Guard just in case
-        if (!this.stateService.state.conversation) {
-            this.stateService.state.conversation = {};
-        }
-        if (!this.stateService.state.conversation.history) {
-            this.stateService.state.conversation.history = {};
-        }
-        if (!this.stateService.state.conversation.metadata) {
-            this.stateService.state.conversation.metadata = {};
-        }
+        // Initialize conversation state just in case
+        this._safeConversationState();
 
         // Initialize the conversation metadata as active in an empty conversation
         this.stateService.state.conversation.history[threadId] = [];
@@ -530,11 +557,8 @@ export class ConversationStatePlugin {
      * @returns {Array} Array of conversation metadata objects
      */
     listConversations({ userName, personaName, status } = {}) {
-        if (!this.stateService.state.conversation || !this.stateService.state.conversation.metadata) {
-            console.log('[ConversationState] No conversations found', this.stateService.state);
-            return [];
-        }
-        let conversations = Object.values(this.stateService.state.conversation.metadata);
+        const state = this._safeConversationState();
+        let conversations = Object.values(state.metadata);
 
         if (userName) {
             conversations = conversations.filter(conv => conv.userName === userName);
@@ -560,7 +584,7 @@ export class ConversationStatePlugin {
      * @param {array} toolCalls
      */
     updateToolCalls(messageId, toolCalls) {
-        const state = this.stateService.state.conversation;
+        const state = this._safeConversationState();
         const threadId = this.getThreadForMessage(messageId);
         if (!state.history[threadId]) {
             console.error('[ConversationState] Conversation not found:', threadId, state);
@@ -582,7 +606,7 @@ export class ConversationStatePlugin {
      * @param {object} toolResult
      */
     updateToolResult(threadId, messageId, callId, toolResult) {
-        const state = this.stateService.state.conversation;
+        const state = this._safeConversationState();
         if (!state.history[threadId]) {
             throw new Error(`Conversation ${threadId} not found`, state);
         }
@@ -603,7 +627,7 @@ export class ConversationStatePlugin {
      * @returns {string|null} The thread ID or null if not found
      */
     getThreadForMessage(messageId) {
-        const state = this.stateService.state.conversation;
+        const state = this._safeConversationState();
         return Object.keys(state.history).find(threadId => state.history[threadId].some(m => m.messageId === messageId));
     }
 
@@ -613,7 +637,7 @@ export class ConversationStatePlugin {
      * @returns {Object} The thread ID and message ID
      */
     getThreadAndMessageForCallId(callId) {
-        const state = this.stateService.state.conversation;
+        const state = this._safeConversationState();
         const threadId = Object.keys(state.history).find(
             threadId => state.history[threadId].some(
                 m => m.toolCalls?.some(
@@ -631,13 +655,10 @@ export class ConversationStatePlugin {
      * This is a destructive operation that cannot be undone
      */
     hardResetAllConversations() {
-        const state = this.stateService.state.conversation;
-        
         console.log('[ConversationState] Performing hard reset of all conversations');
         
         // Clear all conversation history and metadata
-        state.history = {};
-        state.metadata = {};
+        this._safeConversationState({force: true});
         
         console.log('[ConversationState] Hard reset completed - all conversations cleared');
         this.eventBus.emit(EVENTS.CONVERSATION.HARD_RESET, {});
@@ -660,7 +681,7 @@ export class ConversationStatePlugin {
             return;
         }
 
-        const state = this.stateService.state.conversation;
+        const state = this._safeConversationState();
         
         console.log(`[ConversationState] Patching conversation ${threadId} with ${messages?.length || 0} messages`);
         
@@ -705,7 +726,7 @@ export class ConversationStatePlugin {
      * @param {string} messageId - The message ID to mark as retried
      */
     markMessageAsRetried(threadId, messageId) {
-        const state = this.stateService.state.conversation;
+        const state = this._safeConversationState();
         
         if (!state.history[threadId]) {
             console.warn(`[ConversationState] Thread ${threadId} not found`);

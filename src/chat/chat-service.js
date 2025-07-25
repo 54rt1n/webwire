@@ -154,14 +154,14 @@ export class ChatService extends EventBindableComponent {
         this.mcpConnector = mcpConnector;
         this.stateService = stateService;
 
-        // Initialize message builder with model configuration
+        // Initialize message builder with model configuration TODO this should be provided by the model provider
+        // instead of the chat service
         const currentModel = this.stateService.ui.getSelectedModel() || 'chat';
-        const modelConfig = this.stateService.settings.getModelConfig(currentModel);
-        const encodingOptions = this.getEncodingOptions(modelConfig);
+        const currentConfig = this.stateService.settings.getModelConfig(currentModel);
+        const encodingOptions = this.getEncodingOptions(currentConfig);
         this.messageBuilder = new MessageBuilder(this.pageUtils, encodingOptions);
+        console.log('[ChatService] Message builder initialized');
 
-        // Initialize tool executor with dependencies
-        
         // Initialize tool executor with dependencies
         this.toolExecutor = new ToolExecutor(
             this.toolParser,
@@ -169,8 +169,10 @@ export class ChatService extends EventBindableComponent {
             this.domConnector,
             this.stateService
         );
+        console.log('[ChatService] Tool executor initialized');
         
         this.responseHandler = new AIResponseHandler(this.eventBus, this.stateService, this.panel);
+        console.log('[ChatService] Response handler initialized');
 
         this.setupEventListeners();
         console.log('[ChatService] Event listeners set up');
@@ -182,6 +184,7 @@ export class ChatService extends EventBindableComponent {
             
             // Update initial connection status
             this.updateConnectionStatus();
+            console.log('[ChatService] Connection status updated');
             
             // Load current conversation on startup
             console.log('[ChatService] Loading current conversation on startup...');
@@ -191,14 +194,18 @@ export class ChatService extends EventBindableComponent {
             this.panel.updateMcpSetting(this.stateService.ui.getUseMCP());
             this.panel.updateBrowserToolsSetting(this.stateService.ui.getUseBrowserTools());
             this.panel.updateAutoExecuteSetting(this.stateService.ui.getAutoExecuteTools());
+            console.log('[ChatService] UI settings initialized');
             
             // Initialize selected model
-            const selectedModel = this.stateService.ui.getSelectedModel() || 'chat';
-            const currentConfig = this.stateService.settings.getModelConfig(selectedModel);
-            this.panel.updateSelectedModelSetting(selectedModel, currentConfig?.model, currentConfig);
+            this.panel.updateSelectedModelSetting(currentModel, currentConfig?.model, currentConfig);
+            console.log('[ChatService] Selected model initialized');
 
+            console.log('[ChatService] Active thread ID:', this.stateService.state);
             if (!this.stateService.conversation.getActiveThreadId()) {
                 await this.sendGetOrCreateThread();
+                console.log('[ChatService] No active thread found, creating new conversation');
+            } else {
+                console.log('[ChatService] Active thread found:', this.stateService.conversation.getActiveThreadId());
             }
 
             console.log('[ChatService] Initialization complete');

@@ -95,6 +95,7 @@ class WebWireBackground {
         });
 
         this.eventBus.onAsync(BACKGROUND_ACTIONS.GET_OR_CREATE_CURRENT_THREAD, async (data, options) => {
+            try {
             let tabId = options.tabId;
             if (!tabId) {
                 tabId = await this.resolveTabId(options.sender, data);
@@ -118,6 +119,13 @@ class WebWireBackground {
             };
             console.log('[WebWireBackground] GET_OR_CREATE_CURRENT_THREAD', currentThreadData);
             return currentThreadData;
+        } catch (error) {
+            console.error('[WebWireBackground] Error in GET_OR_CREATE_CURRENT_THREAD:', error);
+            return {
+                success: false,
+                error: error.message
+            };
+        }
         });
 
         this.eventBus.onAsync(BACKGROUND_ACTIONS.GET_ACTIVE_THREAD, async (data, options) => {

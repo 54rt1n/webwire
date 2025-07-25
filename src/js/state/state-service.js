@@ -100,6 +100,7 @@ class ContentStateService {
         this.conversation = new ConversationStatePlugin(this);
         this.mcp = new MCPStatePlugin(this);
         this.stash = new StashStatePlugin(this);
+        this.tab = new TabStatePlugin(this);
         this.ui = new UiStatePlugin(this);
 
         this.validator = new StateValidator();
