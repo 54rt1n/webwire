@@ -319,10 +319,15 @@ export class ContentEventHandlers extends EventBindableComponent {
         console.log('[ContentEventHandlers] Handling settings update request:', data);
         try {
             const tabId = this.stateService.ui.getTabId();
-            const tabState = this.stateService.tab.getTabState(tabId);
+            // Get the current tab state from the tabs collection
+            const currentTabState = this.stateService.state.tabs[tabId] || {};
+            
+            // Merge the current tab state with the updates from data
+            const updatedTabState = { ...currentTabState, ...data };
+            
             const response = await this.dispatcher.dispatch(
                 BACKGROUND_ACTIONS.SAVE_WEBWIRE_SETTINGS,
-                { tabId, ...tabState, ...data },
+                { tabId, ...updatedTabState },
                 { target: 'background' }
             );
             console.log('[ContentEventHandlers] Settings update response from background:', response);

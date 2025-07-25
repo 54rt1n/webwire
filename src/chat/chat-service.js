@@ -534,10 +534,9 @@ export class ChatService extends EventBindableComponent {
             }
         }
         
-        // Send unified settings update to background for persistence
-        this.eventBus.emit(EVENTS.CHAT.UPDATE_SETTINGS, {
-            settings: this.stateService.state.settings
-        }, { target: EVENT_CONTEXT.BACKGROUND });
+        // Send UI settings update to background for persistence
+        // Note: We send the specific UI settings that were toggled, not the entire settings object
+        this.eventBus.emit(EVENTS.CHAT.UPDATE_SETTINGS, data, { target: EVENT_CONTEXT.BACKGROUND });
         
         console.log('[ChatService] UI settings toggle processed successfully');
     }

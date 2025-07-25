@@ -50,7 +50,7 @@ class WebWireBackground {
         });
 
         this.eventBus.onAsync(BACKGROUND_ACTIONS.SAVE_WEBWIRE_SETTINGS, async (data, options) => {
-            if (this.stateService?.state && this.stateService?.tabs) {
+            if (this.stateService?.state && this.stateService?.tab) {
                 const { tabId, ...settings } = data;
                 this.stateService.tab.setTabState(tabId, settings);
                 await this.stateService.tab.saveToStorage();
