@@ -60,6 +60,10 @@ export class WebWireClientCore {
 
             return true;
         } catch (error) {
+            if (error.message.includes('MCP server security downgrade')) {
+                console.warn('[WebWireClientCore] MCP Unavailable.');
+                return false;
+            }
             console.error('[WebWireClientCore] Connection failed:', error);
             return false;
         }
