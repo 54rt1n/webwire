@@ -187,7 +187,7 @@ class WebWireContentHost {
                 } else {
                     // No conversations to recover, create a new one
                     console.log('[WebWireContentHost] No conversations to recover, creating new conversation...');
-                    const newThreadId = stateService.conversation.createNewConversation();
+                    stateService.conversation.createNewConversation();
                     currentThread = stateService.conversation.getActiveThread();
                 }
             }
@@ -206,6 +206,7 @@ class WebWireContentHost {
                 useMCP: stateService.ui.getUseMCP() !== false,
                 useBrowserTools: stateService.ui.getUseBrowserTools() !== false,
                 autoExecuteTools: stateService.ui.getAutoExecuteTools() !== false,
+                tabId: stateService.ui.getTabId(),
                 messageOptions: messageOptions
             };
             

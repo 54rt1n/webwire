@@ -468,7 +468,7 @@ export class MCPTestPanel {
      * Initialize collapsible sections
      */
     async initializeCollapsibleSections() {
-        // Load UI state from storage first
+        // Load UI state from storage first (this code is deprecated)
         if (this.stateService && this.stateService.ui) {
             await this.stateService.ui.loadFromStorage();
         }

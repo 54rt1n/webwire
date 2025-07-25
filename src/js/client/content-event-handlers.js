@@ -186,10 +186,12 @@ export class ContentEventHandlers extends EventBindableComponent {
             
             if (response.success && response.result) {
                 console.log('[ContentEventHandlers] Received fresh state from background:', response.result);
+
+                const { tabId, ...state } = response.result;
                 
                 // Update the content state service
                 if (this.core?.stateService) {
-                    this.core.stateService.setState(response.result);
+                    this.core.stateService.setState(state, { tabId });
                 }
                 
                 return { success: true };
@@ -454,45 +456,6 @@ export class ContentEventHandlers extends EventBindableComponent {
         // Late-bind content actions that depend on services
         this.onAsync(CONTENT_ACTIONS.SETTINGS_CHANGED, this.handleSettingsChanged);
         this.onAsync(CONTENT_ACTIONS.CONVERSATION_UPDATED, this.handleConversationUpdated);
-    }
-
-    /**
-     * Handle content action: ping (early-bind safe)
-     */
-    async handlePing(data) {
-        return { success: true, status: 'ready' };
-    }
-
-    /**
-     * Handle content action: get webwire state (early-bind safe)
-     * This is called during initialization so must handle missing services gracefully
-     */
-    async handleGetWebwireState(data) {
-        try {
-            // Check if services are initialized
-            const servicesReady = this.core && this.core.stateService;
-            
-            return {
-                success: true,
-                state: {
-                    panelInjected: false,
-                    mcpConnected: false,
-                    aiClientConfigured: false,
-                    servicesReady: servicesReady
-                }
-            };
-        } catch (error) {
-            console.error('[ContentEventHandlers] Error getting state:', error);
-            return {
-                success: true,
-                state: {
-                    panelInjected: false,
-                    mcpConnected: false,
-                    aiClientConfigured: false,
-                    servicesReady: false
-                }
-            };
-        }
     }
 
     /**

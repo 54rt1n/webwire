@@ -31,9 +31,10 @@ export async function contextFactory(eventBus, context,
                 { target: 'background' }
             );
         console.log('[ContextFactory] Initial state from background:', response);
+        const { tabId, ...state } = response.result;
         initialState = {
-            ...createInitialState(),
-            ...(response.result || {})
+            ...createInitialState(tabId),
+            ...(state || {})
         };
     }
 

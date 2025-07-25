@@ -350,9 +350,9 @@ export class ConversationStatePlugin {
     getActiveThreadId() {
         const state = this.stateService.state.conversation;
         
-        // Use the new active.default field
-        const activeThreadId = state.active?.default;
-        console.log('[ConversationState] Active thread ID from state.active.default:', activeThreadId);
+        // Use the new active.global field
+        const activeThreadId = state.active?.global;
+        console.log('[ConversationState] Active thread ID from state.active.global:', activeThreadId);
         
         return activeThreadId || null;
     }
@@ -374,7 +374,7 @@ export class ConversationStatePlugin {
         if (!state.active) {
             state.active = {};
         }
-        state.active.default = threadId;
+        state.active.global = threadId;
         
         console.log(`[StateService::ConversationState] Set active conversation to ${threadId}`);
         this.eventBus.emit(EVENTS.CONVERSATION.ACTIVATED, { threadId });
@@ -657,6 +657,9 @@ export class ConversationStatePlugin {
             if (state.metadata[threadId]) {
                 state.metadata[threadId].status = 'active';
             }
+            
+            // CRITICAL: Set this as the active thread in the new location
+            this.setActiveConversation(threadId);
         }
         
         console.log(`[ConversationState] Successfully patched conversation ${threadId}`);

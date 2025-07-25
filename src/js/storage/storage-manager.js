@@ -1,6 +1,6 @@
 import { SettingsAdapter } from './adapters/settings-adapter.js';
 import { StateAdapter, StateValidator } from './adapters/state-adapter.js';
-import { UiAdapter } from './adapters/ui-adapter.js';
+import { TabAdapter } from './adapters/tab-adapter.js';
 import { StashAdapter } from './adapters/stash-adapter.js';
 
 /**
@@ -19,7 +19,6 @@ import { StashAdapter } from './adapters/stash-adapter.js';
  * // Access specialized adapters
  * await storageManager.storage.settings.set('theme', 'dark');
  * await storageManager.storage.state.save(appState);
- * const uiState = await storageManager.storage.ui.getAll();
  */
 
 export class StorageManager {
@@ -47,8 +46,8 @@ export class StorageManager {
                 maxSize: this.config.maxSaveSize || 5 * 1024 * 1024
             }, new StateValidator(['session']), eventBus),
 
-            ui: new UiAdapter({
-                storageKey: this.config.keys?.ui || 'app-ui',
+            tab: new TabAdapter({
+                storageKey: this.config.keys?.tab || 'app-tab',
                 version: this.version
             }, eventBus),
 

@@ -86,12 +86,12 @@ The background script integrates with the state system:
 ```javascript
 // State loading
 await this.stateService.settings.loadFromStorage();
-await this.stateService.ui.loadFromStorage();
+await this.stateService.tabs.loadFromStorage();
 await this.stateService.disk.loadFromStorage();
 
 // State saving
 await this.stateService.settings.saveToStorage();
-await this.stateService.ui.saveToStorage();
+await this.stateService.tabs.saveToStorage();
 await this.stateService.disk.saveToStorage();
 ```
 

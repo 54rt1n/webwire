@@ -7,6 +7,7 @@ import { DiskStatePlugin } from './plugins/disk-state.js';
 import { MCPStatePlugin } from './plugins/mcp-state.js';
 import { SettingsStatePlugin } from './plugins/settings-state.js';
 import { StashStatePlugin } from './plugins/stash-state.js';
+import { TabStatePlugin } from './plugins/tab-state.js';
 import { UiStatePlugin } from './plugins/ui-state.js';
 
 /**
@@ -45,14 +46,14 @@ class StateService {
         this.state = createInitialState();
 
         // Initialize plugins
-        this.disk = new DiskStatePlugin(this);
-        this.settings = new SettingsStatePlugin(this);
         this.aim = new AIMStatePlugin(this);
         this.conversation = new ConversationStatePlugin(this);
+        this.disk = new DiskStatePlugin(this);
         this.mcp = new MCPStatePlugin(this);
+        this.settings = new SettingsStatePlugin(this);
         this.stash = new StashStatePlugin(this);
+        this.tab = new TabStatePlugin(this);
         this.ui = new UiStatePlugin(this);
-
         this.validator = new StateValidator();
     }
 
@@ -115,8 +116,12 @@ class ContentStateService {
     /**
      * Set the state
      */
-    setState(state) {
+    setState(state, { tabId } = {}) {
+        console.warn('[CrontentStateService] Setting state:', state, 'with tabId:', tabId);
         this.state = state;
+        if (tabId) {
+            this.ui.setTabId(tabId);
+        }
     }
 
     // ==== UTILITY & STATUS METHODS ====

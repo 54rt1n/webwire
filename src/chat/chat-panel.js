@@ -105,7 +105,8 @@ export class WebChatPanel {
             modelNameDisplay: this.container.querySelector('.ww-model-name'),
             modelTempDisplay: this.container.querySelector('.ww-model-temp'),
             modelMaxDisplay: this.container.querySelector('.ww-model-max'),
-            modelConfigDisplay: this.container.querySelector('.ww-model-config')
+            modelConfigDisplay: this.container.querySelector('.ww-model-config'),
+            tabIdDisplay: this.container.querySelector('.ww-tab-id')
         };
     }
 
@@ -816,6 +817,17 @@ export class WebChatPanel {
         this.elements.statusText.textContent = message || 'Configuring...';
     }
 
+    updateTabIdDisplay(tabId) {
+        if (!this.elements.tabIdDisplay) return;
+        
+        if (tabId) {
+            this.elements.tabIdDisplay.textContent = `Tab ${tabId}`;
+            this.elements.tabIdDisplay.style.display = 'block';
+        } else {
+            this.elements.tabIdDisplay.style.display = 'none';
+        }
+    }
+
     /**
      * Input handling
      */
@@ -1001,6 +1013,11 @@ export class WebChatPanel {
 
         if (state.selectedModel !== undefined) {
             this.updateSelectedModelSetting(state.selectedModel);
+        }
+        
+        // Update tab ID display if available
+        if (state.tabId !== undefined) {
+            this.updateTabIdDisplay(state.tabId);
         }
         
         // Update drawer summary after setting initial state

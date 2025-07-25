@@ -2,6 +2,7 @@ import { EVENT_TYPES, EVENT_CONTEXT, EVENTS } from '../js/core/events.js';
 import { initializeContext } from '../js/context/context-init.js';
 import { EventBus } from '../js/core/event-bus.js';
 import { BACKGROUND_ACTIONS, CONTENT_ACTIONS } from '../js/core/cc-actions.js';
+import { mergeState } from '../js/utils/deep-merge.js';
 
 /**
  * WebWire Extension Background Script
@@ -209,6 +210,16 @@ class WebWireBackground {
         }
     }
 
+    async cleanupTabs() {
+        const browserTabs = await this.getAllTabs();
+        const currentTabs = Object.keys(this.stateService.state.tabs);
+        const tabsToRemove = currentTabs.filter(tabId => !browserTabs.some(tab => tab.id === tabId));
+        for (const tabId of tabsToRemove) {
+            this.stateService.tab.setTabState(tabId, null, { setDefault: true });
+        }
+        await this.stateService.tab.saveToStorage();
+    }
+
     async loadState() {
         try {
             console.log('[WebWireBackground] Loading state...');
@@ -218,8 +229,9 @@ class WebWireBackground {
             await this.stateService.settings.loadFromStorage();
             console.log('[WebWireBackground] Settings loaded, current state.settings:', this.stateService.state.settings);
             
-            await this.stateService.ui.loadFromStorage();
-            console.log('[WebWireBackground] UI state loaded, current state.ui:', this.stateService.state.ui);
+            await this.stateService.tab.loadFromStorage();
+            console.log('[WebWireBackground] Tab state loaded, current state.tabs:', this.stateService.state.tabs);
+            await this.cleanupTabs();
             
             await this.stateService.disk.loadFromStorage();
             console.log('[WebWireBackground] Disk state loaded');
@@ -361,26 +373,26 @@ class WebWireBackground {
      * 
      * @param {Object} sender - Chrome extension message sender object
      * @param {Object} message - Message object that may contain tabId
-     * @returns {Promise<number>} The resolved tab ID
+     * @returns {Promise<string>} The resolved tab ID
      * @throws {Error} When no tab context is available
      */
     // Helper method to resolve tab ID from sender or message
     async resolveTabId(sender, message) {
         // If message explicitly includes a tab ID, use it
         if (message.tabId) {
-            return message.tabId;
+            return message.tabId.toString();
         }
         
         // If sender has tab context (content script), use it
         if (sender.tab && sender.tab.id) {
-            return sender.tab.id;
+            return sender.tab.id.toString();
         }
         
         // If message indicates it needs active tab or comes from non-tab context
         if (message.needsActiveTab || !message.fromContent) {
             const activeTab = await this.getActiveTab();
             if (activeTab && activeTab.id) {
-                return activeTab.id;
+                return activeTab.id.toString();
             }
         }
         
@@ -532,7 +544,7 @@ class WebWireBackground {
             console.log('[WebWireBackground] 🔄 WebWire state/settings changed, reloading state...');
             try {
                 await this.stateService.settings.loadFromStorage();
-                await this.stateService.ui.loadFromStorage();
+                await this.stateService.tabs.loadFromStorage();
                 await this.stateService.disk.loadFromStorage();
                 console.log('[WebWireBackground] ✅ WebWire state reloaded after storage change');
                 
@@ -728,7 +740,7 @@ class WebWireBackground {
         }
     }
 
-    async getWebWireState(tabId, contentState = null) {
+    async getWebWireState(tabId, contentState = null, { saveTabState = true, ...options } = {}) {
         try {
             // Check if state service is available
             if (!this.stateService?.state) {
@@ -740,27 +752,36 @@ class WebWireBackground {
                 };
             }
 
+            // Initialize tab state if not present
+            let tabStateChanged = false;
+            let tabState = this.stateService.tab.getTabState(tabId);
+            if (!tabState) {
+                this.stateService.tab.setTabState(tabId, null, { setDefault: true }); 
+                tabStateChanged = true;
+                tabState = this.stateService.tab.getTabState(tabId);
+            }
+
             // Get state from our state service
-            const state = {
+            let state = {
                 settings: this.stateService.state.settings || {},
                 conversation: this.stateService.state.conversation || {},
-                frameworkReady: true
+                tabs: {
+                    default: this.stateService.state.tabs.default,
+                    [tabId]: tabState // The client just needs it's own tab state
+                },
+                frameworkReady: true,
+                tabId: tabId,
             };
 
-            // Use provided content state if available, otherwise use defaults
+            // If content state is provided, merge it with the state using deep merge
             if (contentState) {
-                state.panelInjected = contentState.panelInjected || false;
-                state.mcpConnected = contentState.mcpConnected || false;
-                state.aiClientConfigured = contentState.aiClientConfigured || false;
-                state.servicesReady = contentState.servicesReady || false;
-            } else {
-                // No content state provided, use defaults
-                state.panelInjected = false;
-                state.mcpConnected = false;
-                state.aiClientConfigured = false;
-                state.servicesReady = false;
+                state = mergeState(state, contentState);
             }
-            
+
+            if (tabStateChanged && saveTabState) {
+                await this.stateService.tab.saveToStorage();
+            }
+
             console.log('[WebWireBackground] Returning state:', state);
             return state;
         } catch (error) {
@@ -773,7 +794,8 @@ class WebWireBackground {
                 panelInjected: false,
                 mcpConnected: false,
                 aiClientConfigured: false,
-                frameworkReady: false
+                frameworkReady: false,
+                tabId: tabId,
             };
         }
     }

@@ -4,7 +4,7 @@ import { generateSessionId } from '../utils/id-generator.js';
  * Creates the initial state structure for the app.
  * @returns {Object} The initial state object.
  */
-export function createInitialState() {
+export function createInitialState(tabId = undefined) {
     return {
         session: {
             sessionId: generateSessionId(),
@@ -82,12 +82,11 @@ export function createInitialState() {
             },
             ui: {
                 autoInject: false,
-                includePageContent: true,
-                useMCP: true,
-                useBrowserTools: true,
-                autoExecuteTools: true,
-                selectedModel: 'chat'
             }
+        },
+
+        tabs: {
+            default: createInitialTabState(),
         },
 
         aim: {
@@ -105,25 +104,14 @@ export function createInitialState() {
             isAvailable: false,
             error: undefined,
             systemMessage: undefined,
-            /* connection
-                {
-                    serverUrl: string,
-                    sessionId: string,
-                    postEndpoint: string | undefined,
-                    isConnected: boolean,
-                    isInitialized: boolean,
-                    lastConnected: number | undefined,
-                    connectionError: string | undefined,
-                }
-            */
             connection: {
-                serverUrl: undefined,
-                sessionId: undefined,
-                postEndpoint: undefined,
-                isConnected: false,
-                isInitialized: false,
-                lastConnected: undefined,
-                connectionError: undefined,
+                serverUrl: undefined, // string
+                sessionId: undefined, // string
+                postEndpoint: undefined, // string | undefined
+                isConnected: false, // boolean
+                isInitialized: false, // boolean
+                lastConnected: undefined, // number | undefined
+                connectionError: undefined, // string | undefined
             },
 
             /* tools
@@ -156,7 +144,7 @@ export function createInitialState() {
 
         conversation: {
             active: {
-                default: undefined
+                global: undefined
             },
             /* message
                 {
@@ -191,7 +179,7 @@ export function createInitialState() {
             metadata: {}, // key is conversation_id, value is the current metadata for the conversation
         },
 
-        ui: createInitialUiState(),
+        ui: createInitialUiState(tabId),
 
         stash: {
             // Stash state - persists across browser sessions
@@ -199,9 +187,21 @@ export function createInitialState() {
     };
 }
 
-export function createInitialUiState() {
+export function createInitialUiState(tabId = undefined) {
     return {
+        tabId: tabId,
         panelVisible: false,
+    };
+}
+
+export function createInitialTabState() {
+    return {
+        trackDefault: true,
+        selectedModel: 'chat',
+        includePageContent: true,
+        useMCP: true,
+        useBrowserTools: true,
+        autoExecuteTools: true,
     };
 }
 

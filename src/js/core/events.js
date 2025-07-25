@@ -80,6 +80,10 @@ export const EVENTS = {
         INJECT_PANEL: 'ui:inject-panel',
         THREAD_SAVED: 'ui:thread-saved'
     },
+    TAB: {
+        CHANGED: 'tab:changed',
+        CLEARED: 'tab:cleared'
+    },
     THREADS: {
         GET_OR_CREATE: 'threads:get-or-create',
         SAVE_MESSAGE: 'threads:save-message'

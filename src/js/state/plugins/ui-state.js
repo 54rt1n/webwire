@@ -1,53 +1,15 @@
 import { createInitialUiState } from '../state-container.js';
 
 /**
- * Plugin for handling UI state
+ * Plugin for handling UI state. This is a blend of methods operating on the:
+ * - state.ui (idempotent, used on the client side)
+ * - state.tabs[tabId] (tab state, persisted on the server to maintain the state through navigation)
+ * - state.settings.ui (global settings, configured in the settings panel)
  */
 export class UiStatePlugin {
     constructor(stateService) {
         this.stateService = stateService;
         this.eventBus = stateService.eventBus;
-        this.uiAdapter = stateService.storage?.ui;
-    }
-
-    /**
-     * Set UI state
-     * @param {Object} uiState 
-     */
-    setUiState(uiState) {
-        this.stateService.state.ui = uiState;
-        console.log('[StateService::UiState] UI state set:', uiState);
-    }
-
-    /**
-     * Read UI state and set them in the state
-     */
-    async loadFromStorage() {
-        if (!this.uiAdapter) {
-            console.log('[StateService::UiState] No UI adapter found');
-            return createInitialUiState();
-        }
-
-        let uiState = await this.uiAdapter.getAll();
-        if (!uiState) {
-            console.log('[StateService::UiState] No UI state found');
-            uiState = createInitialUiState();
-        }
-        this.stateService.state.ui = uiState;
-        console.log('[StateService::UiState] UI state read:', uiState);
-        return uiState;
-    }
-
-    /**
-     * Save UI state
-     */
-    async saveToStorage() {
-        if (!this.uiAdapter) {
-            console.log('[StateService::UiState] No UI adapter found');
-            return;
-        }
-
-        await this.uiAdapter.setAll(this.stateService.state.ui);
     }
 
     /**
@@ -74,72 +36,131 @@ export class UiStatePlugin {
     }
 
     /**
+     * Set tabId
+     */
+    setTabId(tabId) {
+        this.stateService.state.ui.tabId = tabId;
+    }
+
+    /**
+     * Get tabId
+     */
+    getTabId() {
+        return this.stateService.state.ui.tabId;
+    }
+
+    _currentTab() {
+        const tabId = this.getTabId();
+        if (!tabId) return null;
+        if (!this.stateService.state.tabs[tabId]) return null;
+        return this.stateService.state.tabs[tabId];
+    }
+
+    /**
      * Get include page content setting
      */
     getIncludePageContent() {
-        return this.stateService.state.settings.ui.includePageContent;
+        const tab = this._currentTab();
+        if (!tab) return false;
+        return tab.includePageContent;
     }
 
     /**
      * Set include page content setting
      */
     setIncludePageContent(includePageContent) {
-        this.stateService.state.settings.ui.includePageContent = includePageContent;
+        const tab = this._currentTab();
+        if (!tab) return;
+        tab.includePageContent = includePageContent;
     }
 
     /**
      * Get use MCP setting
      */
     getUseMCP() {
-        return this.stateService.state.settings.ui.useMCP;
+        const tab = this._currentTab();
+        if (!tab) return false;
+        return tab.useMCP;
     }
 
     /**
      * Set use MCP setting
      */
     setUseMCP(useMCP) {
-        this.stateService.state.settings.ui.useMCP = useMCP;
+        const tab = this._currentTab();
+        if (!tab) return;
+        tab.useMCP = useMCP;
     }
 
     /**
      * Get use browser tools setting
      */
     getUseBrowserTools() {
-        return this.stateService.state.settings.ui.useBrowserTools;
+        const tab = this._currentTab();
+        if (!tab) return false;
+        return tab.useBrowserTools;
     }
 
     /**
      * Set use browser tools setting
      */
     setUseBrowserTools(useBrowserTools) {
-        this.stateService.state.settings.ui.useBrowserTools = useBrowserTools;
+        const tab = this._currentTab();
+        if (!tab) return;
+        tab.useBrowserTools = useBrowserTools;
     }
 
     /**
      * Get auto execute tools setting
      */
     getAutoExecuteTools() {
-        return this.stateService.state.settings.ui.autoExecuteTools;
+        const tab = this._currentTab();
+        if (!tab) return false;
+        return tab.autoExecuteTools;
     }
 
     /**
      * Set auto execute tools setting
      */
     setAutoExecuteTools(autoExecuteTools) {
-        this.stateService.state.settings.ui.autoExecuteTools = autoExecuteTools;
+        const tab = this._currentTab();
+        if (!tab) return;
+        tab.autoExecuteTools = autoExecuteTools;
     }
 
     /**
      * Get selected model setting
      */
     getSelectedModel() {
-        return this.stateService.state.settings.ui.selectedModel;
+        const tab = this._currentTab();
+        if (!tab) return false;
+        return tab.selectedModel;
     }
 
     /**
      * Set selected model setting
      */
     setSelectedModel(selectedModel) {
-        this.stateService.state.settings.ui.selectedModel = selectedModel;
+        const tab = this._currentTab();
+        if (!tab) return;
+        tab.selectedModel = selectedModel;
+    }
+
+    /**
+     * Track default setting
+     */
+    getTrackDefault() {
+        const tab = this._currentTab();
+        if (!tab) return false;
+        return tab.trackDefault;
+    }
+    
+    /**
+     * Set track default setting
+     */
+    setTrackDefault(trackDefault) {
+        const tab = this._currentTab();
+        if (!tab) return;
+        tab.trackDefault = trackDefault;
     }
 } 

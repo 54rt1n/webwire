@@ -188,6 +188,17 @@
       justify-content: space-between;
       align-items: center;
       margin-bottom: var(--space-2);
+      position: relative;
+      
+      .ww-tab-id {
+        position: absolute;
+        top: -13px;
+        right: 0;
+        font-size: var(--font-size-xs);
+        color: var(--color-text-muted);
+        font-style: italic;
+        opacity: 0.6;
+      }
     }
     
     .ww-agent-info {
