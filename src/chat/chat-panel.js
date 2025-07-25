@@ -526,9 +526,17 @@ export class WebChatPanel {
      * Display a conversation
      */
     displayConversation(conversation, options = {}) {
-        if (!conversation?.messages) return;
+        if (!conversation) return;
 
         this.clearMessages();
+
+        // If no messages, just update the thread ID and return (welcome message already shown by clearMessages)
+        if (!conversation.messages || conversation.messages.length === 0) {
+            this.updateConversationIdDisplay(conversation.threadId);
+            this.updateReparseButton(false);
+            this.updateRetryButton(false);
+            return;
+        }
 
         conversation.messages.forEach(message => {
             if (message.role === 'system') return;

@@ -76,6 +76,7 @@ class WebWireBackground {
             if (activeThreadId) {
                 console.log('[WebWireBackground] Ending active conversation:', activeThreadId);
                 this.stateService.conversation.updateConversationStatus(activeThreadId, 'completed');
+                this.stateService.conversation.setActiveConversation(null);
                 await this.stateService.disk.saveToStorage();
                 return { success: true, threadId: activeThreadId };
             } else {

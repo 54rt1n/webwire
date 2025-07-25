@@ -26,7 +26,7 @@ export class EventDispatcher {
   // ── Core Dispatch Method ──────────────────────────────────────────
   
   async dispatch(event, data, options = {}) {
-    const { target = 'local', timeout = 5000, priority = 'normal' } = options;
+    const { target = 'local', timeout = 30000, priority = 'normal' } = options;
     
     try {
       if (target === EVENT_CONTEXT.LOCAL) {
@@ -66,7 +66,7 @@ export class EventDispatcher {
 
   // ── Cross-Context Communication ──────────────────────────────────
 
-  async sendToBackground(event, data, timeout = 5000) {
+  async sendToBackground(event, data, timeout = 30000) {
     if (this.context === EVENT_CONTEXT.BACKGROUND && this.backgroundIsLocal) {
       // Already in background, dispatch locally
       return this.eventBus.emit(event, data, {source: EVENT_CONTEXT.BACKGROUND});
@@ -85,7 +85,7 @@ export class EventDispatcher {
     }, timeout);
   }
 
-  async sendToContent(event, data, timeout = 5000, tabId = null) {
+  async sendToContent(event, data, timeout = 30000, tabId = null) {
     if (this.context === EVENT_CONTEXT.CONTENT) {
       // Already in content, dispatch locally
       return this.eventBus.emit(event, data);
@@ -117,7 +117,7 @@ export class EventDispatcher {
     throw new Error(`Cannot send to content from context: ${this.context}`);
   }
 
-  async sendToPanel(event, data, timeout = 5000) {
+  async sendToPanel(event, data, timeout = 30000) {
     if (this.context === EVENT_CONTEXT.PANEL) {
       // Already in panel, dispatch locally
       return this.eventBus.emit(event, data);
@@ -279,7 +279,7 @@ export class EventDispatcher {
     });
   }
 
-  async sendToAllTabs(event, data, timeout = 5000) {
+  async sendToAllTabs(event, data, timeout = 30000) {
     const tabs = await chrome.tabs.query({});
     const results = [];
 
