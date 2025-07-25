@@ -237,9 +237,10 @@ export class ContentEventHandlers extends EventBindableComponent {
             const toolResult = await this.core.mcpConnector.executeTool(name, {}, {callId});
             // Update the conversation state with the tool result
             this.stateService.conversation.updateToolResult(threadId, messageId, callId, toolResult);
-            console.log('[MCPApp] Updated tool result (saving to disk):', this.stateService.state.conversation.history[threadId]);
-            // Save to disk
-            await this.dispatcher.dispatch(BACKGROUND_ACTIONS.SAVE_CONVERSATION, { threadId }, { target: 'background' });
+            const conversation = this.stateService.conversation.getConversation(threadId);
+            console.log('[MCPApp] Updated tool result (saving to disk):', conversation);
+            // Save to disk // TODO this should not work
+            await this.dispatcher.dispatch(BACKGROUND_ACTIONS.SAVE_THREAD_MESSAGE, { threadId, messageId, conversation }, { target: 'background' });
 
             // Emit event to notify listeners (e.g., chat panel) of tool result
             this.eventBus.emit(EVENTS.CHAT.TOOL_RESULT, { threadId, messageId, callId, toolResult });
@@ -317,9 +318,11 @@ export class ContentEventHandlers extends EventBindableComponent {
     async handleUpdateSettings(data) {
         console.log('[ContentEventHandlers] Handling settings update request:', data);
         try {
+            const tabId = this.stateService.ui.getTabId();
+            const tabState = this.stateService.tab.getTabState(tabId);
             const response = await this.dispatcher.dispatch(
                 BACKGROUND_ACTIONS.SAVE_WEBWIRE_SETTINGS,
-                data,
+                { tabId, ...tabState, ...data },
                 { target: 'background' }
             );
             console.log('[ContentEventHandlers] Settings update response from background:', response);

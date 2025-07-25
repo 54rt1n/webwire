@@ -64,7 +64,7 @@ export async function contextFactory(eventBus, context,
     // AI client creation removed - now handled lazily by ChatService.getAiClient()
 
     if (mcp) {
-        const serverUrl = results.stateService.state.settings?.mcp?.serverUrl;
+        const serverUrl = results.stateService.mcp.getMcpServerUrl();
         if (serverUrl) {
             results.mcpConnector = new MCPConnector(serverUrl);
         }

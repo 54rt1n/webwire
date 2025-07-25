@@ -50,9 +50,10 @@ class WebWireBackground {
         });
 
         this.eventBus.onAsync(BACKGROUND_ACTIONS.SAVE_WEBWIRE_SETTINGS, async (data, options) => {
-            if (this.stateService?.state && this.stateService?.settings) {
-                this.stateService.state.settings = { ...this.stateService.state.settings, ...data.settings };
-                await this.stateService.settings.saveToStorage();
+            if (this.stateService?.state && this.stateService?.tabs) {
+                const { tabId, ...settings } = data;
+                this.stateService.tab.setTabState(tabId, settings);
+                await this.stateService.tab.saveToStorage();
                 return { success: true };
             } else {
                 throw new Error('State service not initialized');
@@ -544,7 +545,7 @@ class WebWireBackground {
             console.log('[WebWireBackground] 🔄 WebWire state/settings changed, reloading state...');
             try {
                 await this.stateService.settings.loadFromStorage();
-                await this.stateService.tabs.loadFromStorage();
+                await this.stateService.tab.loadFromStorage();
                 await this.stateService.disk.loadFromStorage();
                 console.log('[WebWireBackground] ✅ WebWire state reloaded after storage change');
                 

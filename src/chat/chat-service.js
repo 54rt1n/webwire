@@ -526,6 +526,12 @@ export class ChatService extends EventBindableComponent {
             this.stateService.ui.setSelectedModel(data.selectedModel);
             const currentConfig = this.stateService.settings.getModelConfig(data.selectedModel);
             this.panel.updateSelectedModelSetting(data.selectedModel, currentConfig?.model, currentConfig);
+            
+            // Clear the AI client to force rebuild with new model on next message
+            if (this.aiClient) {
+                console.log('[ChatService] Model changed, clearing AI client for rebuild');
+                this.aiClient = null;
+            }
         }
         
         // Send unified settings update to background for persistence

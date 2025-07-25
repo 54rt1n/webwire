@@ -156,7 +156,7 @@ export class SettingsStatePlugin {
     }
 
     getCurrentModelConfig() {
-        const model = this.stateService.state.settings?.ui?.selectedModel || 'chat';
+        const model = this.stateService.ui.getSelectedModel() || 'chat';
         const modelConfig = this.getModelConfig(model);
         console.log('[StateService::SettingsState] Current model config:', modelConfig);
         return modelConfig;
