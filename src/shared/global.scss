@@ -215,6 +215,35 @@
         font-size: var(--font-size-xs);
         color: var(--color-text-secondary);
       }
+      
+      .ww-thread-info {
+        display: flex;
+        align-items: center;
+        gap: var(--space-1);
+        
+        .ww-thread-action {
+          background: transparent;
+          border: none;
+          padding: 2px;
+          cursor: pointer;
+          color: var(--color-text-secondary);
+          border-radius: var(--radius-sm);
+          transition: all var(--transition-normal);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          
+          svg {
+            width: 12px;
+            height: 12px;
+          }
+          
+          &:hover {
+            background: var(--color-border);
+            color: var(--color-text-primary);
+          }
+        }
+      }
     }
     
     .ww-actions {

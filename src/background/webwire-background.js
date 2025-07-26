@@ -76,16 +76,31 @@ class WebWireBackground {
         this.eventBus.onAsync(BACKGROUND_ACTIONS.END_CONVERSATION, async (data, options) => {
             const tabId = await this.resolveTabId(options.sender, data);
             const activeThreadId = this.stateService.conversation.getActiveThreadId();
+            
+            // End the current conversation if there is one
             if (activeThreadId) {
                 console.log('[WebWireBackground] Ending active conversation:', activeThreadId, 'for tab:', tabId);
                 this.stateService.conversation.updateConversationStatus(activeThreadId, 'completed');
-                this.stateService.conversation.setActiveConversation(null);
-                await this.stateService.disk.saveToStorage();
-                return { success: true, threadId: activeThreadId };
-            } else {
-                console.log('[WebWireBackground] No active conversation to end for tab:', tabId);
-                return { success: true, message: 'No active conversation' };
             }
+            
+            // Create a new empty conversation for the tab immediately
+            const newThreadId = this.stateService.conversation.createNewConversation({tabId});
+            console.log('[WebWireBackground] Created new empty conversation:', newThreadId, 'for tab:', tabId);
+            
+            // Update the tab's persistent tracked thread ID
+            const tabState = this.stateService.tab.getTabState(tabId);
+            if (tabState) {
+                tabState.trackedThreadId = newThreadId;
+                console.log('[WebWireBackground] Updated tab', tabId, 'trackedThreadId to', newThreadId);
+            }
+            
+            await this.stateService.disk.saveToStorage();
+            
+            return { 
+                success: true, 
+                endedThreadId: activeThreadId,
+                newThreadId: newThreadId 
+            };
         });
 
         this.eventBus.onAsync(BACKGROUND_ACTIONS.UPDATE_CONVERSATION, async (data, options) => {
@@ -102,13 +117,43 @@ class WebWireBackground {
                 tabId = await this.resolveTabId(options.sender, data);
             }
             console.log('[WebWireBackground] GET_OR_CREATE_CURRENT_THREAD', tabId, data, options);
-            let threadId = this.stateService.conversation.getCurrentConversation({tabId});
+            
+            let threadId = null;
             let reason = null;
-            if (!threadId) {
+            
+            // If createOnly is true, skip recovery and create new conversation
+            if (data.createOnly) {
                 threadId = this.stateService.conversation.createNewConversation({tabId});
-                reason = 'new_conversation';
+                reason = 'new_conversation_forced';
+                
+                // Update the tab's persistent tracked thread ID
+                const tabState = this.stateService.tab.getTabState(tabId);
+                if (tabState) {
+                    tabState.trackedThreadId = threadId;
+                    console.log('[WebWireBackground] Updated tab', tabId, 'trackedThreadId to', threadId);
+                }
             } else {
-                reason = 'existing_conversation';
+                // Normal flow: try to get current or recover
+                threadId = this.stateService.conversation.getCurrentConversation({tabId});
+                if (!threadId) {
+                    threadId = this.stateService.conversation.createNewConversation({tabId});
+                    reason = 'new_conversation';
+                    
+                    // Update the tab's persistent tracked thread ID
+                    const tabState = this.stateService.tab.getTabState(tabId);
+                    if (tabState) {
+                        tabState.trackedThreadId = threadId;
+                        console.log('[WebWireBackground] Updated tab', tabId, 'trackedThreadId to', threadId);
+                    }
+                } else {
+                    reason = 'existing_conversation';
+                }
+            }
+            
+            // Save tab state if we created a new conversation
+            if (reason === 'new_conversation' || reason === 'new_conversation_forced') {
+                await this.stateService.tab.saveToStorage();
+                console.log('[WebWireBackground] Saved tab state after creating new conversation');
             }
             
             const messages = this.stateService.conversation.getConversationMessages(threadId);

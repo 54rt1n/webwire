@@ -124,12 +124,18 @@ export class ChatUIRenderer {
             <div class="ww-top">
                 <div class="ww-agent-info">
                     <span class="ww-name">WebWire Assistant</span>
-                    <span class="ww-conversation-id">Ready for conversation</span>
+                    <div class="ww-thread-info">
+                        <span class="ww-conversation-id">Ready for conversation</span>
+                        <button class="ww-thread-action" id="resync" title="Resync">
+                            ${this.templates.icons.replay}
+                        </button>
+                        <button class="ww-thread-action" id="new-conversation" title="New Conversation">
+                            ${this.templates.icons.plus}
+                        </button>
+                    </div>
                 </div>
                 <div class="ww-tab-id" title="Tab ID"></div>
                 <div class="ww-actions">
-                    ${this.createHeaderButton('resync', 'Resync', this.templates.icons.replay)}
-                    ${this.createHeaderButton('new-conversation', 'New Conversation', this.templates.icons.plus)}
                     ${this.createHeaderButton('close-panel', 'Close', this.templates.icons.close)}
                 </div>
             </div>

@@ -1,5 +1,5 @@
 import { StateValidator } from './state-validator.js';
-import { createInitialState } from './state-container.js';
+import { createInitialState, createInitialUiState } from './state-container.js';
 
 import { AIMStatePlugin } from './plugins/aim-state.js';
 import { ConversationStatePlugin } from './plugins/conversation-state.js';
@@ -41,6 +41,7 @@ class StateService {
 
         this.eventBus = eventBus;
         this.storage = storage;
+        this.isBackend = true;
 
         // Initialize state with default structure
         this.state = createInitialState();
@@ -93,6 +94,7 @@ class ContentStateService {
 
         // Initialize state with default structure
         this.state = initialState;
+        this.isFrontend = true;
 
         // Initialize plugins
         this.settings = new SettingsStatePlugin(this);
@@ -120,8 +122,8 @@ class ContentStateService {
     setState(state, { tabId } = {}) {
         console.warn('[CrontentStateService] Setting state:', state, 'with tabId:', tabId);
         this.state = state;
-        if (tabId) {
-            this.ui.setTabId(tabId);
+        if (!this.state.ui) {
+            this.state.ui = createInitialUiState(tabId);
         }
     }
 

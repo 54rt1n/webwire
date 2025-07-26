@@ -640,14 +640,18 @@ export class ChatService extends EventBindableComponent {
     async handleNewConversationRequest(payload) {
         console.log('[ChatService] Handling new conversation request');
         
-        // Step 1: End the current conversation via backend
-        await this.eventBus.emitAsync(EVENTS.CHAT.END_CONVERSATION, {}, { target: EVENT_CONTEXT.BACKGROUND });
+        // End the current conversation via backend (which will create a new empty one)
+        const result = await this.eventBus.emitAsync(EVENTS.CHAT.END_CONVERSATION, {}, { target: EVENT_CONTEXT.BACKGROUND });
         
-        // Step 2: Clear the active thread ID to force creation of new conversation
-        this.stateService.conversation.setActiveConversation(null);
-        
-        // Step 3: Request host to get or create new conversation
-        await this.sendGetOrCreateThread();
+        if (result && result.newThreadId) {
+            console.log('[ChatService] New conversation created by END_CONVERSATION:', result.newThreadId);
+            // Request the newly created conversation to update the UI
+            await this.sendGetOrCreateThread();
+        } else {
+            console.log('[ChatService] END_CONVERSATION did not return new thread, creating one');
+            // Fallback: create new conversation if END_CONVERSATION didn't
+            await this.sendGetOrCreateThread({ createOnly: true });
+        }
     }
 
     /**
@@ -739,17 +743,12 @@ export class ChatService extends EventBindableComponent {
             conversation = conversation.result;
         }
         
-        // Store the current conversation for context in AI requests
+        // Update the panel with the new conversation
         if (conversation && this.panel.isReady()) {
             console.log(`[ChatService] Displaying conversation with ID: ${conversation.threadId}`);
             
-            // Only display conversation if it has messages, or if it's explicitly a new conversation
-            if (conversation.messages?.length > 0 || conversation.reason === 'new_conversation') {
-                this.panel.displayConversation(conversation, this.stateService.aim.getAimMessageOptions());
-                console.log(`[ChatService] Loaded conversation with ${conversation.messages?.length || 0} messages`);
-            } else {
-                console.log('[ChatService] Skipping display of empty conversation');
-            }
+            this.panel.displayConversation(conversation, this.stateService.aim.getAimMessageOptions());
+            console.log(`[ChatService] Loaded conversation with ${conversation.messages?.length || 0} messages`);
         } else {
             console.warn('[ChatService] Cannot display conversation - panel not ready or no conversation data');
         }
@@ -1002,13 +1001,16 @@ export class ChatService extends EventBindableComponent {
 
     /**
      * Load current conversation on startup
+     * @param {Object} options - Options for thread creation
+     * @param {boolean} options.createOnly - Force creation of new thread, skip recovery
      */
-    async sendGetOrCreateThread() {
-        console.log('[ChatService] Requesting current conversation from host...');
+    async sendGetOrCreateThread(options = {}) {
+        console.log('[ChatService] Requesting current conversation from host...', options);
         
         // Request the current conversation from the host
         const conversationData = await this.eventBus.emitAsync(EVENTS.CHAT.GET_OR_CREATE_THREAD, {
-            ...this.pageUtils.getPageLocation()
+            ...this.pageUtils.getPageLocation(),
+            ...options
         }, { target: EVENT_CONTEXT.BACKGROUND });
 
         console.log('[ChatService] Current conversation loaded:', conversationData);
