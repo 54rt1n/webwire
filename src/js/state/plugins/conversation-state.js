@@ -18,7 +18,6 @@ export class ConversationStatePlugin {
             this.stateService.state.conversation = {};
             this.stateService.state.conversation.history = {};
             this.stateService.state.conversation.metadata = {};
-            this.stateService.state.conversation.active = {};
             return this.stateService.state.conversation;
         }
         if (!this.stateService.state.conversation) {
@@ -29,12 +28,6 @@ export class ConversationStatePlugin {
         }
         if (!this.stateService.state.conversation.metadata) {
             this.stateService.state.conversation.metadata = {};
-        }
-        if (!this.stateService.state.conversation.active) {
-            this.stateService.state.conversation.active = {
-                global: null,
-                tabs: {}
-            };
         }
         return this.stateService.state.conversation;
     }
@@ -136,6 +129,7 @@ export class ConversationStatePlugin {
         if (!state.metadata[threadId]) {
             state.metadata[threadId] = {
                 threadId: threadId,
+                tabId: this.stateService.ui.getTabId(),  // Associate with current tab
                 userName: userName || 'User',
                 personaName: personaName || 'Default',
                 mood: mood,
@@ -246,6 +240,7 @@ export class ConversationStatePlugin {
         if (!state.metadata[threadId]) {
             state.metadata[threadId] = {
                 threadId: threadId,
+                tabId: this.stateService.ui.getTabId(),  // Associate with current tab
                 userName: userName || 'User',
                 personaName: personaName || 'Default',
                 mood: mood,
@@ -375,48 +370,20 @@ export class ConversationStatePlugin {
     }
 
     /**
-     * Get the current active thread ID
+     * Get the current active thread ID for this tab
      * @returns {string|null} Active thread ID or null
      */
     getActiveThreadId(tabId = undefined) {
-        const state = this._safeConversationState();
-
-        if (!tabId) {
-            console.log('[ConversationState] No tab ID provided, using current tab ID:', this.stateService.ui.getTabId());
-            tabId = this.stateService.ui.getTabId();
-        }
-
-        // Use the UI state's tracked thread ID if available
-        let trackedThreadId = this.stateService.ui.getTrackedThreadId();
-        console.log('[ConversationState] Tracked thread ID from UI state:', trackedThreadId, tabId);
-        
-        if (trackedThreadId) {
-            return trackedThreadId;
-        }
-        
-        // Fall back to global active thread if no tab-specific thread
-        console.log('[ConversationState] No tab trackedThreadId, using global:', state.active?.global);
-        trackedThreadId = state.active?.global;
-        if (trackedThreadId) {
-            return trackedThreadId;
-        }
-
-        // Try and recover the active thread
-        const recoveredThreadId = this.recoverGlobalActive();
-        if (recoveredThreadId) {
-            this.setActiveConversation(recoveredThreadId);
-            return recoveredThreadId;
-        }
-
-        return null;
+        // Only use the per-tab tracked thread
+        return this.stateService.ui.getTrackedThreadId();
     }
 
     /**
-     * Set a conversation as active (and mark others as inactive)
+     * Set a conversation as active for this tab
      * @param {string} threadId - The thread ID to set as active
-     * @param {string} [tabId] - The tab ID to set as active (defaults to current tab)
+     * @param {string} [tabId] - The tab ID (for event emission)
      */
-    setActiveConversation(threadId, {tabId, setGlobal = false} = {}) {
+    setActiveConversation(threadId, {tabId} = {}) {
         if (threadId !== null) {
             const targetMetadata = this.stateService.state.conversation?.metadata?.[threadId];
             if (!targetMetadata) {
@@ -424,37 +391,26 @@ export class ConversationStatePlugin {
             }
         }
 
-        if (!setGlobal && !tabId) {
-            throw new Error('setGlobal is false and tabId is not provided');
-        }
-
-        // Set the active thread ID in the new location
-        const state = this.stateService.state.conversation;
-        if (setGlobal) {
-            if (!state.active) {
-                state.active = {};
-            }
-
-            state.active.global = threadId;
-            this.stateService.ui.setTrackedThreadId(threadId);
-        } else {
-            this.stateService.ui.setTrackedThreadId(threadId);
-        }
+        // Just update the UI state for this tab
+        this.stateService.ui.setTrackedThreadId(threadId);
         
-        console.log(`[StateService::ConversationState] Set active conversation to ${threadId} (tab: ${tabId})`);
-        this.eventBus.emit(EVENTS.CONVERSATION.ACTIVATED, { threadId, tabId });
+        console.log(`[StateService::ConversationState] Set active conversation to ${threadId} (tab: ${tabId || this.stateService.ui.getTabId()})`);
+        this.eventBus.emit(EVENTS.CONVERSATION.ACTIVATED, { threadId, tabId: tabId || this.stateService.ui.getTabId() });
     }
 
     /**
-     * Get the current conversation
+     * Get the current conversation for this tab
      * @param {Object} [options={}] - Options for conversation creation
-     * @param {string} [options.title] - Conversation title
+     * @param {string} [options.tabId] - Tab ID
      * @returns {string} The thread ID
      */
     getCurrentConversation({tabId, ...options} = {}) {
-        console.log('[ConversationState] getCurrentConversation called with options:', options, tabId);
+        if (!tabId) {
+            tabId = this.stateService.ui.getTabId();
+        }
+        console.log('[ConversationState] getCurrentConversation called for tab:', tabId);
         
-        // Try to get existing active conversation
+        // Try to get existing active conversation for this tab
         let threadId = this.getActiveThreadId(tabId);
         console.log('[ConversationState] Active thread ID:', threadId);
 
@@ -462,26 +418,11 @@ export class ConversationStatePlugin {
             return threadId;
         }
         
-        // No active conversation found, look for newest conversation
-        const allConversations = Object.values(this.stateService.state.conversation.metadata);
-        console.log('[ConversationState] Total conversations in storage:', allConversations.length);
-        
-        if (allConversations.length > 0) {
-            console.log('[ConversationState] All conversations:', allConversations.map(conv => ({
-                threadId: conv.threadId,
-                userName: conv.userName, 
-                personaName: conv.personaName,
-                status: conv.status,
-                startTime: conv.startTime
-            })));
-
-            const activeConversations = allConversations.filter(conv => conv.status === 'active');
-            if (activeConversations.length > 0) {
-                threadId = activeConversations[0].threadId;
-                this.setActiveConversation(threadId);
-                console.log(`[ConversationState] Reactivated newest conversation: ${threadId}`);
-                return threadId;
-            }
+        // No active conversation found, try to recover one for this tab
+        threadId = this.recoverActiveForTab(tabId);
+        if (threadId) {
+            console.log(`[ConversationState] Recovered conversation for tab ${tabId}: ${threadId}`);
+            return threadId;
         }
         
         return null;
@@ -495,12 +436,11 @@ export class ConversationStatePlugin {
     createNewConversation(options = {setActive: true}) {
         console.log('[ConversationState] createNewConversation called with options:', options);
         
-        // No conversations exist, create new one
+        const tabId = options.tabId || this.stateService.ui.getTabId();
         const currentUser = this.stateService.state.settings?.aim?.userName || 'User';
         const currentPersona = this.stateService.state.settings?.aim?.personaName || 'WebWire Assistant';
         
         const threadId = this.createThreadId(currentUser, currentPersona);
-        
         const timestamp = Date.now();
 
         // Initialize conversation state just in case
@@ -510,55 +450,58 @@ export class ConversationStatePlugin {
         this.stateService.state.conversation.history[threadId] = [];
         this.stateService.state.conversation.metadata[threadId] = {
             threadId: threadId,
+            tabId: tabId,  // Associate with creating tab
             userName: currentUser,
             personaName: currentPersona,
             startTime: timestamp,
             endTime: undefined,
             duration: undefined,
+            status: 'active',
             error: undefined,
             errorCode: undefined,
             errorType: undefined,
         };
 
-        console.log(`[ConversationState] Created new conversation: ${threadId}`);
+        console.log(`[ConversationState] Created new conversation: ${threadId} for tab: ${tabId}`);
         
         if (options.setActive) {
-            // Set this as the active conversation
-            this.setActiveConversation(threadId);
+            // Set this as the active conversation for this tab
+            this.setActiveConversation(threadId, {tabId});
         }
 
         return threadId;
     }
 
     /**
-     * Recover the active conversation by finding the most recent one
+     * Recover the active conversation for a specific tab
+     * @param {string} tabId - The tab ID to recover conversation for
      * @returns {string|null} The recovered thread ID or null if no conversations exist
      */
-    recoverGlobalActive() {
-        console.log('[ConversationState] Recovering active conversation...');
+    recoverActiveForTab(tabId) {
+        if (!tabId) {
+            tabId = this.stateService.ui.getTabId();
+        }
+        console.log('[ConversationState] Recovering active conversation for tab:', tabId);
 
-        const conversations = this.stateService.conversation.listConversations();
-
-        // Filter out conversations with zero messages
-        const filteredConversations = conversations.filter((value) => value && value.messages && value.messages.length > 0);
+        // Find conversations for this tab only
+        const tabConversations = Object.values(this.stateService.state.conversation.metadata)
+            .filter(meta => meta.tabId === tabId && this.stateService.state.conversation.history[meta.threadId]?.length > 0)
+            .sort((a, b) => {
+                // Sort by most recent activity
+                const timeA = a.endTime || a.startTime || 0;
+                const timeB = b.endTime || b.startTime || 0;
+                return timeB - timeA;
+            });
         
-        if (filteredConversations.length === 0) {
-            console.log('[ConversationState] No conversations found to recover');
-            return null;
+        if (tabConversations.length > 0) {
+            const mostRecent = tabConversations[0];
+            console.log(`[ConversationState] Found most recent conversation for tab ${tabId}: ${mostRecent.threadId}`);
+            this.stateService.ui.setTrackedThreadId(mostRecent.threadId);
+            return mostRecent.threadId;
         }
         
-        // Sort by most recent activity (endTime or startTime), newest first
-        const sortedConversations = filteredConversations.sort((a, b) => {
-            const timeA = a.endTime || a.startTime || 0;
-            const timeB = b.endTime || b.startTime || 0;
-            return timeB - timeA;
-        });
-        
-        // Get the most recent conversation
-        const mostRecent = sortedConversations[0];
-        console.log(`[ConversationState] Found most recent conversation: ${mostRecent.threadId} from ${new Date(mostRecent.startTime).toLocaleString()}`);
-        
-        return mostRecent.threadId;
+        console.log('[ConversationState] No conversations found to recover for tab:', tabId);
+        return null;
     }
 
     /**
@@ -725,7 +668,7 @@ export class ConversationStatePlugin {
                 state.metadata[threadId].status = 'active';
             }
             
-            // CRITICAL: Set this as the active thread in the new location
+            // Set this as the active thread for this tab
             this.setActiveConversation(threadId, {tabId: this.stateService.ui.getTabId()});
         }
         

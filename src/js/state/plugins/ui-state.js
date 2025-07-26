@@ -146,23 +146,6 @@ export class UiStatePlugin {
         tab.selectedModel = selectedModel;
     }
 
-    /**
-     * Track default setting
-     */
-    getTrackDefault() {
-        const tab = this._currentTab();
-        if (!tab) return false;
-        return tab.trackDefault;
-    }
-    
-    /**
-     * Set track default setting
-     */
-    setTrackDefault(trackDefault) {
-        const tab = this._currentTab();
-        if (!tab) return;
-        tab.trackDefault = trackDefault;
-    }
     
     /**
      * Get tracked thread ID for the current tab

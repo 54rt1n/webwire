@@ -16,6 +16,7 @@ export class EventDispatcher {
     // Retry queue for failed messages due to extension context invalidation
     this.retryQueue = [];
     this.isReconnecting = false;
+    this.defaultTimeout = 3000;
     this.maxRetries = 3;
     this.retryDelay = 100; // Start with 100ms, exponential backoff
     
@@ -26,7 +27,7 @@ export class EventDispatcher {
   // ── Core Dispatch Method ──────────────────────────────────────────
   
   async dispatch(event, data, options = {}) {
-    const { target = 'local', timeout = 5000, priority = 'normal', tabId = undefined } = options;
+    const { target = 'local', timeout = this.defaultTimeout, priority = 'normal', tabId = undefined } = options;
     
     try {
       if (target === EVENT_CONTEXT.LOCAL) {
@@ -66,7 +67,7 @@ export class EventDispatcher {
 
   // ── Cross-Context Communication ──────────────────────────────────
 
-  async sendToBackground(event, data, timeout = 5000, tabId = null) {
+  async sendToBackground(event, data, timeout = this.defaultTimeout, tabId = null) {
     console.log('[EventDispatcher] sendToBackground', event, data, timeout, tabId);
     if (this.context === EVENT_CONTEXT.BACKGROUND && this.backgroundIsLocal) {
       // Already in background, dispatch locally
@@ -86,7 +87,7 @@ export class EventDispatcher {
     }, timeout);
   }
 
-  async sendToContent(event, data, timeout = 5000, tabId = undefined) {
+  async sendToContent(event, data, timeout = this.defaultTimeout, tabId = undefined) {
     console.log('[EventDispatcher] sendToContent', event, data, timeout, tabId);
     if (this.context === EVENT_CONTEXT.CONTENT) {
       // Already in content, dispatch locally
@@ -119,7 +120,7 @@ export class EventDispatcher {
     throw new Error(`Cannot send to content from context: ${this.context}`);
   }
 
-  async sendToPanel(event, data, timeout = 5000, tabId = undefined) {
+  async sendToPanel(event, data, timeout = this.defaultTimeout, tabId = undefined) {
     console.log('[EventDispatcher] sendToPanel', event, data, timeout, tabId);
     if (this.context === EVENT_CONTEXT.PANEL) {
       // Already in panel, dispatch locally
@@ -157,7 +158,7 @@ export class EventDispatcher {
     
     for (const target of targets) {
       try {
-        const result = await this.dispatch(event, data, { target, timeout: 3000 });
+        const result = await this.dispatch(event, data, { target, timeout: this.defaultTimeout });
         results.push({ target, success: true, result });
       } catch (error) {
         results.push({ target, success: false, error: error.message });
@@ -169,7 +170,7 @@ export class EventDispatcher {
 
   // ── Chrome Extension Messaging ───────────────────────────────────
 
-  async sendChromeMessage(message, timeout = 30000, retryCount = 0) {
+  async sendChromeMessage(message, timeout = this.defaultTimeout, retryCount = 0) {
     return new Promise((resolve, reject) => {
       const requestId = ++this.requestId;
       
@@ -260,7 +261,7 @@ export class EventDispatcher {
     }
   }
 
-  async sendToSpecificTab(tabId, event, data, timeout = 30000) {
+  async sendToSpecificTab(tabId, event, data, timeout = this.defaultTimeout) {
     return new Promise((resolve, reject) => {
       const timeoutId = setTimeout(() => {
         reject(new Error(`Tab message timeout after ${timeout}ms`));
@@ -283,7 +284,7 @@ export class EventDispatcher {
     });
   }
 
-  async sendToAllTabs(event, data, timeout = 5000) {
+  async sendToAllTabs(event, data, timeout = this.defaultTimeout) {
     const tabs = await chrome.tabs.query({});
     const results = [];
 
@@ -301,7 +302,7 @@ export class EventDispatcher {
 
   // ── PostMessage Communication (Panel ↔ Content) ─────────────────
 
-  async sendToInjectedPanel(event, data, timeout = 5000, tabId = undefined) {
+  async sendToInjectedPanel(event, data, timeout = this.defaultTimeout, tabId = undefined) {
     return new Promise((resolve, reject) => {
       const requestId = ++this.requestId;
       
@@ -332,7 +333,7 @@ export class EventDispatcher {
     });
   }
 
-  async sendToParentContent(event, data, timeout = 5000, tabId = undefined) {
+  async sendToParentContent(event, data, timeout = this.defaultTimeout, tabId = undefined) {
     return new Promise((resolve, reject) => {
       const requestId = ++this.requestId;
       

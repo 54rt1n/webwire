@@ -181,7 +181,7 @@ class WebWireContentHost {
             // If no active thread, try to recover one
             if (!currentThread) {
                 console.log('[WebWireContentHost] No active thread found, attempting to recover...');
-                const recoveredThreadId = stateService.conversation.recoverGlobalActive();
+                const recoveredThreadId = stateService.conversation.recoverActiveForTab();
                 if (recoveredThreadId) {
                     currentThread = stateService.conversation.getActiveThread();
                 } else {

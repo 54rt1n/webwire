@@ -74,15 +74,16 @@ class WebWireBackground {
 
         // Handle thread/conversation operations
         this.eventBus.onAsync(BACKGROUND_ACTIONS.END_CONVERSATION, async (data, options) => {
+            const tabId = await this.resolveTabId(options.sender, data);
             const activeThreadId = this.stateService.conversation.getActiveThreadId();
             if (activeThreadId) {
-                console.log('[WebWireBackground] Ending active conversation:', activeThreadId);
+                console.log('[WebWireBackground] Ending active conversation:', activeThreadId, 'for tab:', tabId);
                 this.stateService.conversation.updateConversationStatus(activeThreadId, 'completed');
                 this.stateService.conversation.setActiveConversation(null);
                 await this.stateService.disk.saveToStorage();
                 return { success: true, threadId: activeThreadId };
             } else {
-                console.log('[WebWireBackground] No active conversation to end');
+                console.log('[WebWireBackground] No active conversation to end for tab:', tabId);
                 return { success: true, message: 'No active conversation' };
             }
         });
@@ -129,6 +130,7 @@ class WebWireBackground {
         });
 
         this.eventBus.onAsync(BACKGROUND_ACTIONS.GET_ACTIVE_THREAD, async (data, options) => {
+            const tabId = await this.resolveTabId(options.sender, data);
             const threadId = this.stateService.conversation.getActiveThreadId();
             if (threadId) {
                 const messages = this.stateService.conversation.getConversationMessages(threadId);
@@ -143,7 +145,7 @@ class WebWireBackground {
             } else {
                 return {
                     success: false,
-                    error: 'No active thread'
+                    error: 'No active thread for tab: ' + tabId
                 };
             }
         });
@@ -156,24 +158,10 @@ class WebWireBackground {
                 data.options || {}
             );
             
-            // Auto-save state and notify listeners
+            // Auto-save state
             await this.stateService.disk.saveToStorage();
             
-            // Notify all tabs about the conversation update
-            const completeConversationState = {
-                threadId: data.threadId,
-                metadata: this.stateService.state.conversation.metadata[data.threadId],
-                messages: this.stateService.conversation.getConversationMessages(data.threadId),
-                isActive: this.stateService.conversation.getActiveThreadId() === data.threadId
-            };
-
-            console.log('[WebWireBackground] SAVE_THREAD_MESSAGE', completeConversationState, data);
-            
-            await this.notifyTabsOfConversationUpdate(data.threadId, {
-                action: CONTENT_ACTIONS.CONVERSATION_UPDATED,
-                conversation: completeConversationState,
-                timestamp: Date.now()
-            });
+            console.log('[WebWireBackground] SAVE_THREAD_MESSAGE - saved for tab only', data);
             
             return { success: true };
         });
@@ -634,55 +622,6 @@ class WebWireBackground {
         }
     }
 
-    async notifyTabsOfConversationUpdate(threadId, updateData) {
-        try {
-            const tabs = await this.getAllTabs();
-            
-            // Filter tabs that can potentially have content scripts
-            const validTabs = tabs.filter(tab => {
-                return tab.url && 
-                       (tab.url.startsWith('http://') || tab.url.startsWith('https://')) &&
-                       !tab.url.includes('chrome-extension://') &&
-                       !tab.url.startsWith('chrome://') &&
-                       !tab.url.startsWith('moz-extension://') &&
-                       !tab.url.startsWith('edge://');
-            });
-            
-            console.log(`Notifying ${validTabs.length} valid tabs about conversation update for thread: ${threadId}`);
-            
-            let successCount = 0;
-            const notifications = validTabs.map(async (tab) => {
-                try {
-                    // First ping to check if content script is available
-                    await this.dispatcher.dispatch(
-                        CONTENT_ACTIONS.PING,
-                        {},
-                        { target: 'content', tabId: tab.id }
-                    );
-                    
-                    // If ping succeeds, send the conversation update
-                    await this.dispatcher.dispatch(
-                        CONTENT_ACTIONS.CONVERSATION_UPDATED,
-                        updateData,
-                        { target: 'content', tabId: tab.id }
-                    );
-                    
-                    successCount++;
-                    return { success: true, tabId: tab.id, url: tab.url };
-                } catch (error) {
-                    // Content script not available, which is normal for most tabs
-                    return { success: false, tabId: tab.id, url: tab.url, error: error.message };
-                }
-            });
-            
-            const results = await Promise.allSettled(notifications);
-            const successful = results.filter(r => r.status === 'fulfilled' && r.value.success).length;
-            
-            console.log(`Conversation update notifications completed: ${successful} tabs notified successfully out of ${validTabs.length} checked`);
-        } catch (error) {
-            console.error('Failed to notify tabs of conversation update:', error);
-        }
-    }
 
     async injectContentScript(tabId) {
         try {

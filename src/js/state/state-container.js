@@ -143,9 +143,6 @@ export function createInitialState(tabId = undefined) {
         },
 
         conversation: {
-            active: {
-                global: undefined
-            },
             /* message
                 {
                     role: string,
@@ -197,7 +194,6 @@ export function createInitialUiState(tabId = undefined) {
 export function createInitialTabState() {
     return {
         trackedThreadId: undefined,
-        trackDefault: true,
         selectedModel: 'chat',
         includePageContent: true,
         useMCP: false,
