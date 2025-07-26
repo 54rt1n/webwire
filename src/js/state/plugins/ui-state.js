@@ -164,4 +164,18 @@ export class UiStatePlugin {
         if (!tab) return;
         tab.trackedThreadId = threadId;
     }
+
+    /**
+     * Get voice settings
+     */
+    getVoiceSettings() {
+        return this.stateService.state.ui.voice;
+    }
+
+    /**
+     * Set voice settings
+     */
+    setVoiceSettings(voiceSettings) {
+        this.stateService.state.ui.voice = voiceSettings;
+    }
 } 

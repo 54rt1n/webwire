@@ -81,10 +81,11 @@
   .ww-message-actions {
     display: flex;
     align-items: center;
-    justify-content: space-between;
+    gap: var(--space-1);
     margin-top: var(--space-1);
     
-    .ww-copy-button {
+    .ww-copy-button,
+    .ww-play-button {
       opacity: 0;
       background: transparent;
       border: none;
@@ -112,11 +113,26 @@
         background: var(--color-success-50);
       }
     }
+    
+    .ww-time {
+      margin-left: auto;
+    }
   }
 
-  /* Show copy button on message hover */
-  .ww-message.ww-assistant:hover .ww-copy-button {
+  /* Show action buttons on message hover */
+  .ww-message.ww-assistant:hover .ww-copy-button,
+  .ww-message.ww-assistant:hover .ww-play-button {
     opacity: 1;
+  }
+  
+  /* Keep play button visible when speaking */
+  .ww-play-button.speaking {
+    opacity: 1 !important;
+    color: var(--color-primary);
+  }
+  
+  .ww-play-button.speaking.paused {
+    color: var(--color-warning);
   }
 
   /* Status indicator styling with nice visual effects */

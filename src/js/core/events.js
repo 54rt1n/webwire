@@ -43,6 +43,7 @@ export const EVENTS = {
         SEND_MESSAGE: 'chat:send-message',
         START_NEW_CONVERSATION: 'chat:start-new-conversation',
         UPDATE_SETTINGS: 'chat:update-settings',
+        PLAY_AUDIO: 'chat:play-audio',
         TOGGLE_UI_SETTING: 'chat:toggle-ui-setting',
         EXECUTE_TOOL: 'chat:execute-tool',
         CANCEL_TOOL: 'chat:cancel-tool',
@@ -78,7 +79,7 @@ export const EVENTS = {
         CHANGED: 'ui:changed',
         SAVE_PANEL_VISIBILITY: 'ui:save-panel-visibility',
         INJECT_PANEL: 'ui:inject-panel',
-        THREAD_SAVED: 'ui:thread-saved'
+        THREAD_SAVED: 'ui:thread-saved',
     },
     TAB: {
         CHANGED: 'tab:changed',

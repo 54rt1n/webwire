@@ -82,7 +82,14 @@ export function createInitialState(tabId = undefined) {
             },
             ui: {
                 autoInject: false,
-            }
+                voice: {
+                    rate: 1.0,
+                    pitch: 1.0,
+                    volume: 1.0,
+                    lang: 'en-US',
+                    voice: undefined
+                }
+            },
         },
 
         tabs: {

@@ -76,6 +76,15 @@ export class ChatUIRenderer {
                 
                 timeline: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+                </svg>`,
+                
+                play: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polygon points="5 3 19 12 5 21 5 3"/>
+                </svg>`,
+                
+                pause: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="6" y="3" width="4" height="18"/>
+                    <rect x="14" y="3" width="4" height="18"/>
                 </svg>`
             }
         };
@@ -396,11 +405,18 @@ export class ChatUIRenderer {
                 ${this.templates.icons.copy}
                </button>`
             : '';
+            
+        const playButtonHTML = (message.role === 'assistant' && !isThinking)
+            ? `<button class="ww-play-button" data-message-id="${message.messageId || message.id}" title="Play message">
+                ${this.templates.icons.play}
+               </button>`
+            : '';
 
         return `
             <div class="ww-sender">${senderName}</div>
             <div class="ww-content">${contentHTML}</div>
             <div class="ww-message-actions">
+                ${playButtonHTML}
                 ${copyButtonHTML}
                 <div class="ww-time">${time}</div>
             </div>

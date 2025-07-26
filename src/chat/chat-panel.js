@@ -27,6 +27,7 @@ export class WebChatPanel {
         
         // Message counter for unique IDs
         this.messageCounter = 0;
+        
     }
 
     /**
@@ -259,6 +260,13 @@ export class WebChatPanel {
             const copyButton = e.target.closest('.ww-copy-button');
             if (copyButton) {
                 this.handleCopyMessage(copyButton);
+                return;
+            }
+            
+            // Play button handling
+            const playButton = e.target.closest('.ww-play-button');
+            if (playButton) {
+                this.handlePlayMessage(playButton);
                 return;
             }
 
@@ -900,6 +908,72 @@ export class WebChatPanel {
         
         // Show visual feedback on button
         this.showCopyFeedback(button);
+    }
+    
+    /**
+     * Handle play message button click
+     */
+    handlePlayMessage(button) {
+        const messageId = button.dataset.messageId;
+        
+        if (!messageId) {
+            console.warn('[WebChatPanel] Play button clicked but no messageId found');
+            return;
+        }
+        
+        // Determine action based on button state
+        let action = 'play';
+        
+        if (button.classList.contains('speaking')) {
+            if (button.classList.contains('paused')) {
+                action = 'resume';
+            } else {
+                action = 'pause';
+            }
+        }
+        
+        console.log('[WebChatPanel] Play audio request for message:', messageId, 'action:', action);
+        
+        // Emit event to chat service
+        this.eventBus.emit(EVENTS.CHAT.PLAY_AUDIO, { 
+            messageId, 
+            action 
+        });
+    }
+    
+    /**
+     * Update play button state based on audio status
+     * @param {string} messageId - The message ID
+     * @param {string} state - The button state: 'playing', 'paused', 'stopped'
+     */
+    updatePlayButton(messageId, state) {
+        const button = this.container.querySelector(`.ww-play-button[data-message-id="${messageId}"]`);
+        if (!button) {
+            console.warn('[WebChatPanel] Play button not found for message:', messageId);
+            return;
+        }
+        
+        switch (state) {
+            case 'playing':
+                button.classList.add('speaking');
+                button.classList.remove('paused');
+                button.innerHTML = this.renderer.templates.icons.pause;
+                button.setAttribute('title', 'Pause message');
+                break;
+                
+            case 'paused':
+                button.classList.add('speaking', 'paused');
+                button.innerHTML = this.renderer.templates.icons.play;
+                button.setAttribute('title', 'Resume message');
+                break;
+                
+            case 'stopped':
+            default:
+                button.classList.remove('speaking', 'paused');
+                button.innerHTML = this.renderer.templates.icons.play;
+                button.setAttribute('title', 'Play message');
+                break;
+        }
     }
 
     /**
