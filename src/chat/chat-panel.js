@@ -812,15 +812,21 @@ export class WebChatPanel {
         }
 
         // Clear all classes first
-        this.elements.statusIndicatorAi.classList.remove('connecting');
+        this.elements.statusIndicatorAi.classList.remove('connecting', 'streaming');
         this.elements.statusIndicatorMcp.classList.remove('connecting');
 
+        // Handle AI indicator
         this.elements.statusIndicatorAi.style.color = ai.connected ? colors.connected : ai.connecting ? colors.connecting : ai.unavailable ? colors.unavailable : colors.disconnected;
         this.elements.statusIndicatorAi.title = ai.message || 'AI: Disconnected';
-        this.elements.statusIndicatorAi.classList.remove('connecting');
+        
+        // Add streaming class for AI when connected
+        if (ai.connected) {
+            this.elements.statusIndicatorAi.classList.add('streaming');
+        }
+        
+        // Handle MCP indicator
         this.elements.statusIndicatorMcp.style.color = mcp.connected ? colors.connected : mcp.connecting ? colors.connecting : mcp.unavailable ? colors.unavailable : colors.disconnected;
         this.elements.statusIndicatorMcp.title = mcp.message || 'MCP: Disconnected';
-        this.elements.statusIndicatorMcp.classList.remove('connecting');
         this.elements.statusText.textContent = message || 'Configuring...';
     }
 

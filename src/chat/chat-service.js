@@ -52,6 +52,8 @@ export class ChatService extends EventBindableComponent {
         this.toolExecutor = null; // Initialized after stateService is set
         this.responseHandler = null;
 
+        this.isStreaming = false;
+
         this.initialized = false;
     }
 
@@ -816,10 +818,10 @@ export class ChatService extends EventBindableComponent {
         // Check AI configuration status
         const modelConfig = this.stateService.settings.getModelConfig(this.stateService.ui.getSelectedModel() || 'chat');
         const hasAiConfig = modelConfig && modelConfig.provider && modelConfig.model;
-        
+
         // Build AI status object
         const aiStatus = {};
-        if (this.aiClient) {
+        if (this.isStreaming) {
             aiStatus.connected = true;
             aiStatus.message = 'AI: Connected';
         } else if (hasAiConfig) {
@@ -908,6 +910,8 @@ export class ChatService extends EventBindableComponent {
     handleStreamStarted() {
         // Update FAB to show streaming indicator
         this.panel.updateFabStreamingState(true);
+        this.isStreaming = true;
+        this.updateConnectionStatus();
     }
     
     /**
@@ -916,6 +920,8 @@ export class ChatService extends EventBindableComponent {
     handleStreamCompleted() {
         // Reset FAB to normal state when streaming ends
         this.panel.updateFabStreamingState(false);
+        this.isStreaming = false;
+        this.updateConnectionStatus();
     }
 
     /**
