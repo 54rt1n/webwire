@@ -15,6 +15,7 @@ import {
 import '../shared/global.scss';
 import '../chat/chat.scss';
 import { ContentEventHandlers, EarlyEventHandlers } from '../js/client/content-event-handlers.js';
+import { BrowserEventHandlers } from '../js/client/browser-event-handlers.js';
 
 /**
  * WebWire Content Script - Thin Host/Adapter
@@ -43,6 +44,9 @@ class WebWireContentHost {
         
         // Tab indicator for streaming status
         this.tabIndicator = new TabIndicator(this.eventBus);
+
+        // Browser event handlers for play/copy functionality
+        this.browserEventHandlers = null;
 
         this.initialized = false;
         
@@ -82,6 +86,10 @@ class WebWireContentHost {
         // Initialize ChatService with the core services
         await this.chatService.initialize(this.core.mcpConnector, this.core.stateService);
         console.log('[WebWireContentHost] ChatService initialized');
+        
+        // Initialize browser event handlers for copy/play functionality
+        this.browserEventHandlers = new BrowserEventHandlers(this.eventBus, this.core.stateService);
+        console.log('[WebWireContentHost] BrowserEventHandlers initialized');
 
         await this.core.connect();
         
@@ -224,6 +232,10 @@ class WebWireContentHost {
      */
     cleanup() {
         console.log('[WebWireContentHost] Cleaning up before page unload...');
+
+        if (this.browserEventHandlers) {
+            this.browserEventHandlers.cleanup();
+        }
         
         if (this.chatService) {
             this.chatService.destroy();

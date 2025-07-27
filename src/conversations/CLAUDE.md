@@ -29,11 +29,12 @@ The Conversations interface provides a comprehensive management system for chat 
 ### Component Hierarchy
 
 ```
-ConversationsPanelApp (index.js)
+ConversationsPanelApp (index.js) extends EventBindableComponent
 ├── WebWireClientCore           # State management and core functionality
-├── PanelEventHandlers          # Panel-specific event handling
+├── PanelEventHandlers          # Panel-specific event handling (created on init)
+├── BrowserEventHandlers        # Browser actions (play/copy) (created on init)
 ├── ConversationsPanel          # UI rendering and DOM management
-└── ConversationModal           # Modal for viewing conversation details
+└── ConversationModal           # Modal for viewing conversation details (created on init)
 ```
 
 ### Data Flow
@@ -46,17 +47,21 @@ ConversationsPanelApp (index.js)
 
 ## ConversationsPanelApp (index.js)
 
-The main application controller that initializes and coordinates all components.
+The main application controller that initializes and coordinates all components. Extends EventBindableComponent for proper event handling and memory management.
 
 ### Key Responsibilities
 
 ```javascript
-class ConversationsPanelApp {
+class ConversationsPanelApp extends EventBindableComponent {
     constructor() {
-        this.eventBus = new EventBus({domain: 'conversations'});
+        const eventBus = new EventBus({domain: 'conversations', debug: true});
+        super(eventBus);
         this.core = new WebWireClientCore(this.eventBus);
+        this.panelEventHandlers = null;
         this.panel = new ConversationsPanel(this.eventBus);
-        this.conversationModal = new ConversationModal();
+        this.conversationModal = null;
+        
+        this.setupEventListeners();
     }
 }
 ```
@@ -64,9 +69,11 @@ class ConversationsPanelApp {
 ### Event Handling
 
 Listens for conversation state changes:
-- `CONVERSATION.UPDATED` - Refresh when conversations change
-- `CONVERSATION.ACTIVATED` - Update UI when active conversation changes
-- `CONVERSATION.DELETED` - Remove from list when deleted
+- `EVENTS.CONVERSATION.UPDATED` - Refresh when conversations change
+- `EVENTS.CONVERSATION.ACTIVATED` - Update UI when active conversation changes
+- `EVENTS.CONVERSATION.DELETED` - Remove from list when deleted
+- `EVENTS.CONVERSATION.STATUS_UPDATED` - Update status display
+- `EVENTS.CONVERSATION.HARD_RESET` - Handle complete conversation reset
 
 ### Core Operations
 
@@ -87,8 +94,11 @@ async deleteConversation(threadId) {
     this.core.stateService.conversation.clearConversationHistory(threadId);
     // Save state
     await this.core.stateService.disk.saveToStorage();
-    // Emit event
-    this.eventBus.emit(EVENTS.CONVERSATION.DELETED, { threadId });
+    // Emit event - using cross-context dispatcher
+    this.eventBus.emit(EVENTS.CONVERSATION.DELETED, { 
+        threadId, 
+        source: 'conversations-panel' 
+    });
 }
 ```
 
@@ -138,9 +148,10 @@ Manages all UI rendering and DOM event handling for the conversations list.
 ### Key Features
 
 #### Bulk Selection
-- Select individual conversations with checkboxes
-- Select all functionality
+- Select individual conversations with checkboxes  
+- Select all functionality with master checkbox
 - Visual feedback for selection state
+- Selection count display updates dynamically
 
 #### Bulk Operations
 ```javascript
@@ -159,7 +170,16 @@ _handleBulkExport() {
         const metadata = this.stateService.state.conversation.metadata[threadId];
         exportData.push({ threadId, metadata, messages });
     }
-    // Download as JSON
+    // Download as JSON using data URL and anchor click
+    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `conversations-export-${Date.now()}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
 }
 ```
 
@@ -189,7 +209,12 @@ renderConversations(conversations) {
 
 ## ConversationModal (components/conversation-modal.js)
 
-A modal component for displaying full conversation history with rich formatting.
+A modal component for displaying full conversation history with rich formatting. Extends EventBindableComponent for proper event handling and memory management.
+
+### New Features
+- **Play/Copy Buttons**: Assistant messages include play (text-to-speech) and copy-to-clipboard buttons
+- **Browser Integration**: Uses Web Speech API for text-to-speech and Clipboard API for copying
+- **Visual Feedback**: Buttons provide immediate visual feedback for user actions
 
 ### Modal Features
 
@@ -284,13 +309,16 @@ close() {
 ## Event Integration
 
 ### Emitted Events
-- `CONVERSATION.DELETED` - When conversation is deleted
-- `CONVERSATION.LOADED` - When conversation is set as active
+- `EVENTS.CONVERSATION.DELETED` - When conversation is deleted
+- `EVENTS.CONVERSATION.HARD_RESET` - When all conversations are deleted
+- `EVENTS.CHAT.CONVERSATION_LOADED` - When conversation is set as active
 
 ### Listened Events
-- `CONVERSATION.UPDATED` - Refresh list on updates
-- `CONVERSATION.ACTIVATED` - Update UI for active conversation
-- `CONVERSATION.STATUS_UPDATED` - Update status display
+- `EVENTS.CONVERSATION.UPDATED` - Refresh list on updates
+- `EVENTS.CONVERSATION.ACTIVATED` - Update UI for active conversation
+- `EVENTS.CONVERSATION.STATUS_UPDATED` - Update status display
+- `EVENTS.CONVERSATION.DELETED` - Remove from list when deleted
+- `EVENTS.CONVERSATION.HARD_RESET` - Refresh after all conversations cleared
 
 ## Styling Architecture
 
@@ -343,9 +371,41 @@ Uses shared design tokens from `src/shared/design-tokens.scss`:
 - Delete selected with confirmation
 
 ### 4. Delete Conversations
-- Individual delete with confirmation
-- Bulk delete with count confirmation
-- Delete all with extra confirmation
+- Individual delete with confirmation modal
+- Bulk delete with count confirmation modal
+- Delete all with window.confirm (uses `hardResetAllConversations()`)
+
+## Browser Event Handlers Integration
+
+The conversations panel includes lightweight browser event handlers for play and copy functionality without requiring the full ChatService:
+
+### BrowserEventHandlers Features
+```javascript
+// Handles both direct content and messageId lookup
+this.eventBus.emit(EVENTS.CHAT.COPY_MESSAGE, {
+    messageId: 'msg-123',
+    content: 'Direct text content',  // Optional: bypasses lookup
+    source: 'conversation-modal'
+});
+
+this.eventBus.emit(EVENTS.CHAT.PLAY_AUDIO, {
+    messageId: 'msg-123', 
+    content: 'Text to speak',       // Optional: bypasses lookup
+    action: 'play',                 // or 'stop'
+    source: 'conversation-modal'
+});
+```
+
+### Clipboard Support
+- Primary: Modern `navigator.clipboard.writeText()`
+- Fallback: Legacy `document.execCommand('copy')`
+- Error handling with user feedback
+
+### Text-to-Speech Support  
+- Uses Web Speech API (`speechSynthesis`)
+- Configurable voice settings (rate, pitch, volume)
+- Start/stop/error event emission
+- Graceful degradation when not supported
 
 ## Performance Considerations
 

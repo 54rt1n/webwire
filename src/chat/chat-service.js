@@ -6,12 +6,9 @@ import { WebChatPanel } from './chat-panel.js';
 import { PageUtils } from '../js/browser/page-utils.js';
 import { DOMConnector } from '../js/browser/dom-connector.js';
 import { generateMessageId } from '../js/utils/id-generator.js';
-import { buildToolMessages } from './message-utils.js';
 import { MessageBuilder } from './message-builder.js';
 import { ToolExecutor } from './tool-executor.js';
 import { AIResponseHandler } from './ai-response-handler.js';
-import { ClipboardUtil } from '../js/utils/clipboard-util.js';
-import { SpeechUtil } from '../js/utils/speech-util.js';
 import { AIClientFactory } from '../js/ai/ai-client-factory.js';
 import * as analysis from '../js/prompts/analysis-prompt.js';
 import * as timeline from '../js/prompts/timeline-prompt.js';
@@ -52,7 +49,6 @@ export class ChatService extends EventBindableComponent {
         this.messageBuilder = null; // Initialized after stateService is set
         this.toolExecutor = null; // Initialized after stateService is set
         this.responseHandler = null;
-        this.speechUtil = null; // Initialized after stateService is set
 
         this.isStreaming = false;
 
@@ -133,8 +129,6 @@ export class ChatService extends EventBindableComponent {
         this.on(EVENTS.CHAT.TOOL_RESULT, this.handleToolResult);
         this.on(EVENTS.CHAT.TOGGLE_UI_SETTING, this.handleUISettingsToggle);
         this.on(EVENTS.CHAT.CANCEL_STREAM, this.cancelStreamingResponse);
-        this.on(EVENTS.CHAT.COPY_MESSAGE, this.handleCopyMessage);
-        this.on(EVENTS.CHAT.PLAY_AUDIO, this.handlePlayAudio);
         
         // Listen for AI streaming events
         this.on(EVENTS.AI.STREAM_CHUNK, this.handleStreamingChunk);
@@ -168,11 +162,6 @@ export class ChatService extends EventBindableComponent {
         this.messageBuilder = new MessageBuilder(this.pageUtils, encodingOptions);
         console.log('[ChatService] Message builder initialized');
         
-        // Initialize speech utility with voice settings
-        const voiceSettings = this.stateService.ui.getVoiceSettings();
-        this.speechUtil = new SpeechUtil(voiceSettings);
-        console.log('[ChatService] Speech utility initialized');
-
         // Initialize tool executor with dependencies
         this.toolExecutor = new ToolExecutor(
             this.toolParser,
@@ -574,125 +563,6 @@ export class ChatService extends EventBindableComponent {
         this.eventBus.emit(EVENTS.CHAT.UPDATE_SETTINGS, data, { target: EVENT_CONTEXT.BACKGROUND });
         
         console.log('[ChatService] UI settings toggle processed successfully');
-    }
-
-    /**
-     * Handle copy message event
-     */
-    async handleCopyMessage(data) {
-        console.log('[ChatService] Handling copy message request:', data);
-        
-        const { messageId } = data;
-        if (!messageId) {
-            console.warn('[ChatService] No messageId provided for copy request');
-            return;
-        }
-
-        const threadId = this.stateService.conversation.getActiveThreadId();
-        if (!threadId) {
-            console.warn('[ChatService] No active thread found for copy request');
-            return;
-        }
-
-        // Get the message from conversation state
-        const conversation = this.stateService.conversation.getConversation(threadId);
-        if (!conversation || !conversation.messages) {
-            console.warn('[ChatService] No conversation or messages found');
-            return;
-        }
-
-        // Find the message by ID
-        const message = conversation.messages.find(msg => 
-            (msg.messageId && msg.messageId === messageId) || 
-            (msg.id && msg.id === messageId)
-        );
-
-        if (!message) {
-            console.warn('[ChatService] Message not found with ID:', messageId);
-            return;
-        }
-
-        // Copy the message content to clipboard
-        const success = await ClipboardUtil.copyToClipboard(message.content);
-        
-        if (success) {
-            console.log('[ChatService] Message copied to clipboard successfully');
-        } else {
-            console.error('[ChatService] Failed to copy message to clipboard');
-            // Could emit an error event or show a notification here
-        }
-    }
-    
-    /**
-     * Handle play audio event
-     */
-    async handlePlayAudio(data) {
-        console.log('[ChatService] Handling play audio request:', data);
-        
-        const { messageId, action } = data;
-        if (!messageId) {
-            console.warn('[ChatService] No messageId provided for play audio request');
-            return;
-        }
-        
-        if (action === 'stop') {
-            // Stop any ongoing speech
-            this.speechUtil.stop();
-            this.panel.updatePlayButton(messageId, 'stopped');
-            return;
-        }
-        
-        if (action === 'pause') {
-            // Pause speech
-            this.speechUtil.pause();
-            this.panel.updatePlayButton(messageId, 'paused');
-            return;
-        }
-        
-        if (action === 'resume') {
-            // Resume speech
-            this.speechUtil.resume();
-            this.panel.updatePlayButton(messageId, 'playing');
-            return;
-        }
-        
-        // Get the message content
-        const threadId = this.stateService.conversation.getActiveThreadId();
-        if (!threadId) {
-            console.warn('[ChatService] No active thread found for play audio request');
-            return;
-        }
-        
-        const conversation = this.stateService.conversation.getConversation(threadId);
-        if (!conversation || !conversation.messages) {
-            console.warn('[ChatService] No conversation or messages found');
-            return;
-        }
-        
-        const message = conversation.messages.find(msg => 
-            (msg.messageId && msg.messageId === messageId) || 
-            (msg.id && msg.id === messageId)
-        );
-        
-        if (!message) {
-            console.warn('[ChatService] Message not found with ID:', messageId);
-            return;
-        }
-        
-        // Update voice settings if they've changed
-        const voiceSettings = this.stateService.ui.getVoiceSettings();
-        this.speechUtil.updateConfig(voiceSettings);
-        
-        // Start speaking with UI feedback
-        this.panel.updatePlayButton(messageId, 'playing');
-        
-        try {
-            await this.speechUtil.speak(message.content);
-            this.panel.updatePlayButton(messageId, 'stopped');
-        } catch (error) {
-            console.error('[ChatService] Speech synthesis error:', error);
-            this.panel.updatePlayButton(messageId, 'stopped');
-        }
     }
 
     /**
@@ -1177,13 +1047,7 @@ export class ChatService extends EventBindableComponent {
         if (this.responseHandler) {
             this.responseHandler.cancelStreaming();
         }
-        
-        // Clean up speech utility
-        if (this.speechUtil) {
-            this.speechUtil.destroy();
-            this.speechUtil = null;
-        }
-        
+
         if (this.panel) {
             this.panel.destroy();
         }

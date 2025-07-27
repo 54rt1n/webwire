@@ -21,7 +21,7 @@ Note: This project uses both Webpack (primary) for Chrome extension and Vite for
 
 ## Architecture Overview
 
-WebWire is a Chrome extension providing AI-powered web page analysis with Model Context Protocol (MCP) tool integration. The codebase is ~20k lines with sophisticated architecture across 77 files in 21 directories.
+WebWire is a Chrome extension providing AI-powered web page analysis with Model Context Protocol (MCP) tool integration. The codebase is ~23k lines with sophisticated architecture across 75 JavaScript files in 28 directories.
 
 ### Primary Extension Structure
 
@@ -32,6 +32,9 @@ WebWire is a Chrome extension providing AI-powered web page analysis with Model 
 - `src/options/` - Settings and configuration pages
 - `src/mcp/` - MCP status panel and tool management interface
 - `src/mcp_test/` - MCP testing interface
+- `src/conversations/` - Conversation history management interface
+- `src/shared/` - Shared styles and design tokens
+- `src/tokenizers/` - Tokenizer data files for various AI models
 
 ### Core JavaScript Architecture (`src/js/`)
 
@@ -52,6 +55,7 @@ WebWire is a Chrome extension providing AI-powered web page analysis with Model 
   - `aim-state.js` - AIM-specific state (personas, workspace)
   - `stash-state.js` - Document stashing functionality
   - `disk-state.js` - Persistent storage coordination
+  - `tab-state.js` - Per-tab state management
 
 **Storage System (`storage/`):**
 - `storage-manager.js` - Central storage coordination
@@ -103,6 +107,7 @@ WebWire is a Chrome extension providing AI-powered web page analysis with Model 
 - `chat-renderer.js` - HTML generation and DOM manipulation
 - `message-utils.js` - Message formatting and processing
 - `chat-constants.js` - Chat-related constants
+- `ai-response-handler.js` - Streaming AI response processing
 - `chat.scss` - Chat styling (SCSS)
 
 ### UI Interfaces
@@ -121,6 +126,17 @@ WebWire is a Chrome extension providing AI-powered web page analysis with Model 
 **Popup (`src/popup/`):**
 - Quick access interface
 - Status display
+
+**Conversations Management (`src/conversations/`):**
+- Browse and manage conversation history
+- View full conversation details with messages and tool calls
+- Bulk operations (export, delete)
+- Set active/complete conversations
+
+**Shared Resources (`src/shared/`):**
+- `design-tokens.scss` - Design system tokens
+- `common.scss` - Common styles
+- `global.scss` - Global styles
 
 ## Key Design Patterns
 

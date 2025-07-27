@@ -66,6 +66,7 @@ export class ConversationModal extends EventBindableComponent {
         this.isOpen = true;
         this._createModal(conversationData);
         this._attachEventListeners();
+        this._attachMessageActionListeners();
         
         // Add to DOM and show
         document.body.appendChild(this.modal);
@@ -185,12 +186,31 @@ export class ConversationModal extends EventBindableComponent {
         const toolMessages = buildToolMessages(message.toolCalls, message.toolResults);
         const hasToolCalls = toolMessages && toolMessages.length > 0;
         const hasThinking = message.think && message.think.trim();
+        const messageId = message.messageId || message.id || `msg-${Date.now()}-${Math.random()}`;
+
+        // Add action buttons for all messages (both user and assistant)
+        const actionButtons = `
+            <div class="conversation-message-actions">
+                <button class="conversation-play-button" data-message-id="${messageId}" data-content="${this._escapeAttribute(message.content)}" title="Play message">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polygon points="5 3 19 12 5 21 5 3"/>
+                    </svg>
+                </button>
+                <button class="conversation-copy-button" data-message-id="${messageId}" data-content="${this._escapeAttribute(message.content)}" title="Copy to clipboard">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+                        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+                    </svg>
+                </button>
+            </div>
+        `;
 
         return `
-            <div class="conversation-message ${message.role}">
+            <div class="conversation-message ${message.role}" data-message-id="${messageId}">
                 <div class="conversation-message-header">
                     <span class="conversation-message-role">${message.role}</span>
                     <span class="conversation-message-timestamp">${timestamp}</span>
+                    ${actionButtons}
                 </div>
                 <div class="conversation-message-content">
                     ${this._formatMessageContent(message.content)}
@@ -508,5 +528,141 @@ export class ConversationModal extends EventBindableComponent {
         const div = document.createElement('div');
         div.textContent = text;
         return div.innerHTML;
+    }
+
+    /**
+     * Escapes content for use in HTML attributes
+     * @param {string} str - String to escape
+     * @returns {string} Escaped string for attributes
+     * @private
+     */
+    _escapeAttribute(str) {
+        if (!str) return '';
+        return str.replace(/"/g, '&quot;')
+                  .replace(/'/g, '&#39;')
+                  .replace(/</g, '&lt;')
+                  .replace(/>/g, '&gt;')
+                  .replace(/&/g, '&amp;');
+    }
+
+    /**
+     * Attaches event listeners for message action buttons (play/copy)
+     * @private
+     */
+    _attachMessageActionListeners() {
+        if (!this.modal) return;
+        
+        // Handle play button clicks
+        const playButtons = this.modal.querySelectorAll('.conversation-play-button');
+        playButtons.forEach(button => {
+            const handler = async (e) => {
+                e.stopPropagation();
+                await this._handlePlayMessage(button);
+            };
+            button.addEventListener('click', handler);
+            this.eventListeners.push({ element: button, event: 'click', handler });
+        });
+        
+        // Handle copy button clicks
+        const copyButtons = this.modal.querySelectorAll('.conversation-copy-button');
+        copyButtons.forEach(button => {
+            const handler = async (e) => {
+                e.stopPropagation();
+                await this._handleCopyMessage(button);
+            };
+            button.addEventListener('click', handler);
+            this.eventListeners.push({ element: button, event: 'click', handler });
+        });
+    }
+
+    /**
+     * Handles play button click
+     * @param {HTMLElement} button - The play button element
+     * @private
+     */
+    async _handlePlayMessage(button) {
+        const messageContent = button.dataset.content;
+        const messageId = button.dataset.messageId;
+        
+        if (!messageContent) {
+            console.warn('[ConversationModal] No content found for play button');
+            return;
+        }
+        
+        // Visual feedback - start playing
+        button.classList.add('playing');
+        
+        try {
+            // Emit async event to browser event handlers
+            if (this.eventBus) {
+                const result = await this.eventBus.emitAsync(EVENTS.CHAT.PLAY_AUDIO, { 
+                    messageId,
+                    content: messageContent,
+                    source: 'conversation-modal',
+                    action: 'play'
+                });
+                
+                // Success - result contains { success: true, message: ... }
+                console.log('[ConversationModal] Audio playback completed:', result.message);
+            }
+        } catch (error) {
+            // Handler threw an error
+            console.error('[ConversationModal] Audio playback failed:', error.message);
+            // Could show user error feedback here
+        } finally {
+            // Remove playing state
+            button.classList.remove('playing');
+        }
+    }
+
+    /**
+     * Handles copy button click
+     * @param {HTMLElement} button - The copy button element
+     * @private
+     */
+    async _handleCopyMessage(button) {
+        const messageContent = button.dataset.content;
+        const messageId = button.dataset.messageId;
+        
+        if (!messageContent) {
+            console.warn('[ConversationModal] No content found for copy button');
+            return;
+        }
+        
+        // Store original HTML for restoration
+        const originalHTML = button.innerHTML;
+        
+        try {
+            // Emit async event to browser event handlers
+            if (this.eventBus) {
+                const result = await this.eventBus.emitAsync(EVENTS.CHAT.COPY_MESSAGE, { 
+                    messageId,
+                    content: messageContent,
+                    source: 'conversation-modal' 
+                });
+                
+                // Success visual feedback - change icon briefly
+                button.innerHTML = '✓';
+                button.classList.add('copied');
+                
+                setTimeout(() => {
+                    button.innerHTML = originalHTML;
+                    button.classList.remove('copied');
+                }, 2000);
+                
+                console.log('[ConversationModal] Message copied successfully:', result.message);
+            }
+        } catch (error) {
+            // Handler threw an error - show error feedback
+            button.innerHTML = '✗';
+            button.classList.add('error');
+            
+            setTimeout(() => {
+                button.innerHTML = originalHTML;
+                button.classList.remove('error');
+            }, 2000);
+            
+            console.error('[ConversationModal] Failed to copy message:', error.message);
+        }
     }
 }

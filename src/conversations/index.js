@@ -3,6 +3,7 @@ import { EventBindableComponent } from '../js/core/event-bindable-panel.js';
 import { ConversationsPanel } from './panel.js';
 import { WebWireClientCore } from '../js/client/webwire-client-core.js';
 import { PanelEventHandlers } from '../js/client/panel-event-handlers.js';
+import { BrowserEventHandlers } from '../js/client/browser-event-handlers.js';
 import { EventBus } from '../js/core/event-bus.js';
 import { ConversationModal } from './components/conversation-modal.js';
 
@@ -18,7 +19,7 @@ class ConversationsPanelApp extends EventBindableComponent {
         this.core = new WebWireClientCore(this.eventBus);
         this.panelEventHandlers = null;
         this.panel = new ConversationsPanel(this.eventBus);
-        this.conversationModal = new ConversationModal(this.core.stateService, this.eventBus);
+        this.conversationModal = null;
         
         this.setupEventListeners();
     }
@@ -32,6 +33,12 @@ class ConversationsPanelApp extends EventBindableComponent {
         await this.core.initialize();
         this.panelEventHandlers = new PanelEventHandlers(this.core);
         this.panelEventHandlers.setupEventListeners();
+        
+        // Initialize browser event handlers for play/copy functionality
+        this.browserEventHandlers = new BrowserEventHandlers(this.eventBus, this.core.stateService);
+
+        // Create conversation modal after core is initialized
+        this.conversationModal = new ConversationModal(this.core.stateService, this.eventBus);
 
         // Set up state service for conversations management
         if (this.core.stateService) {
@@ -42,11 +49,11 @@ class ConversationsPanelApp extends EventBindableComponent {
 
         // Setup UI event handlers
         const handlers = {
-            onDeleteConversation: this.deleteConversation,
-            onViewConversation: this.viewConversation,
-            onSetActiveConversation: this.setActiveConversation,
-            onRefreshConversations: this.refreshConversations,
-            onCreateNewConversation: this.createNewConversation,
+            onDeleteConversation: this.deleteConversation.bind(this),
+            onViewConversation: this.viewConversation.bind(this),
+            onSetActiveConversation: this.setActiveConversation.bind(this),
+            onRefreshConversations: this.refreshConversations.bind(this),
+            onCreateNewConversation: this.createNewConversation.bind(this),
         };
         this.panel.initialize(handlers);
 
@@ -146,7 +153,7 @@ class ConversationsPanelApp extends EventBindableComponent {
      * @param {Object} conversation - The conversation metadata to view
      */
     async viewConversation(conversation) {
-        console.log(`[ConversationsApp] Viewing conversation ${conversation.threadId}...`);
+        console.log(`[ConversationsApp] Viewing conversation ${conversation.threadId}...`, this);
         
         // Open the conversation modal
         this.conversationModal.open(
@@ -245,4 +252,11 @@ class ConversationsPanelApp extends EventBindableComponent {
 document.addEventListener('DOMContentLoaded', () => {
     const app = new ConversationsPanelApp();
     app.initialize();
+    
+    // Clean up on page unload
+    window.addEventListener('beforeunload', () => {
+        if (app.browserEventHandlers) {
+            app.browserEventHandlers.cleanup();
+        }
+    });
 });

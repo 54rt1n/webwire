@@ -429,6 +429,21 @@ export class ConversationStatePlugin {
     }
 
     /**
+     * Get message by messageId
+     * @param {string} messageId
+     * @returns {Object|null} The message, or null if not found
+     */
+    getMessageById(messageId) {
+        const state = this._safeConversationState();
+        const threadId = this.getThreadForMessage(messageId);
+        if (!state.history[threadId]) {
+            console.error('[ConversationState] Conversation not found:', threadId, state);
+            throw new Error(`Conversation ${threadId} not found`);
+        }
+        return state.history[threadId].find(m => m.messageId === messageId);
+    }
+
+    /**
      * Create a new conversation
      * @param {Object} [options={}] - Options for conversation creation
      * @returns {string} The thread ID

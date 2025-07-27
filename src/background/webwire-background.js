@@ -777,7 +777,7 @@ class WebWireBackground {
             // Get state from our state service
             let state = {
                 settings: this.stateService.state.settings || {},
-                conversation: this.stateService.state.conversation || {},
+                conversation: this.stateService.state.conversation || {}, // TODO: tabs don't need all conversations
                 tabs: {
                     default: this.stateService.state.tabs.default,
                     [tabId]: tabState // The client just needs it's own tab state

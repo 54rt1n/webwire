@@ -948,7 +948,7 @@ export class WebChatPanel {
     /**
      * Handle copy message button click
      */
-    handleCopyMessage(button) {
+    async handleCopyMessage(button) {
         const messageId = button.dataset.messageId;
         
         if (!messageId) {
@@ -959,7 +959,7 @@ export class WebChatPanel {
         console.log('[WebChatPanel] Copy message request for ID:', messageId);
         
         // Emit event to chat service to handle the actual copying
-        this.eventBus.emit(EVENTS.CHAT.COPY_MESSAGE, { messageId });
+        await this.eventBus.emitAsync(EVENTS.CHAT.COPY_MESSAGE, { messageId });
         
         // Show visual feedback on button
         this.showCopyFeedback(button);
@@ -968,7 +968,7 @@ export class WebChatPanel {
     /**
      * Handle play message button click
      */
-    handlePlayMessage(button) {
+    async handlePlayMessage(button) {
         const messageId = button.dataset.messageId;
         
         if (!messageId) {
@@ -989,11 +989,51 @@ export class WebChatPanel {
         
         console.log('[WebChatPanel] Play audio request for message:', messageId, 'action:', action);
         
-        // Emit event to chat service
-        this.eventBus.emit(EVENTS.CHAT.PLAY_AUDIO, { 
-            messageId, 
-            action 
-        });
+        try {
+            const onComplete = () => {
+                console.log('[WebChatPanel] Speech completed successfully');
+                this.updatePlayButton(messageId, 'play');
+            }
+
+            const onError = (error) => {
+                console.error('[WebChatPanel] Failed to play audio:', error);
+                this.updatePlayButton(messageId, 'play');
+            }
+            // Emit event to browser event handlers
+            await this.eventBus.emitAsync(EVENTS.CHAT.PLAY_AUDIO, { 
+                messageId, 
+                action 
+            }, {
+                onComplete,
+                onError
+            });
+            
+            // Update button state based on successful action
+            let newState;
+            switch (action) {
+                case 'play':
+                    newState = 'playing';
+                    break;
+                case 'pause':
+                    newState = 'paused';
+                    break;
+                case 'resume':
+                    newState = 'playing';
+                    break;
+                case 'stop':
+                    newState = 'stopped';
+                    break;
+                default:
+                    newState = 'stopped';
+            }
+            
+            this.updatePlayButton(messageId, newState);
+            
+        } catch (error) {
+            console.error('[WebChatPanel] Play audio failed:', error);
+            // Reset button to stopped state on error
+            this.updatePlayButton(messageId, 'stopped');
+        }
     }
     
     /**
