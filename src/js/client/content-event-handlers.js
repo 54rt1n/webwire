@@ -153,6 +153,7 @@ export class ContentEventHandlers extends EventBindableComponent {
         this.onAsync(EVENTS.CHAT.CANCEL_TOOL, this.handleCancelTool);
         this.onAsync(EVENTS.CHAT.EXECUTE_TOOL, this.handleExecuteTool);
         this.onAsync(EVENTS.CHAT.SAVE_MESSAGE, this.handleSaveMessage);
+        this.onAsync(EVENTS.CHAT.UPDATE_MESSAGE, this.handleUpdateMessage);
         this.onAsync(EVENTS.CHAT.SAVE_PANEL_VISIBILITY, this.handleSavePanelVisibility);
         this.onAsync(EVENTS.CHAT.END_CONVERSATION, this.handleEndConversation);
         this.onAsync(EVENTS.CHAT.UPDATE_SETTINGS, this.handleUpdateSettings);
@@ -291,6 +292,24 @@ export class ContentEventHandlers extends EventBindableComponent {
         } catch (error) {
             console.error('[ContentEventHandlers] Failed to save message:', error);
             this.eventBus.emit(EVENTS.UI.THREAD_SAVED, { data, status: 'error', error: error.message });
+            return { success: false, error: error.message };
+        }
+    }
+
+    /**
+     * Handle update message request from ChatService
+     */
+    async handleUpdateMessage(data) {
+        try {
+            const response = await this.dispatcher.dispatch(
+                BACKGROUND_ACTIONS.UPDATE_MESSAGE,
+                data,
+                { target: 'background', tabId: this.stateService.ui.getTabId() }
+            );
+
+            return response;
+        } catch (error) {
+            console.error('[ContentEventHandlers] Failed to update message:', error);
             return { success: false, error: error.message };
         }
     }

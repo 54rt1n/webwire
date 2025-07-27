@@ -211,6 +211,21 @@ class WebWireBackground {
             return { success: true };
         });
 
+        this.eventBus.onAsync(BACKGROUND_ACTIONS.UPDATE_MESSAGE, async (data, options) => {
+            this.stateService.conversation.markMessage(
+                data.threadId,
+                data.messageId,
+                data.status
+            );
+            
+            // Auto-save state
+            await this.stateService.disk.saveToStorage();
+            
+            console.log('[WebWireBackground] UPDATE_MESSAGE - marked message', data);
+            
+            return { success: true };
+        });
+
         this.eventBus.onAsync(BACKGROUND_ACTIONS.SAVE_PANEL_VISIBILITY, async (data, options) => {
             await this.savePanelVisibilityState(data.visible);
             return { success: true };

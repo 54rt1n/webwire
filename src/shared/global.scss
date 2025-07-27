@@ -602,6 +602,33 @@
         cursor: not-allowed;
       }
     }
+
+    .ww-drawer-actions .ww-back-button {
+      align-self: center;
+      margin-top: var(--space-2);
+      padding: 2px 12px;
+      font-size: var(--font-size-xs);
+      color: var(--color-gray-600);
+      background: var(--color-gray-100);
+      border: none;
+      border-radius: 12px;
+      cursor: pointer;
+      transition: all var(--transition-normal);
+      font-weight: 500;
+      width: auto;
+      height: auto;
+      margin-left: var(--space-2);
+      
+      &:hover:not(:disabled) {
+        background: var(--color-gray-200);
+        color: var(--color-gray-700);
+      }
+      
+      &:disabled {
+        opacity: 0.4;
+        cursor: not-allowed;
+      }
+    }
     
     .ww-wrapper {
       display: flex;

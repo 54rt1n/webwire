@@ -94,6 +94,7 @@ export class WebChatPanel {
             mcpCheckbox: this.container.querySelector('.ww-mcp-checkbox'),
             browserToolsCheckbox: this.container.querySelector('.ww-browser-tools-checkbox'),
             autoExecuteCheckbox: this.container.querySelector('.ww-auto-execute-checkbox'),
+            backBtn: this.container.querySelector('.ww-back-button'),
             retryBtn: this.container.querySelector('.ww-retry-button'),
             drawerToggle: this.container.querySelector('.ww-drawer-toggle'),
             drawerContent: this.container.querySelector('.ww-drawer-content'),
@@ -248,6 +249,10 @@ export class WebChatPanel {
 
         this.elements.retryBtn?.addEventListener('click', () => {
             this.handleReplayLastTurn();
+        });
+
+        this.elements.backBtn?.addEventListener('click', () => {
+            this.handleBackButton();
         });
     }
 
@@ -427,11 +432,12 @@ export class WebChatPanel {
             );
         }
         
-        // Add copy button to message actions
+        // Add play and copy buttons to message actions
         const messageActions = messageEl.querySelector('.ww-message-actions');
         if (messageActions) {
             const timeEl = messageActions.querySelector('.ww-time');
             if (timeEl) {
+                timeEl.insertAdjacentHTML('beforebegin', this.renderer.createPlayButtonHTML(messageId));
                 timeEl.insertAdjacentHTML('beforebegin', this.renderer.createCopyButtonHTML(messageId));
             }
         }
@@ -440,6 +446,14 @@ export class WebChatPanel {
         
         // Hide cancel button when streaming is complete
         this.hideCancelButton();
+    }
+
+    /**
+     * Remove the last message from the panel
+     */
+    removeLastMessage() {
+        const lastMessage = this.elements.chatContent?.lastElementChild;
+        lastMessage?.remove();
     }
 
     /**
@@ -544,14 +558,22 @@ export class WebChatPanel {
             this.updateConversationIdDisplay(conversation.threadId);
             this.updateReparseButton(false);
             this.updateRetryButton(false);
+        this.updateBackButton(false);
+            this.updateBackButton(false);
             return;
         }
 
+        let userMessage = false;
+
         conversation.messages.forEach(message => {
             if (message.role === 'system') return;
+
+            if (message.role === 'user') {
+                userMessage = true;
+            }
             
-            // Skip messages marked as retried
-            if (message.status === 'retried') return;
+            // Skip messages marked as retried or dropped
+            if (message.status === 'retried' || message.status === 'dropped') return;
 
             const toolMessages = buildToolMessages(message.toolCalls, message.toolResults);
             console.log('[WebChatPanel] displayConversation toolMessages:', message.role, toolMessages);
@@ -572,7 +594,9 @@ export class WebChatPanel {
 
         this.updateConversationIdDisplay(conversation.threadId);
         this.updateReparseButton(conversation.messages.length > 0);
-        this.updateRetryButton(conversation.messages.length > 0);
+        this.updateRetryButton(userMessage);
+        this.updateBackButton(userMessage);
+        this.scrollToBottom();
     }
 
     /**
@@ -587,11 +611,17 @@ export class WebChatPanel {
         this.clearMessages();
         this.currentThreadId = conversation.threadId;
 
+        let userMessage = false;
+
         conversation.messages.forEach(message => {
             if (message.role === 'system') return;
             
-            // Skip messages marked as retried
-            if (message.status === 'retried') return;
+            if (message.role === 'user') {
+                userMessage = true;
+            }
+            
+            // Skip messages marked as retried or dropped
+            if (message.status === 'retried' || message.status === 'dropped') return;
             
             const toolMessages = buildToolMessages(message.toolCalls, message.toolResults);
             console.log('[WebChatPanel] loadConversation:', toolMessages);
@@ -613,7 +643,8 @@ export class WebChatPanel {
 
         this.updateConversationIdDisplay(conversation.threadId);
         this.updateReparseButton(conversation.messages.length > 0);
-        this.updateRetryButton(conversation.messages.length > 0);
+        this.updateRetryButton(userMessage);
+        this.updateBackButton(userMessage);
         this.scrollToBottom();
     }
 
@@ -641,6 +672,18 @@ export class WebChatPanel {
     removeWelcomeMessage() {
         const welcome = this.elements.chatContent?.querySelector('.ww-welcome-message');
         welcome?.remove();
+    }
+
+    /**
+     * Clear thinking messages from the panel
+     */
+    removeThinkingMessages() {
+        // Also check for any "thinking" messages that might be stuck in the UI
+        const thinkingMessages = this.container?.querySelectorAll('.ww-thinking');
+        if (thinkingMessages && thinkingMessages.length > 0) {
+            console.log('[ChatService] Found thinking messages during retry, removing them');
+            thinkingMessages.forEach(msg => msg.remove());
+        }
     }
 
     /**
@@ -716,6 +759,9 @@ export class WebChatPanel {
             this.elements.cancelBtn.style.display = 'flex';
             this.elements.sendBtn.style.display = 'none';
         }
+        // Disable retry button during streaming
+        this.updateRetryButton(false);
+        this.updateBackButton(false);
     }
     
     hideCancelButton() {
@@ -723,6 +769,9 @@ export class WebChatPanel {
             this.elements.cancelBtn.style.display = 'none';
             this.elements.sendBtn.style.display = 'flex';
         }
+        // Re-enable retry button if there's a user message to retry
+        this.updateRetryButton(true);
+        this.updateBackButton(true);
     }
 
     updateReparseButton(visible) {
@@ -735,6 +784,12 @@ export class WebChatPanel {
     updateRetryButton(visible) {
         if (this.elements.retryBtn) {
             this.elements.retryBtn.disabled = !visible;
+        }
+    }
+
+    updateBackButton(visible) {
+        if (this.elements.backBtn) {
+            this.elements.backBtn.disabled = !visible;
         }
     }
 
@@ -1005,12 +1060,18 @@ export class WebChatPanel {
         this.clearMessages();
         this.updateConversationIdDisplay(null);
         this.updateRetryButton(false);
+        this.updateBackButton(false);
         this.eventBus.emit(EVENTS.CHAT.START_NEW_CONVERSATION, {});
     }
 
     handleReplayLastTurn() {
         console.log('[WebChatPanel] Replay last turn requested');
         this.eventBus.emit(EVENTS.CHAT.REPLAY_LAST_TURN, {});
+    }
+
+    handleBackButton() {
+        console.log('[WebChatPanel] Back button clicked');
+        this.eventBus.emit(EVENTS.CHAT.BACK_BUTTON, {});
     }
 
     handleResync() {

@@ -535,6 +535,22 @@ export class ConversationStatePlugin {
     }
 
     /**
+     * Pop a message from a conversation
+     * @param {string} threadId
+     * @returns {Object|null} The popped message, or null if none found
+     */
+    popMessage(threadId) {
+        const state = this._safeConversationState();
+
+        if (!state.history[threadId]) {
+            console.error('[ConversationState] Conversation not found:', threadId, state);
+            throw new Error(`Conversation ${threadId} not found`);
+        }
+        
+        return state.history[threadId].pop();
+    }
+
+    /**
      * Update tool calls for a specific message
      * @param {string} messageId
      * @param {array} toolCalls
@@ -677,11 +693,12 @@ export class ConversationStatePlugin {
     }
 
     /**
-     * Marks a message as retried by setting its status.
+     * Marks a message as a specific status
      * @param {string} threadId - The thread ID
      * @param {string} messageId - The message ID to mark as retried
+     * @param {string} status - The status to mark the message as
      */
-    markMessageAsRetried(threadId, messageId) {
+    markMessage(threadId, messageId, status) {
         const state = this._safeConversationState();
         
         if (!state.history[threadId]) {
@@ -693,8 +710,8 @@ export class ConversationStatePlugin {
         const message = messages.find(m => m.messageId === messageId);
         
         if (message) {
-            message.status = 'retried';
-            console.log(`[ConversationState] Marked message ${messageId} as retried`);
+            message.status = status;
+            console.log(`[ConversationState] Marked message ${messageId} as ${status}`);
             this.eventBus.emit(EVENTS.CONVERSATION.UPDATED, { threadId });
         } else {
             console.warn(`[ConversationState] Message ${messageId} not found in thread ${threadId}`);

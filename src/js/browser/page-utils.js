@@ -10,7 +10,6 @@
 export class SemanticPageExtractor {
     constructor() {
         this.config = {
-            maxTextLength: 50000, // Much higher limit - let LLM handle large content
             maxInteractiveElements: 200,
         };
         // Selectors for truly non-content elements (only technical/UI elements)
@@ -21,7 +20,7 @@ export class SemanticPageExtractor {
      * Main extraction method. Produces a structured object representing the page.
      * @returns {Object} A structured representation of the page.
      */
-    extract({ includePageNavigation = false, maxTextTokens = null } = {}) {
+    extract({ includePageNavigation = false } = {}) {
         let extractedData = {
             url: window.location.href,
             title: document.title,
@@ -37,15 +36,7 @@ export class SemanticPageExtractor {
             extractedData.interactiveElements = this.extractInteractiveElements();
         }
 
-        if (maxTextTokens) {
-            const dataTokens = JSON.stringify(extractedData).split(' ').length * 1.75;
-            if (dataTokens < maxTextTokens) {
-                console.log('[SemanticPageExtractor] Extracting main content with maxTextTokens:', maxTextTokens - dataTokens);
-                extractedData.mainContent = this.extractMainContent({ maxTextTokens: maxTextTokens - dataTokens });
-            }
-        } else {
-            extractedData.mainContent = this.extractMainContent();
-        }
+        extractedData.mainContent = this.extractMainContent();
 
         console.log('[SemanticPageExtractor] Extracted structured content:', extractedData);
 
@@ -57,7 +48,7 @@ export class SemanticPageExtractor {
      * Uses a comprehensive approach to capture meaningful content.
      * @returns {string} Cleaned, structurally-preserved text content.
      */
-    extractMainContent({ maxTextTokens = null } = {}) {
+    extractMainContent({ } = {}) {
         // Create a copy of the document to manipulate
         const tempDoc = document.cloneNode(true);
         
@@ -69,15 +60,7 @@ export class SemanticPageExtractor {
         const text = tempDoc.body ? tempDoc.body.innerText : '';
         
         // Clean up whitespace and limit length
-        const cleanedText = text.replace(/\s+/g, ' ').trim();
-        if (maxTextTokens) {
-            const words = cleanedText.split(' ');
-            const tokens = words.length * 0.75;
-            if (tokens > maxTextTokens) {
-                const wordsToKeep = Math.floor(maxTextTokens / 0.75);
-                cleanedText = words.slice(0, wordsToKeep).join(' ');
-            }
-        }
+        let cleanedText = text.replace(/\s+/g, ' ').trim();
             
         return cleanedText;
     }

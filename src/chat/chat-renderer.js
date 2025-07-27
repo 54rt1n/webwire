@@ -296,6 +296,7 @@ export class ChatUIRenderer {
                         </div>
                         <div class="ww-drawer-actions">
                             <button class="ww-reparse-button" title="Reparse with tools">Reparse</button>
+                            <button class="ww-back-button" title="Mark last message as dropped">Back</button>
                             <button class="ww-retry-button" title="Retry last message">Retry</button>
                         </div>
                     </div>
@@ -602,6 +603,12 @@ export class ChatUIRenderer {
     createCopyButtonHTML(messageId) {
         return `<button class="ww-copy-button" data-message-id="${messageId}" title="Copy message">
             ${this.templates.icons.copy}
+        </button>`;
+    }
+
+    createPlayButtonHTML(messageId) {
+        return `<button class="ww-play-button" data-message-id="${messageId}" title="Play message">
+            ${this.templates.icons.play}
         </button>`;
     }
 

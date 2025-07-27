@@ -14,7 +14,7 @@ export class TabIndicator extends EventBindableComponent {
         this.animationFrame = 0;
         
         // Animation frames for the streaming indicator
-        this.animationFrames = ['(~__)', '(_~_)', '(__~)'];
+        this.animationFrames = ['(~__)', '(_~_)', '(__~)', '(_~_)'];
         
         this.setupEventListeners();
     }

@@ -128,6 +128,7 @@ export class ChatService extends EventBindableComponent {
         this.on(EVENTS.CHAT.CONVERSATION_UPDATED, this.handleConversationUpdated);
         this.on(EVENTS.CHAT.START_NEW_CONVERSATION, this.handleNewConversationRequest);
         this.on(EVENTS.CHAT.REPLAY_LAST_TURN, this.handleReplayLastTurn);
+        this.on(EVENTS.CHAT.BACK_BUTTON, this.handleBackButton);
         this.on(EVENTS.CHAT.REPARSE_MESSAGE, this.handleReparseMessage);
         this.on(EVENTS.CHAT.TOOL_RESULT, this.handleToolResult);
         this.on(EVENTS.CHAT.TOGGLE_UI_SETTING, this.handleUISettingsToggle);
@@ -269,11 +270,11 @@ export class ChatService extends EventBindableComponent {
      *  This is one of the main entry points for the chat service.
      *  Be very careful with modifying this function.
      */
-    async handleUserMessage(payload, { autoExecuteTools = false,
-        forcePageContent = false, customSystemPrompt = null } = {}) {
+    async handleUserMessage(payload, { autoExecuteTools = false, silent = false,
+        forcePageContent = false, customSystemPrompt = null, isRetry = false } = {}) {
         console.log('[ChatService] Handling user message:', payload);
         
-        const { message, silent = false } = payload;
+        const { message } = payload;
         
         let aiClient;
         try {
@@ -284,7 +285,7 @@ export class ChatService extends EventBindableComponent {
             return;
         }
 
-        this.panel.removeErrorMessages();
+        this.panel.removeThinkingMessages();
 
         const threadId = this.stateService.conversation.getActiveThreadId();
         const location = typeof window !== 'undefined' ? window.location.href : undefined;
@@ -410,6 +411,7 @@ export class ChatService extends EventBindableComponent {
                     ...persona,
                     url: location,
                     title: document.title,
+                    isRetry: isRetry,
                 }}, { target: EVENT_CONTEXT.BACKGROUND }
             );
 
@@ -453,6 +455,7 @@ export class ChatService extends EventBindableComponent {
                 }
                 // Re-enable retry button after cancellation
                 this.panel.updateRetryButton(true);
+                this.panel.updateBackButton(true);
                 return; // Don't show error for cancelled requests
             }
             
@@ -757,29 +760,69 @@ export class ChatService extends EventBindableComponent {
             return;
         }
 
-        // Mark the last assistant message as 'retried' instead of removing it
-        const conversation = this.stateService.conversation.getConversation(threadId);
-        if (conversation && conversation.messages && conversation.messages.length > 0) {
-            const lastMessage = conversation.messages[conversation.messages.length - 1];
-            if (lastMessage.role === MESSAGE_ROLES.ASSISTANT) {
-                // Mark the message as retried in the state
-                this.stateService.conversation.markMessageAsRetried(threadId, lastMessage.messageId);
-                // Update the panel to hide the retried message
-                if (this.panel.isReady()) {
-                    this.panel.updateConversation(conversation);
-                }
-            }
-        }
-        
-        // Also check for any "thinking" messages that might be stuck in the UI
-        const thinkingMessages = this.panel.container?.querySelectorAll('.ww-thinking');
-        if (thinkingMessages && thinkingMessages.length > 0) {
-            console.log('[ChatService] Found thinking messages during retry, removing them');
-            thinkingMessages.forEach(msg => msg.remove());
+        const metadata = this.stateService.conversation.getConversationMetadata(threadId);
+        if (!metadata) {
+            console.log('[ChatService] No conversation metadata found');
+            this.panel.displayError('No conversation metadata found to replay');
+            return;
         }
 
+        this.stateService.conversation.markMessage(threadId, lastUserMessage.messageId, 'retried');
+
+        // Remove the last message from the panel
+        this.panel.removeLastMessage();
+        
         // Re-send the message through the normal flow
-        await this.handleUserMessage({ message: lastUserMessage.content.trim(), silent: true });
+        await this.handleUserMessage({ message: lastUserMessage.content.trim() }, { silent: true, isRetry: true });
+    }
+
+    /**
+     * Handle back button request event - marks last message as dropped
+     */
+    async handleBackButton() {
+        console.log('[ChatService] Handling back button request');
+
+        const threadId = this.stateService.conversation.getActiveThreadId();
+        if (!threadId) {
+            console.log('[ChatService] No active thread found');
+            this.panel.displayError('No active thread found');
+            return;
+        }
+
+        const metadata = this.stateService.conversation.getConversationMetadata(threadId);
+        if (!metadata) {
+            console.log('[ChatService] No conversation metadata found');
+            this.panel.displayError('No conversation metadata found to mark as dropped');
+            return;
+        }
+
+        // Get the last message from the conversation (could be user or assistant)
+        const lastMessage = this.stateService.conversation.popMessage(threadId);
+        
+        // Mark the last message as dropped using the UPDATE_MESSAGE background action
+        try {
+            const response = await this.emitAsync(EVENTS.CHAT.UPDATE_MESSAGE, {
+                threadId: threadId,
+                messageId: lastMessage?.messageId,
+                status: 'dropped'
+            }, { target: 'background' });
+
+            if (response && response.success) {
+                console.log('[ChatService] Message marked as dropped successfully');
+                // Refresh the conversation display to hide the dropped message
+                const threadId = this.stateService.conversation.getActiveThreadId();
+                const conversation = this.stateService.conversation.getConversation(threadId);
+                if (conversation) {
+                    this.panel.displayConversation(conversation, this.stateService.aim.getAimMessageOptions());
+                }
+            } else {
+                console.error('[ChatService] Failed to mark message as dropped:', response);
+                this.panel.displayError('Failed to mark message as dropped');
+            }
+        } catch (error) {
+            console.error('[ChatService] Error marking message as dropped:', error);
+            this.panel.displayError('Error marking message as dropped');
+        }
     }
 
     /**
