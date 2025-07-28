@@ -639,8 +639,15 @@ export class ChatService extends EventBindableComponent {
 
         this.stateService.conversation.markMessage(threadId, lastUserMessage.messageId, 'retried');
 
-        // Remove the last message from the panel
-        this.panel.removeLastMessage();
+        // Check if the last message in the panel is an AI message before removing
+        const messages = this.stateService.conversation.getConversationMessages(threadId);
+        const lastMessage = messages[messages.length - 1];
+        
+        // Only remove the last message from the panel if it's an AI message
+        // This prevents removing the user message when retry is clicked after using the back button
+        if (lastMessage && lastMessage.role === 'assistant') {
+            this.panel.removeLastMessage();
+        }
         
         // Re-send the message through the normal flow
         await this.handleUserMessage({ message: lastUserMessage.content.trim() }, { silent: true, isRetry: true });

@@ -655,11 +655,12 @@
       resize: none;
       outline: none;
       min-height: 44px;
-      /*max-height: 120px;*/
-      height: 100%;
+      max-height: 120px;
+      height: auto;
       font-family: inherit;
       line-height: 1.4;
       color: var(--color-text-primary);
+      overflow-y: auto;
       
       &::placeholder {
         color: var(--color-text-muted);
