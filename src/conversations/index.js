@@ -6,6 +6,7 @@ import { PanelEventHandlers } from '../js/client/panel-event-handlers.js';
 import { BrowserEventHandlers } from '../js/client/browser-event-handlers.js';
 import { EventBus } from '../js/core/event-bus.js';
 import { ConversationModal } from './components/conversation-modal.js';
+import { AppConfig } from '../js/core/app-config.js';
 
 /**
  * ConversationsPanelApp
@@ -13,10 +14,11 @@ import { ConversationModal } from './components/conversation-modal.js';
  * state management (data/business logic) and the ConversationsPanel (UI/view logic).
  */
 class ConversationsPanelApp extends EventBindableComponent {
-    constructor() {
+    constructor(config) {
         const eventBus = new EventBus({domain: 'conversations', debug: true});
         super(eventBus);
-        this.core = new WebWireClientCore(this.eventBus);
+        this.config = config;
+        this.core = new WebWireClientCore(this.eventBus, config);
         this.panelEventHandlers = null;
         this.panel = new ConversationsPanel(this.eventBus);
         this.conversationModal = null;
@@ -250,7 +252,9 @@ class ConversationsPanelApp extends EventBindableComponent {
 
 // Kick off the application.
 document.addEventListener('DOMContentLoaded', () => {
-    const app = new ConversationsPanelApp();
+    const config = AppConfig.pageFactory('lite');
+    
+    const app = new ConversationsPanelApp(config);
     app.initialize();
     
     // Clean up on page unload

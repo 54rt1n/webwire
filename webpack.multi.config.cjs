@@ -78,7 +78,7 @@ const createConfig = (env, argv, variant) => {
             }
           },
           { from: `./${appDir}/icons`, to: 'icons' },
-          { from: './src/tokenizers', to: 'tokenizers' }
+          { from: './assets/tokenizers', to: 'tokenizers' }
         ]
       }),
       new HtmlWebpackPlugin({

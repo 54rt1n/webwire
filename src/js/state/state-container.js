@@ -111,7 +111,28 @@ export function createInitialState(tabId = undefined) {
 
         stash: {
             // Stash state - persists across browser sessions
-        }
+        },
+
+        /*
+            prompt-id: {
+                buttonIcon: string,
+                buttonText: string,
+                systemPrompt: string,
+                userPrompt: string,
+                features: {
+                    pageContent: boolean,
+                    mcp: boolean,
+                    autoThink: boolean,
+                    noBaseSystemPrompt: boolean,
+                    browserTools: boolean,
+                    autoExecuteTools: boolean,
+                },
+                version: number,
+                created: number,
+                updated: number,
+            }
+        */
+        prompts: {},
     };
 }
 
