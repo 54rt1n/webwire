@@ -346,10 +346,14 @@ class OptionsApp {
             
             // Enhanced validation with visual feedback
             const validationResult = this.validateSettings(settings);
-            if (!validationResult.isValid) {
-                console.log('[OptionsApp] ❌ Validation failed:', validationResult.errors);
+            const panelValidationErrors = this.panel.validateSettings(settings);
+            
+            const allErrors = [...validationResult.errors, ...panelValidationErrors];
+            
+            if (!validationResult.isValid || panelValidationErrors.length > 0) {
+                console.log('[OptionsApp] ❌ Validation failed:', allErrors);
                 this.highlightMissingFields(validationResult.missingFields);
-                this.panel.showStatus(validationResult.message, true);
+                this.panel.showStatus(allErrors.join(' '), true);
                 return;
             }
 

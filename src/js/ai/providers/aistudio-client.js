@@ -10,7 +10,7 @@ export class AIStudioClient extends AbstractAIClient {
     constructor(eventBus, config = {}) {
         super('AIStudioClient', eventBus, config);
 
-        this.baseUrl = 'https://generativelanguage.googleapis.com/v1beta/models';
+        this.baseUrl = 'https://generativelanguage.googleapis.com/v1beta';
         
         // Set default model if not provided
         if (!this.model) {
@@ -50,13 +50,13 @@ export class AIStudioClient extends AbstractAIClient {
 
     /**
      * Build contents array for Gemini API
-     * @param {string} playerTurn 
-     * @param {Array} gameHistory 
+     * @param {string} userTurn 
+     * @param {Array} conversationHistory 
      * @param {string} systemPrompt
      * @param {Object} options - Additional options including maxHistory
      * @returns {Array}
      */
-    buildContents(playerTurn, gameHistory, systemPrompt, { maxHistory = null } = {}) {
+    buildContents(userTurn, conversationHistory, systemPrompt, { maxHistory = null } = {}) {
         const contents = [];
 
         // Add system prompt as first user message (Gemini doesn't have system role)
@@ -71,23 +71,22 @@ export class AIStudioClient extends AbstractAIClient {
             parts: [{ text: "I understand. I'll respond according to the specified format and guidelines." }]
         });
 
-        // Add recent game history - we have to rewrite this to be user model instead of role, content
-        if (gameHistory.length > 0) {
-            // iterate reverse until we hit our maxHistory
-            const itMin = maxHistory ? gameHistory.length - maxHistory : 0;
-            for (let i = gameHistory.length - 1; i >= itMin; i--) {
-                const { role, content } = gameHistory[i];
+        // Add recent conversation history - convert from standard format to Gemini format
+        if (conversationHistory.length > 0) {
+            const historyToAdd = maxHistory ? conversationHistory.slice(-maxHistory) : conversationHistory;
+            
+            for (const message of historyToAdd) {
                 contents.push({
-                    role: role === 'user' ? 'user' : 'model',
-                    parts: [{ text: content }]
+                    role: message.role === 'user' ? 'user' : 'model',
+                    parts: [{ text: message.content }]
                 });
             }
         }
 
-        // Add current player input
+        // Add current user input
         contents.push({
             role: "user",
-            parts: [{ text: playerTurn }]
+            parts: [{ text: userTurn }]
         });
 
         return contents;
@@ -196,27 +195,84 @@ export class AIStudioClient extends AbstractAIClient {
                 const decoded = decoder.decode(value, { stream: true });
                 buffer += decoded;
                 
-                // Gemini uses simple JSON objects separated by newlines
-                const lines = buffer.split('\n');
-                buffer = lines.pop(); // Keep incomplete line in buffer
-                
-                for (const line of lines) {
-                    if (line.trim()) {
-                        try {
-                            const parsed = JSON.parse(line);
-                            // The response can be a single object or an array of them
-                            const chunks = Array.isArray(parsed) ? parsed : [parsed];
-
-                            for (const chunk of chunks) {
-                                const content = this.extractContent(chunk);
-                                if (content) {
-                                    fullResponse += content;
-                                    this.emitStreamingChunk(content);
+                // Gemini returns an array of JSON objects, need to parse them properly
+                while (buffer.length > 0) {
+                    buffer = buffer.trim();
+                    if (!buffer) break;
+                    
+                    // Check if we have a complete JSON structure (array or single object)
+                    let braceCount = 0;
+                    let bracketCount = 0;
+                    let inString = false;
+                    let escapeNext = false;
+                    let jsonEnd = -1;
+                    let isArray = buffer.startsWith('[');
+                    
+                    for (let i = 0; i < buffer.length; i++) {
+                        const char = buffer[i];
+                        
+                        if (escapeNext) {
+                            escapeNext = false;
+                            continue;
+                        }
+                        
+                        if (char === '\\' && inString) {
+                            escapeNext = true;
+                            continue;
+                        }
+                        
+                        if (char === '"') {
+                            inString = !inString;
+                            continue;
+                        }
+                        
+                        if (!inString) {
+                            if (char === '{') {
+                                braceCount++;
+                            } else if (char === '}') {
+                                braceCount--;
+                            } else if (char === '[') {
+                                bracketCount++;
+                            } else if (char === ']') {
+                                bracketCount--;
+                                if (isArray && bracketCount === 0) {
+                                    jsonEnd = i;
+                                    break;
                                 }
                             }
-                        } catch (parseError) {
-                            console.log('[AIStudioClient]', `Gemini parse error: ${parseError.message}`);
+                            
+                            if (!isArray && braceCount === 0 && bracketCount === 0 && char === '}') {
+                                jsonEnd = i;
+                                break;
+                            }
                         }
+                    }
+                    
+                    if (jsonEnd === -1) {
+                        // Incomplete JSON structure, wait for more data
+                        break;
+                    }
+                    
+                    // Extract the complete JSON structure
+                    const jsonStr = buffer.substring(0, jsonEnd + 1);
+                    buffer = buffer.substring(jsonEnd + 1);
+                    
+                    // Skip comma and whitespace for next iteration
+                    buffer = buffer.replace(/^\s*,?\s*/, '');
+                    
+                    try {
+                        const parsed = JSON.parse(jsonStr);
+                        const chunks = Array.isArray(parsed) ? parsed : [parsed];
+                        
+                        for (const chunk of chunks) {
+                            const content = this.extractContent(chunk);
+                            if (content) {
+                                fullResponse += content;
+                                this.emitStreamingChunk(content);
+                            }
+                        }
+                    } catch (parseError) {
+                        console.log('[AIStudioClient]', `Gemini parse error: ${parseError.message}`, jsonStr.substring(0, 100));
                     }
                 }
             }
@@ -224,16 +280,10 @@ export class AIStudioClient extends AbstractAIClient {
             // Process any remaining buffer
             if (buffer.trim()) {
                 try {
-                    const parsed = JSON.parse(buffer);
-                    // The response can be a single object or an array of them
-                    const chunks = Array.isArray(parsed) ? parsed : [parsed];
-
-                    for (const chunk of chunks) {
-                        const content = this.extractContent(chunk);
-                        if (content) {
-                            fullResponse += content;
-                            // No streaming event for the final part, it's part of the returned promise
-                        }
+                    const parsed = JSON.parse(buffer.trim());
+                    const content = this.extractContent(parsed);
+                    if (content) {
+                        fullResponse += content;
                     }
                 } catch (parseError) {
                     console.log('[AIStudioClient]', `Final parse error: ${parseError.message}`);

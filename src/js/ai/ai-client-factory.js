@@ -71,6 +71,21 @@ export class AIClientFactory {
                 client = new OpenAIClient(eventBus, modelConfig);
                 client.baseUrl = 'https://api.llama.com/compat/v1';
                 break;
+            case 'huggingface':
+                // Hugging Face uses OpenAI-compatible API
+                client = new OpenAIClient(eventBus, modelConfig);
+                client.baseUrl = 'https://api-inference.huggingface.co/v1';
+                break;
+            case 'hyperbolic':
+                // Hyperbolic uses OpenAI-compatible API
+                client = new OpenAIClient(eventBus, modelConfig);
+                client.baseUrl = 'https://api.hyperbolic.xyz/v1';
+                break;
+            case 'local':
+                // Local OpenAI-compatible API
+                client = new OpenAIClient(eventBus, modelConfig);
+                client.baseUrl = modelConfig.apiEndpoint;
+                break;
             default:
                 console.warn(`[AIClientFactory] Unknown provider "${modelConfig.provider}", falling back to legacy client.`);
                 throw new Error(`Unknown provider "${modelConfig.provider}"`);
@@ -99,7 +114,7 @@ export class AIClientFactory {
      * @returns {Array} List of provider names
      */
     static getSupportedProviders() {
-        return ['featherless', 'openai', 'google', 'openrouter', 'groq', 'anthropic', 'meta'];
+        return ['featherless', 'openai', 'google', 'openrouter', 'groq', 'anthropic', 'meta', 'huggingface', 'hyperbolic', 'local'];
     }
 
     /**

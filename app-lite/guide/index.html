@@ -184,43 +184,51 @@
       <h2 id="local-models">🏠 Local Models Setup</h2>
       <div class="section">
         <p>Running models locally gives you privacy, control, and potentially lower costs.</p>
+        
+        <div class="warning">
+          <strong>⚠️ HTTPS Requirement:</strong> Due to Chrome security policies, local model endpoints must use HTTPS. HTTP endpoints will be blocked. You'll need to set up SSL certificates for your local server or use a reverse proxy with HTTPS.
+        </div>
 
         <div class="platform">
           <h4>🦙 Llama.cpp</h4>
           <p>High-performance C++ implementation for running LLaMA models locally.</p>
-          <p><strong>Default Endpoint:</strong> <code>http://localhost:8080/v1</code></p>
+          <p><strong>Required Endpoint:</strong> <code>https://localhost:8080/v1</code> (HTTPS required)</p>
           <p><strong>Setup:</strong> <a href="https://github.com/ggerganov/llama.cpp" target="_blank">Visit llama.cpp on GitHub</a></p>
         </div>
 
         <div class="platform">
           <h4>🐉 KoboldCpp</h4>
           <p>Easy-to-use AI text generation tool with focus on story writing.</p>
-          <p><strong>Default Endpoint:</strong> <code>http://localhost:5001/v1</code></p>
+          <p><strong>Required Endpoint:</strong> <code>https://localhost:5001/v1</code> (HTTPS required)</p>
           <p><strong>Setup:</strong> <a href="https://github.com/LostRuins/koboldcpp" target="_blank">Visit KoboldCpp on GitHub</a></p>
         </div>
 
         <div class="platform">
           <h4>🦌 Ollama</h4>
           <p>The easiest way to run large language models locally.</p>
-          <p><strong>Default Endpoint:</strong> <code>http://localhost:11434/v1</code></p>
+          <p><strong>Required Endpoint:</strong> <code>https://localhost:11434/v1</code> (HTTPS required)</p>
           <p><strong>Setup:</strong> <a href="https://github.com/ollama/ollama" target="_blank">Visit Ollama on GitHub</a></p>
         </div>
 
         <div class="platform">
           <h4>⚡ vLLM</h4>
           <p>High-throughput and memory-efficient inference engine for large language models.</p>
-          <p><strong>Default Endpoint:</strong> <code>http://localhost:8000/v1</code></p>
+          <p><strong>Required Endpoint:</strong> <code>https://localhost:8000/v1</code> (HTTPS required)</p>
           <p><strong>Setup:</strong> <a href="https://github.com/vllm-project/vllm" target="_blank">Visit vLLM on GitHub</a></p>
         </div>
 
         <h3>General Local Setup</h3>
         <ol>
           <li>Set <strong>Provider</strong> to "Local"</li>
-          <li>Enter your server endpoint in <strong>Local Model Endpoint</strong></li>
+          <li>Enter your server endpoint in <strong>Local Model Endpoint</strong> (must start with <code>https://</code>)</li>
           <li>Enter the model name as configured in your local server</li>
           <li>Choose an appropriate tokenizer (usually "llama" for local models)</li>
           <li>Save settings and test</li>
         </ol>
+        
+        <div class="info">
+          <strong>💡 Setting up HTTPS for local servers:</strong> Most local model servers run on HTTP by default. You'll need to either configure SSL certificates or use a reverse proxy like nginx or Caddy to add HTTPS support.
+        </div>
       </div>
 
       <h2 id="troubleshooting">🔧 Troubleshooting</h2>

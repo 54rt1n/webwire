@@ -116,7 +116,7 @@ contextFactory(eventBus, context,
         loadSettings: boolean,       // Load settings from storage
         loadState: boolean,          // Load state from storage
         loadStash: boolean,          // Load stash from storage
-        modelType: string,           // AI model type ('chat', 'tool', etc.)
+        modelType: string,           // AI model type ('chat', 'code', etc.)
         initialState: object,        // Initial state object
         readInitialState: boolean    // Query background for initial state
     }

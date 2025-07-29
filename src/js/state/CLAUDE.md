@@ -122,7 +122,7 @@ const initialState = {
                     }
                 },
                 thought: undefined,      // Thinking model config
-                tool: undefined          // Tool execution model config
+                code: undefined          // Code execution model config
             },
             providers: {
                 featherless: { apiKey: undefined },
