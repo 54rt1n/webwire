@@ -3,22 +3,30 @@ const CopyPlugin = require('copy-webpack-plugin');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
 const MiniCssExtractPlugin = require('mini-css-extract-plugin');
 
-module.exports = (env, argv) => {
+const createConfig = (env, argv, variant) => {
   const isProd = argv.mode === 'production';
+  const isLite = variant === 'lite';
+  const outputDir = isLite ? 'dist-lite' : 'dist-full';
+  const appDir = isLite ? 'app-lite' : 'app';
 
   return {
+    name: variant,
     mode: isProd ? 'production' : 'development',
     devtool: isProd ? false : 'inline-source-map',
     entry: {
-      background: './src/background/webwire-background.js',
-      content: './src/content/index.js',
-      popup: './src/popup/index.js',
-      mcp_status: './src/mcp/index.js',
+      background: `./${appDir}/background.js`,
+      content: `./${appDir}/content.js`,
+      popup: `./${appDir}/popup/index.js`,
+      options: `./${appDir}/options/index.js`,
+      guide: `./${appDir}/guide/index.js`,
       conversations: './src/conversations/index.js',
-      options: './src/options/index.js'
+      // Only include MCP entries for full version
+      ...(isLite ? {} : {
+        mcp_status: './src/mcp/index.js'
+      })
     },
     output: {
-      path: path.resolve(__dirname, 'dist'),
+      path: path.resolve(__dirname, outputDir),
       filename: '[name].js',
       clean: true,
       publicPath: ''
@@ -56,46 +64,61 @@ module.exports = (env, argv) => {
       new CopyPlugin({
         patterns: [
           { 
-            from: './src/manifest.json.dist', 
+            from: `./${appDir}/manifest.json.dist`, 
             to: 'manifest.json',
             transform(content) {
               // Generate manifest based on package.json info
               const packageJson = require('./package.json');
               const manifest = JSON.parse(content.toString());
               
-              // Update version from package.json
-              manifest.version = packageJson.version;
+              // Update version from package.json, strip any -beta suffix for Chrome compatibility
+              manifest.version = packageJson.version.replace(/-.*$/, '');
               
               return JSON.stringify(manifest, null, 2);
-            } 
+            }
           },
-          { from: './src/icons', to: 'icons' },
+          { from: `./${appDir}/icons`, to: 'icons' },
           { from: './src/tokenizers', to: 'tokenizers' }
         ]
       }),
       new HtmlWebpackPlugin({
-        template: './src/options/index.html',
+        template: `./${appDir}/options/index.html`,
         filename: 'options.html',
         chunks: ['options']
       }),
       new HtmlWebpackPlugin({ 
-        template: './src/popup/index.html',
+        template: `./${appDir}/popup/index.html`,
         filename: 'popup.html',
         chunks: ['popup']
-      }),
-      new HtmlWebpackPlugin({
-        template: './src/mcp/index.html',
-        filename: 'mcp_status.html',
-        chunks: ['mcp_status']
       }),
       new HtmlWebpackPlugin({
         template: './src/conversations/index.html',
         filename: 'conversations.html',
         chunks: ['conversations']
       }),
+      new HtmlWebpackPlugin({
+        template: `./${appDir}/guide/index.html`,
+        filename: 'guide.html',
+        chunks: ['guide']
+      }),
+      // Only include MCP HTML for full version
+      ...(isLite ? [] : [
+        new HtmlWebpackPlugin({
+          template: './src/mcp/index.html',
+          filename: 'mcp_status.html',
+          chunks: ['mcp_status']
+        })
+      ]),
       isProd && new MiniCssExtractPlugin({
         filename: '[name].css'
       })
     ].filter(Boolean)
   };
+};
+
+module.exports = (env, argv) => {
+  return [
+    createConfig(env, argv, 'full'),
+    createConfig(env, argv, 'lite')
+  ];
 };

@@ -31,9 +31,11 @@ export async function initializeContext(eventBus, context = null, {initialState 
         pageAnalyzer,
       */
      // TODO our settings can't be loaded here, so we will need to get them from the background
-     // We will need to make our own state-service instance 
+     // We will need to make our own state-service instance
+      const config = window.__WEBWIRE_CONFIG__ || {};
+      const enableMcp = config.enableMcp !== false; // Default to true for backward compatibility
       results = await contextFactory(eventBus, context,
-        {storage: false, contentState: true, ai: true, mcp: true},
+        {storage: false, contentState: true, ai: true, mcp: enableMcp},
         {backgroundIsLocal: false, modelType: 'chat', readInitialState: true});
       break;
     case EVENT_CONTEXT.POPUP:
@@ -56,8 +58,10 @@ export async function initializeContext(eventBus, context = null, {initialState 
         chatState,
         sendToContent,
       */
+      const panelConfig = globalThis.__WEBWIRE_CONFIG__ || {};
+      const enableMcpPanel = panelConfig.enableMcp !== false; // Default to true for backward compatibility
       results = await contextFactory(eventBus, context,
-        {storage: true, state: true, ai: true, mcp: true},
+        {storage: true, state: true, ai: true, mcp: enableMcpPanel},
         {backgroundIsLocal: true, loadSettings: true, loadState: true, loadStash: true, modelType: 'chat'});
       break;
     case EVENT_CONTEXT.SIMPLE:

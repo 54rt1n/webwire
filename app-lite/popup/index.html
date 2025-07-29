@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebWire Popup</title>
+</head>
+<body class="ww-popup">
+    <div class="header">
+        <div class="logo">
+            <img src="icons/ww_poly.svg" alt="WebWire" width="48" height="48">
+        </div>
+        <h1 class="title">WebWire</h1>
+        <p class="subtitle">AI-Powered Web Assistant</p>
+    </div>
+
+    <div class="loading" id="loading">
+        <div class="spinner"></div>
+        <div>Loading...</div>
+    </div>
+
+    <div id="content" style="display: none;">
+        <div class="status">
+            <div class="status-row">
+                <span class="status-label">Configuration</span>
+                <div class="status-value">
+                    <span id="config-status">-</span>
+                    <div class="status-indicator disconnected" id="config-indicator"></div>
+                </div>
+            </div>
+            <div class="status-row">
+                <span class="status-label">Conversations</span>
+                <div class="status-value">
+                    <span id="conversation-count">-</span>
+                </div>
+            </div>
+            <div class="status-row">
+                <span class="status-label">Messages</span>
+                <div class="status-value">
+                    <span id="message-count">-</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="config-message" id="config-message" style="display: none;">
+            <p>Please configure your AI client in settings to start chatting.</p>
+        </div>
+
+        <div class="actions">
+            <button class="btn sm" id="conversations-btn">
+                <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                </svg>
+                Conversations
+            </button>
+
+            <button class="btn sm" id="settings-btn">
+                <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="3"/>
+                    <path d="M12 1v6m0 6v6m11-7h-6m-6 0H1"/>
+                </svg>
+                Settings
+            </button>
+
+            <button class="btn sm" id="help-btn">
+                <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="9"/>
+                    <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/>
+                    <path d="M12 17h.01"/>
+                </svg>
+                Help
+            </button>
+        </div>
+    </div>
+
+</body>
+</html>

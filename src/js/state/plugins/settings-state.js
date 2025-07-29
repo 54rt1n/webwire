@@ -161,4 +161,46 @@ export class SettingsStatePlugin {
         console.log('[StateService::SettingsState] Current model config:', modelConfig);
         return modelConfig;
     }
+
+    /**
+     * Validate if settings are properly configured
+     * @returns {boolean} True if settings are valid for basic operation
+     */
+    isValid() {
+        const settings = this.stateService.state.settings;
+        
+        // Check if settings exist
+        if (!settings) {
+            return false;
+        }
+        
+        // Check if AI configuration exists
+        if (!settings.ai || !settings.ai.models || !settings.ai.providers) {
+            return false;
+        }
+        
+        // Check if chat model is configured
+        const chatModel = settings.ai.models.chat;
+        if (!chatModel || !chatModel.provider || !chatModel.model) {
+            return false;
+        }
+        
+        // Check if the provider for the chat model has required configuration
+        const provider = settings.ai.providers[chatModel.provider];
+        if (!provider) {
+            return false;
+        }
+        
+        // Check for API key if required by provider
+        if (chatModel.provider !== 'aimind' && !provider.apiKey) {
+            return false;
+        }
+        
+        // For AIMind, check for both endpoint and key
+        if (chatModel.provider === 'aimind' && (!provider.apiEndpoint || !provider.apiKey)) {
+            return false;
+        }
+        
+        return true;
+    }
 } 

@@ -231,7 +231,18 @@ class WebWireBackground {
             return { success: true };
         });
 
-        this.eventBus.on(BACKGROUND_ACTIONS.PING, (data, options) => {
+        this.eventBus.onAsync(BACKGROUND_ACTIONS.GET_EXTENSION_STATS, (data, options) => {
+            const conversationStats = this.stateService?.conversation?.getStats() || { conversationCount: 0, totalMessages: 0 };
+            const configurationValid = this.stateService?.settings?.isValid() || false;
+            
+            return {
+                conversationCount: conversationStats.conversationCount,
+                totalMessages: conversationStats.totalMessages,
+                configurationValid: configurationValid
+            };
+        });
+
+        this.eventBus.onAsync(BACKGROUND_ACTIONS.PING, (data, options) => {
             return { 
                 success: true, 
                 status: 'ready',

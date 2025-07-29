@@ -1,12 +1,18 @@
 {
   "name": "webwire",
-  "version": "0.0.1",
+  "version": "0.8.9-beta",
   "description": "WebWire - AI-powered web application framework",
   "type": "module",
   "scripts": {
-    "dev": "webpack --mode development --watch",
-    "build": "webpack --mode production",
-    "clean": "rimraf dist",
+    "dev:full": "webpack --mode development --watch --config webpack.multi.config.cjs --config-name full",
+    "dev:lite": "webpack --mode development --watch --config webpack.multi.config.cjs --config-name lite",
+    "dev:all": "webpack --mode development --watch --config webpack.multi.config.cjs",
+    "build:full": "webpack --mode production --config webpack.multi.config.cjs --config-name full",
+    "build:lite": "webpack --mode production --config webpack.multi.config.cjs --config-name lite",
+    "build:all": "webpack --mode production --config webpack.multi.config.cjs",
+    "clean": "rimraf dist-full dist-lite",
+    "package:full": "cd dist-full && zip -r ../webwire-full.zip .",
+    "package:lite": "cd dist-lite && zip -r ../webwire-lite.zip .",
     "dev:vite": "vite --host",
     "build:vite": "vite build",
     "preview:vite": "vite preview"

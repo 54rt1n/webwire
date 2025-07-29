@@ -1,0 +1,74 @@
+{
+  "manifest_version": 3,
+  "name": "WebWire Assistant",
+  "version": "0.8.9",
+  "description": "Transform any webpage into an AI conversation. Use OpenAI, Claude, Gemini, Meta, and thousands more AI models.",
+  
+  "permissions": [
+    "activeTab",
+    "storage",
+    "scripting"
+  ],
+  
+  "host_permissions": [
+    "http://*/*",
+    "https://*/*"
+  ],
+  
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"],
+      "type": "module",
+      "run_at": "document_end"
+    }
+  ],
+  
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "WebWire Assistant",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
+  
+  "options_page": "options.html",
+  
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "js/*.js",
+        "content/*.js",
+        "options/*.js",
+        "options/*.html",
+        "mcp/*.js",
+        "main/*.js",
+        "tokenizers/*.json"
+      ],
+      "matches": ["<all_urls>"]
+    }
+  ],
+  
+  "commands": {
+    "toggle-panel": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+W",
+        "mac": "Command+Shift+W"
+      },
+      "description": "Toggle WebWire panel"
+    }
+  }
+}

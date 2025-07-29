@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>WebWire - Options</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+</head>
+<body>
+  <div class="ww-options">
+    <div class="ww-container">
+      <div class="ww-text-center margin-bottom-8">
+        <h1>WebWire Options</h1>
+        <p class="ww-text-secondary">Configure your AI assistant settings</p>
+      </div>
+    
+      <div class="section">
+        <h2>General Settings</h2>
+      <div class="ww-grid-2">
+        <div class="form-group">
+          <label for="userName">User Name:</label>
+          <input type="text" id="userName" placeholder="Enter your user name">
+          <small>Identifier for the current user.</small>
+        </div>
+        <div class="form-group">
+          <label for="personaName">Persona Name:</label>
+          <input type="text" id="personaName" placeholder="Enter persona name">
+          <small>The persona to use for the AI.</small>
+        </div>
+        <div class="form-group">
+          <label for="mcpServerUrl">MCP Server URL:</label>
+          <input type="text" id="mcpServerUrl" placeholder="Enter MCP server URL (e.g., http://localhost:8000/sse)">
+          <small>The URL of your MCP server for tool-enabled agents.</small>
+        </div>
+      </div>
+      <div class="ww-grid-2 margin-top-4">
+        <div class="form-group checkbox-group">
+          <input type="checkbox" id="showThought">
+          <label for="showThought">Show Thought Process</label>
+        </div>
+        <div class="form-group checkbox-group">
+          <input type="checkbox" id="autoThink">
+          <label for="autoThink">Enable Auto-Think</label>
+        </div>
+      </div>
+      <div class="ww-grid-2 margin-top-4">
+        <div class="form-group checkbox-group">
+          <input type="checkbox" id="autoInject">
+          <label for="autoInject">Auto-Inject WebWire Panel</label>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Provider Settings</h2>
+        <div class="ww-grid-2">
+            <div class="form-group">
+                <label for="featherlessApiKey">Featherless API Key:</label>
+                <input type="password" id="featherlessApiKey" placeholder="Enter Featherless API key">
+            </div>
+            <div class="form-group">
+                <label for="openaiApiKey">OpenAI API Key:</label>
+                <input type="password" id="openaiApiKey" placeholder="Enter OpenAI API key">
+            </div>
+            <div class="form-group">
+                <label for="googleApiKey">Google API Key:</label>
+                <input type="password" id="googleApiKey" placeholder="Enter Google API key">
+            </div>
+            <div class="form-group">
+                <label for="anthropicApiKey">Anthropic API Key:</label>
+                <input type="password" id="anthropicApiKey" placeholder="Enter Anthropic API key">
+            </div>
+            <div class="form-group">
+                <label for="groqApiKey">Groq API Key:</label>
+                <input type="password" id="groqApiKey" placeholder="Enter Groq API key">
+            </div>
+             <div class="form-group">
+                <label for="metaApiKey">Meta API Key:</label>
+                <input type="password" id="metaApiKey" placeholder="Enter Meta API key">
+            </div>
+        </div>
+        <h3>AIMind</h3>
+        <div class="ww-grid-2">
+            <div class="form-group">
+                <label for="aimindApiEndpoint">AIMind API Endpoint:</label>
+                <input type="text" id="aimindApiEndpoint" placeholder="e.g. http://localhost:8000/v1">
+            </div>
+            <div class="form-group">
+                <label for="aimindApiKey">AIMind API Key:</label>
+                <input type="password" id="aimindApiKey" placeholder="Enter AIMind API key">
+            </div>
+        </div>
+        <h3>OpenRouter</h3>
+        <div class="ww-grid-2">
+            <div class="form-group">
+                <label for="openrouterApiEndpoint">OpenRouter API Endpoint:</label>
+                <input type="text" id="openrouterApiEndpoint" placeholder="e.g. https://openrouter.ai/api/v1">
+            </div>
+            <div class="form-group">
+                <label for="openrouterApiKey">OpenRouter API Key:</label>
+                <input type="password" id="openrouterApiKey" placeholder="Enter OpenRouter API key">
+            </div>
+        </div>
+      </div>
+    
+      <div class="section">
+        <h2>Model Configuration</h2>
+      
+      <!-- Chat Model -->
+      <div class="model-config">
+        <h3>Chat Model (Primary)</h3>
+        <div class="grid">
+            <div class="form-group">
+                <label for="chatModel">Model Name:</label>
+                <input type="text" id="chatModel" placeholder="e.g., gpt-4-turbo">
+            </div>
+            <div class="form-group">
+                <label for="chatProvider">Provider:</label>
+                <select id="chatProvider">
+                    <option value="featherless">Featherless</option>
+                    <option value="openai">OpenAI</option>
+                    <option value="google">Google</option>
+                    <option value="anthropic">Anthropic</option>
+                    <option value="groq">Groq</option>
+                    <option value="meta">Meta</option>
+                    <option value="aimind">AIMind</option>
+                    <option value="openrouter">OpenRouter</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="chatTokenizer">Tokenizer:</label>
+                <select id="chatTokenizer">
+                    <!-- Options will be populated dynamically -->
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="chatTemp">Temperature:</label>
+                <input type="number" id="chatTemp" min="0" max="2" step="0.1" placeholder="0.8">
+            </div>
+            <div class="form-group">
+                <label for="chatMaxTokens">Max Response Tokens:</label>
+                <input type="number" id="chatMaxTokens" min="1" placeholder="2048">
+                <small>Maximum tokens for AI response</small>
+            </div>
+            <div class="form-group">
+                <label for="chatMaxContentTokens">Max Content Tokens:</label>
+                <input type="number" id="chatMaxContentTokens" min="1" placeholder="16384">
+                <small>Maximum tokens for page content/context</small>
+            </div>
+            <div class="form-group">
+                <label for="chatTopP">Top P:</label>
+                <input type="number" id="chatTopP" min="0" max="1" step="0.01" placeholder="Optional">
+            </div>
+            <div class="form-group">
+                <label for="chatMinP">Min P:</label>
+                <input type="number" id="chatMinP" min="0" max="1" step="0.01" placeholder="0.05">
+            </div>
+            <div class="form-group">
+                <label for="chatTopK">Top K:</label>
+                <input type="number" id="chatTopK" min="1" step="1" placeholder="Optional">
+            </div>
+            <div class="form-group">
+                <label for="chatFreqPenalty">Frequency Penalty:</label>
+                <input type="number" id="chatFreqPenalty" min="-2" max="2" step="0.1" placeholder="Optional">
+            </div>
+            <div class="form-group">
+                <label for="chatPresPenalty">Presence Penalty:</label>
+                <input type="number" id="chatPresPenalty" min="-2" max="2" step="0.1" placeholder="Optional">
+            </div>
+            <div class="form-group checkbox-group">
+                <input type="checkbox" id="chatMinimalMode">
+                <label for="chatMinimalMode">Minimal Mode</label>
+                <small>Use minimal system prompt for this model</small>
+            </div>
+        </div>
+      </div>
+
+      <!-- Thought Model -->
+      <div class="model-config">
+        <h3>Thought Model (Optional)</h3>
+        <div class="grid">
+            <div class="form-group">
+                <label for="thoughtModel">Model Name:</label>
+                <input type="text" id="thoughtModel" placeholder="Leave blank to use Chat Model">
+            </div>
+            <div class="form-group">
+                <label for="thoughtProvider">Provider:</label>
+                 <select id="thoughtProvider">
+                    <option value="">(Same as Chat)</option>
+                    <option value="featherless">Featherless</option>
+                    <option value="openai">OpenAI</option>
+                    <option value="google">Google</option>
+                    <option value="anthropic">Anthropic</option>
+                    <option value="groq">Groq</option>
+                    <option value="meta">Meta</option>
+                    <option value="aimind">AIMind</option>
+                    <option value="openrouter">OpenRouter</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="thoughtTokenizer">Tokenizer:</label>
+                <select id="thoughtTokenizer">
+                    <option value="">(Same as Chat)</option>
+                    <!-- Other options will be populated dynamically -->
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="thoughtTemp">Temperature:</label>
+                <input type="number" id="thoughtTemp" min="0" max="2" step="0.1" placeholder="Optional">
+            </div>
+            <div class="form-group">
+                <label for="thoughtMaxTokens">Max Response Tokens:</label>
+                <input type="number" id="thoughtMaxTokens" min="1" placeholder="Optional">
+                <small>Maximum tokens for AI response</small>
+            </div>
+            <div class="form-group">
+                <label for="thoughtMaxContentTokens">Max Content Tokens:</label>
+                <input type="number" id="thoughtMaxContentTokens" min="1" placeholder="Optional">
+                <small>Maximum tokens for page content/context</small>
+            </div>
+            <div class="form-group">
+                <label for="thoughtTopP">Top P:</label>
+                <input type="number" id="thoughtTopP" min="0" max="1" step="0.01" placeholder="Optional">
+            </div>
+            <div class="form-group">
+                <label for="thoughtMinP">Min P:</label>
+                <input type="number" id="thoughtMinP" min="0" max="1" step="0.01" placeholder="Optional">
+            </div>
+            <div class="form-group">
+                <label for="thoughtTopK">Top K:</label>
+                <input type="number" id="thoughtTopK" min="1" step="1" placeholder="Optional">
+            </div>
+            <div class="form-group">
+                <label for="thoughtFreqPenalty">Frequency Penalty:</label>
+                <input type="number" id="thoughtFreqPenalty" min="-2" max="2" step="0.1" placeholder="Optional">
+            </div>
+            <div class="form-group">
+                <label for="thoughtPresPenalty">Presence Penalty:</label>
+                <input type="number" id="thoughtPresPenalty" min="-2" max="2" step="0.1" placeholder="Optional">
+            </div>
+            <div class="form-group checkbox-group">
+                <input type="checkbox" id="thoughtMinimalMode">
+                <label for="thoughtMinimalMode">Minimal Mode</label>
+                <small>Use minimal system prompt for this model</small>
+            </div>
+        </div>
+      </div>
+
+      <!-- Tool Model -->
+      <div class="model-config">
+        <h3>Tool Model (Optional)</h3>
+        <div class="grid">
+            <div class="form-group">
+                <label for="toolModel">Model Name:</label>
+                <input type="text" id="toolModel" placeholder="Leave blank to use Chat Model">
+            </div>
+            <div class="form-group">
+                <label for="toolProvider">Provider:</label>
+                 <select id="toolProvider">
+                    <option value="">(Same as Chat)</option>
+                    <option value="featherless">Featherless</option>
+                    <option value="openai">OpenAI</option>
+                    <option value="google">Google</option>
+                    <option value="anthropic">Anthropic</option>
+                    <option value="groq">Groq</option>
+                    <option value="meta">Meta</option>
+                    <option value="aimind">AIMind</option>
+                    <option value="openrouter">OpenRouter</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="toolTokenizer">Tokenizer:</label>
+                <select id="toolTokenizer">
+                    <option value="">(Same as Chat)</option>
+                    <!-- Other options will be populated dynamically -->
+                </select>
+            </div>
+             <div class="form-group">
+                <label for="toolTemp">Temperature:</label>
+                <input type="number" id="toolTemp" min="0" max="2" step="0.1" placeholder="Optional">
+            </div>
+            <div class="form-group">
+                <label for="toolMaxTokens">Max Response Tokens:</label>
+                <input type="number" id="toolMaxTokens" min="1" placeholder="Optional">
+                <small>Maximum tokens for AI response</small>
+            </div>
+            <div class="form-group">
+                <label for="toolMaxContentTokens">Max Content Tokens:</label>
+                <input type="number" id="toolMaxContentTokens" min="1" placeholder="Optional">
+                <small>Maximum tokens for page content/context</small>
+            </div>
+            <div class="form-group">
+                <label for="toolTopP">Top P:</label>
+                <input type="number" id="toolTopP" min="0" max="1" step="0.01" placeholder="Optional">
+            </div>
+            <div class="form-group">
+                <label for="toolMinP">Min P:</label>
+                <input type="number" id="toolMinP" min="0" max="1" step="0.01" placeholder="Optional">
+            </div>
+            <div class="form-group">
+                <label for="toolTopK">Top K:</label>
+                <input type="number" id="toolTopK" min="1" step="1" placeholder="Optional">
+            </div>
+            <div class="form-group">
+                <label for="toolFreqPenalty">Frequency Penalty:</label>
+                <input type="number" id="toolFreqPenalty" min="-2" max="2" step="0.1" placeholder="Optional">
+            </div>
+            <div class="form-group">
+                <label for="toolPresPenalty">Presence Penalty:</label>
+                <input type="number" id="toolPresPenalty" min="-2" max="2" step="0.1" placeholder="Optional">
+            </div>
+            <div class="form-group checkbox-group">
+                <input type="checkbox" id="toolMinimalMode">
+                <label for="toolMinimalMode">Minimal Mode</label>
+                <small>Use minimal system prompt for this model</small>
+            </div>
+        </div>
+      </div>
+
+      <!-- Creative Model -->
+      <div class="model-config">
+        <h3>Creative Model (Optional)</h3>
+        <div class="grid">
+            <div class="form-group">
+                <label for="creativeModel">Model Name:</label>
+                <input type="text" id="creativeModel" placeholder="Leave blank to use Chat Model">
+            </div>
+            <div class="form-group">
+                <label for="creativeProvider">Provider:</label>
+                 <select id="creativeProvider">
+                    <option value="">(Same as Chat)</option>
+                    <option value="featherless">Featherless</option>
+                    <option value="openai">OpenAI</option>
+                    <option value="google">Google</option>
+                    <option value="anthropic">Anthropic</option>
+                    <option value="groq">Groq</option>
+                    <option value="meta">Meta</option>
+                    <option value="aimind">AIMind</option>
+                    <option value="openrouter">OpenRouter</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="creativeTokenizer">Tokenizer:</label>
+                <select id="creativeTokenizer">
+                    <option value="">(Same as Chat)</option>
+                    <!-- Other options will be populated dynamically -->
+                </select>
+            </div>
+             <div class="form-group">
+                <label for="creativeTemp">Temperature:</label>
+                <input type="number" id="creativeTemp" min="0" max="2" step="0.1" placeholder="Optional">
+            </div>
+            <div class="form-group">
+                <label for="creativeMaxTokens">Max Response Tokens:</label>
+                <input type="number" id="creativeMaxTokens" min="1" placeholder="Optional">
+                <small>Maximum tokens for AI response</small>
+            </div>
+            <div class="form-group">
+                <label for="creativeMaxContentTokens">Max Content Tokens:</label>
+                <input type="number" id="creativeMaxContentTokens" min="1" placeholder="Optional">
+                <small>Maximum tokens for page content/context</small>
+            </div>
+            <div class="form-group">
+                <label for="creativeTopP">Top P:</label>
+                <input type="number" id="creativeTopP" min="0" max="1" step="0.01" placeholder="Optional">
+            </div>
+            <div class="form-group">
+                <label for="creativeMinP">Min P:</label>
+                <input type="number" id="creativeMinP" min="0" max="1" step="0.01" placeholder="Optional">
+            </div>
+            <div class="form-group">
+                <label for="creativeTopK">Top K:</label>
+                <input type="number" id="creativeTopK" min="1" step="1" placeholder="Optional">
+            </div>
+            <div class="form-group">
+                <label for="creativeFreqPenalty">Frequency Penalty:</label>
+                <input type="number" id="creativeFreqPenalty" min="-2" max="2" step="0.1" placeholder="Optional">
+            </div>
+            <div class="form-group">
+                <label for="creativePresPenalty">Presence Penalty:</label>
+                <input type="number" id="creativePresPenalty" min="-2" max="2" step="0.1" placeholder="Optional">
+            </div>
+            <div class="form-group checkbox-group">
+                <input type="checkbox" id="creativeMinimalMode">
+                <label for="creativeMinimalMode">Minimal Mode</label>
+                <small>Use minimal system prompt for this model</small>
+            </div>
+        </div>
+      </div>
+      </div>
+
+      <div class="section">
+        <h2>System Prompt Controls</h2>
+        <div class="form-group">
+          <label for="systemMessage">System Message:</label>
+          <textarea id="systemMessage" rows="4" placeholder="Enter custom system message"></textarea>
+          <small>Override the default system prompt for AI responses.</small>
+        </div>
+        <div class="form-group">
+          <label for="minimalSystemMessage">Minimal System Message:</label>
+          <textarea id="minimalSystemMessage" rows="3" placeholder="Enter minimal system message for token-constrained models"></textarea>
+          <small>System prompt used when minimal mode is enabled.</small>
+        </div>
+        <div class="form-group">
+          <label for="userHeader">User Header:</label>
+          <textarea id="userHeader" rows="2" placeholder="Enter text to prepend to user messages"></textarea>
+          <small>Text automatically added to the beginning of user messages.</small>
+        </div>
+        <div class="form-group">
+          <label for="userFooter">User Footer:</label>
+          <textarea id="userFooter" rows="2" placeholder="Enter text to append to user messages"></textarea>
+          <small>Text automatically added to the end of user messages.</small>
+        </div>
+      </div>
+    
+      <div id="status" class="status"></div>
+      <div class="ww-text-center margin-top-8">
+        <button id="saveBtn" class="btn primary lg">💾 Save All Settings</button>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

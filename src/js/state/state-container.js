@@ -14,87 +14,11 @@ export function createInitialState(tabId = undefined) {
             autoSaveEnabled: true,
         },
 
-        settings: {
-            ai: {
-                models: {
-                    chat: {
-                        model: undefined,
-                        provider: undefined,
-                        tokenizer: undefined,
-                        minimalMode: false,
-                        samplerConfig: {
-                            temperature: 0.8,
-                            maxTokens: 2048,
-                            maxContentTokens: 16384,
-                            topP: undefined,
-                            minP: 0.05,
-                            topK: undefined,
-                            frequencyPenalty: undefined,
-                            presencePenalty: undefined,
-                        }
-                    },
-                    thought: undefined,
-                    tool: undefined,
-                    creative: undefined,
-                },
-                providers: {
-                    featherless: {
-                        apiKey: undefined,
-                    },
-                    openai: {
-                        apiKey: undefined,
-                    },
-                    aimind: {
-                        apiEndpoint: undefined,
-                        apiKey: undefined,
-                    },
-                    google: {
-                        apiKey: undefined,
-                    },
-                    openrouter: {
-                        apiEndpoint: undefined,
-                        apiKey: undefined,
-                    },
-                    groq: {
-                        apiKey: undefined,
-                    },
-                    anthropic: {
-                        apiKey: undefined,
-                    },
-                    meta: {
-                        apiKey: undefined,
-                    },
-                }
-            },
-            aim: {
-                userName: undefined,
-                personaName: undefined,
-                showThought: false,
-                autoThink: false,
-                systemMessage: undefined,
-                userHeader: undefined,
-                userFooter: undefined,
-            },
-            mcp: {
-                serverUrl: undefined,
-                autoConnect: false,
-                systemMessage: undefined,
-            },
-            ui: {
-                autoInject: false,
-                voice: {
-                    rate: 1.0,
-                    pitch: 1.0,
-                    volume: 1.0,
-                    lang: 'en-US',
-                    voice: undefined
-                }
-            },
-        },
-
         tabs: {
             default: createInitialTabState(),
         },
+
+        settings: createInitialSettingsState(),
 
         aim: {
             pinnedMessages: [],
@@ -188,6 +112,86 @@ export function createInitialState(tabId = undefined) {
         stash: {
             // Stash state - persists across browser sessions
         }
+    };
+}
+
+export function createInitialSettingsState() {
+    return {
+        ai: {
+            models: {
+                chat: {
+                    model: undefined,
+                    provider: undefined,
+                    tokenizer: undefined,
+                    minimalMode: false,
+                    samplerConfig: {
+                        temperature: 0.8,
+                        maxTokens: 2048,
+                        maxContentTokens: 16384,
+                        topP: undefined,
+                        minP: 0.05,
+                        topK: undefined,
+                        frequencyPenalty: undefined,
+                        presencePenalty: undefined,
+                    }
+                },
+                thought: undefined,
+                tool: undefined,
+                creative: undefined,
+            },
+            providers: {
+                featherless: {
+                    apiKey: undefined,
+                },
+                openai: {
+                    apiKey: undefined,
+                },
+                aimind: {
+                    apiEndpoint: undefined,
+                    apiKey: undefined,
+                },
+                google: {
+                    apiKey: undefined,
+                },
+                openrouter: {
+                    apiEndpoint: undefined,
+                    apiKey: undefined,
+                },
+                groq: {
+                    apiKey: undefined,
+                },
+                anthropic: {
+                    apiKey: undefined,
+                },
+                meta: {
+                    apiKey: undefined,
+                },
+            }
+        },
+        aim: {
+            userName: undefined,
+            personaName: undefined,
+            showThought: false,
+            autoThink: false,
+            systemMessage: undefined,
+            userHeader: undefined,
+            userFooter: undefined,
+        },
+        mcp: {
+            serverUrl: undefined,
+            autoConnect: false,
+            systemMessage: undefined,
+        },
+        ui: {
+            autoInject: false,
+            voice: {
+                rate: 1.0,
+                pitch: 1.0,
+                volume: 1.0,
+                lang: 'en-US',
+                voice: undefined
+            }
+        },
     };
 }
 

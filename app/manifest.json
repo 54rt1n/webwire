@@ -1,0 +1,76 @@
+{
+  "manifest_version": 3,
+  "name": "WebWire AI Assistant",
+  "version": "0.8.9",
+  "description": "Transform any webpage into an AI conversation. Chat, analyze, summarize, and extract insights from web content using OpenAI GPT-4, Claude, Google Gemini, Meta Llama, Qwen, Kimi, and thousands more AI models. Features advanced MCP tool integration for automated web actions, data extraction, and API connectivity. Your personal AI assistant for the web.",
+  
+  "permissions": [
+    "activeTab",
+    "storage",
+    "scripting"
+  ],
+  
+  "host_permissions": [
+    "http://*/*",
+    "https://*/*"
+  ],
+  
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"],
+      "type": "module",
+      "run_at": "document_end"
+    }
+  ],
+  
+  "action": {
+    "default_popup": "popup/index.html",
+    "default_title": "WebWire Assistant",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
+  
+  "options_page": "options/index.html",
+  
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "js/*.js",
+        "content/*.js",
+        "options/*.js",
+        "options/*.html",
+        "mcp/*.js",
+        "mcp/*.html",
+        "conversations/*.js",
+        "conversations/*.html",
+        "main/*.js"
+      ],
+      "matches": ["<all_urls>"]
+    }
+  ],
+  
+  "commands": {
+    "toggle-panel": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+W",
+        "mac": "Command+Shift+W"
+      },
+      "description": "Toggle WebWire panel"
+    }
+  }
+}

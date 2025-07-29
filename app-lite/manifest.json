@@ -1,0 +1,75 @@
+{
+  "manifest_version": 3,
+  "name": "WebWire Lite - Free AI Web Assistant",
+  "version": "0.8.9",
+  "description": "Transform any webpage into an AI conversation. Chat, analyze, summarize, and extract insights from web content using OpenAI GPT-4, Claude, Google Gemini, Meta Llama, Qwen, Kimi, and thousands more AI models. Free lightweight version perfect for content analysis, research, and everyday web browsing with AI assistance. Your personal AI companion for smarter web exploration.",
+  
+  "permissions": [
+    "activeTab",
+    "storage",
+    "scripting"
+  ],
+  
+  "host_permissions": [
+    "http://*/*",
+    "https://*/*"
+  ],
+  
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"],
+      "type": "module",
+      "run_at": "document_end"
+    }
+  ],
+  
+  "action": {
+    "default_popup": "popup/index.html",
+    "default_title": "WebWire Lite",
+    "default_icon": {
+      "16": "icons/ww_binary_poly.svg",
+      "48": "icons/ww_binary_poly.svg",
+      "128": "icons/ww_binary_poly.svg"
+    }
+  },
+  
+  "options_page": "options/index.html",
+  
+  "icons": {
+    "16": "icons/ww_binary_poly.svg",
+    "48": "icons/ww_binary_poly.svg",
+    "128": "icons/ww_binary_poly.svg"
+  },
+  
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "js/*.js",
+        "content/*.js",
+        "options/*.js",
+        "options/*.html",
+        "guide/*.html",
+        "conversations/*.js",
+        "conversations/*.html",
+        "main/*.js"
+      ],
+      "matches": ["<all_urls>"]
+    }
+  ],
+  
+  "commands": {
+    "toggle-panel": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+W",
+        "mac": "Command+Shift+W"
+      },
+      "description": "Toggle WebWire panel"
+    }
+  }
+}

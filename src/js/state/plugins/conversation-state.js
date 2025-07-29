@@ -732,4 +732,27 @@ export class ConversationStatePlugin {
             console.warn(`[ConversationState] Message ${messageId} not found in thread ${threadId}`);
         }
     }
+
+    /**
+     * Get conversation statistics
+     * @returns {object} Stats object with conversationCount and totalMessages
+     */
+    getStats() {
+        const state = this._safeConversationState();
+        
+        // Count conversations that have at least one message
+        const conversationCount = Object.keys(state.history)
+            .filter(threadId => state.history[threadId] && state.history[threadId].length > 0)
+            .length;
+        
+        // Count total messages across all conversations
+        const totalMessages = Object.values(state.history)
+            .filter(messages => messages && Array.isArray(messages))
+            .reduce((total, messages) => total + messages.length, 0);
+        
+        return {
+            conversationCount,
+            totalMessages
+        };
+    }
 }

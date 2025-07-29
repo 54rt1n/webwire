@@ -33,24 +33,25 @@
     "default_popup": "popup.html",
     "default_title": "WebWire Assistant",
     "default_icon": {
-      "16": "icons/icon16.png",
-      "48": "icons/icon48.png",
-      "128": "icons/icon128.png"
+      "16": "icons/ww_binary_poly.svg",
+      "48": "icons/ww_binary_poly.svg",
+      "128": "icons/ww_binary_poly.svg"
     }
   },
   
   "options_page": "options.html",
   
   "icons": {
-    "16": "icons/icon16.png",
-    "48": "icons/icon48.png",
-    "128": "icons/icon128.png"
+    "16": "icons/ww_binary_poly.svg",
+    "48": "icons/ww_binary_poly.svg",
+    "128": "icons/ww_binary_poly.svg"
   },
   
   "web_accessible_resources": [
     {
       "resources": [
         "icons/*.png",
+        "icons/*.svg",
         "tokenizers/*.json",
         "*.js",
         "*.html"

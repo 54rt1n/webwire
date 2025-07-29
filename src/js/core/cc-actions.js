@@ -28,6 +28,9 @@ export const BACKGROUND_ACTIONS = {
     SAVE_WEBWIRE_STATE: 'SAVE_WEBWIRE_STATE',
     UPDATE_UI_SETTINGS: 'UPDATE_UI_SETTINGS',
     
+    // Extension statistics
+    GET_EXTENSION_STATS: 'GET_EXTENSION_STATS',
+    
     // Health check
     PING: 'PING'
 };
