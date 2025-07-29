@@ -1,4 +1,5 @@
 import { WebWirePopup } from './popup.js';
+import { AppConfig } from '../../src/js/core/app-config.js';
 
 /**
  * WebWire Popup Application - Main business logic for the extension popup.
@@ -160,8 +161,7 @@ class WebWirePopupApp {
 
 // Initialize the application when DOM is ready
 document.addEventListener('DOMContentLoaded', () => {
-    // import { AppConfig } from '../src/core/app-config.js';
-    // const config = AppConfig.pageFactory('lite');
+    const config = AppConfig.pageFactory('lite');
     const app = new WebWirePopupApp(config);
     app.initialize();
 }); 

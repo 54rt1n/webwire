@@ -5,6 +5,7 @@ import { MessageBuilder } from '../../src/chat/message-builder.js';
 export class OptionsPanel {
     constructor(eventBus) {
         this.eventBus = eventBus;
+        this.renderDynamicSections();
         this.elements = this._DOMElements();
         this.populateTokenizerDropdowns();
     }
@@ -13,7 +14,7 @@ export class OptionsPanel {
      * Get elements from the DOM
      */
     _DOMElements() {
-        return {
+        const elements = {
             userNameInput: document.getElementById('userName'),
             personaNameInput: document.getElementById('personaName'),
             providerInputs: {
@@ -23,38 +24,15 @@ export class OptionsPanel {
                 anthropic: { apiKey: document.getElementById('anthropicApiKey') },
                 groq: { apiKey: document.getElementById('groqApiKey') },
                 meta: { apiKey: document.getElementById('metaApiKey') },
-                openrouter: { apiKey: document.getElementById('openrouterApiKey') }
-            },
-            modelConfigs: {
-                chat: {
-                    model: document.getElementById('chatModel'),
-                    provider: document.getElementById('chatProvider'),
-                    tokenizer: document.getElementById('chatTokenizer'),
-                    temperature: document.getElementById('chatTemp'),
-                    maxTokens: document.getElementById('chatMaxTokens'),
-                    maxContentTokens: document.getElementById('chatMaxContentTokens'),
-                    topP: document.getElementById('chatTopP'),
-                    minP: document.getElementById('chatMinP'),
-                    topK: document.getElementById('chatTopK'),
-                    frequencyPenalty: document.getElementById('chatFreqPenalty'),
-                    presencePenalty: document.getElementById('chatPresPenalty'),
-                    minimalMode: document.getElementById('chatMinimalMode'),
-                },
-                creative: {
-                    model: document.getElementById('creativeModel'),
-                    provider: document.getElementById('creativeProvider'),
-                    tokenizer: document.getElementById('creativeTokenizer'),
-                    temperature: document.getElementById('creativeTemp'),
-                    maxTokens: document.getElementById('creativeMaxTokens'),
-                    maxContentTokens: document.getElementById('creativeMaxContentTokens'),
-                    topP: document.getElementById('creativeTopP'),
-                    minP: document.getElementById('creativeMinP'),
-                    topK: document.getElementById('creativeTopK'),
-                    frequencyPenalty: document.getElementById('creativeFreqPenalty'),
-                    presencePenalty: document.getElementById('creativePresPenalty'),
-                    minimalMode: document.getElementById('creativeMinimalMode'),
+                openrouter: { apiKey: document.getElementById('openrouterApiKey') },
+                hyperbolic: { apiKey: document.getElementById('hyperbolicApiKey') },
+                huggingface: { apiKey: document.getElementById('huggingfaceApiKey') },
+                local: { 
+                    apiEndpoint: document.getElementById('localModelEndpoint'),
+                    apiKey: document.getElementById('localModelApiKey')
                 }
             },
+            modelConfigs: {},
             systemMessage: document.getElementById('systemMessage'),
             minimalSystemMessage: document.getElementById('minimalSystemMessage'),
             userHeader: document.getElementById('userHeader'),
@@ -62,6 +40,24 @@ export class OptionsPanel {
             saveBtn: document.getElementById('saveBtn'),
             status: document.getElementById('status')
         };
+
+        // Populate model configs after dynamic generation
+        ['chat', 'thought', 'code', 'creative'].forEach(type => {
+            elements.modelConfigs[type] = {
+                model: document.getElementById(`${type}Model`),
+                provider: document.getElementById(`${type}Provider`),
+                tokenizer: document.getElementById(`${type}Tokenizer`),
+                temperature: document.getElementById(`${type}Temp`),
+                maxTokens: document.getElementById(`${type}MaxTokens`),
+                maxContentTokens: document.getElementById(`${type}MaxContentTokens`),
+                topP: document.getElementById(`${type}TopP`),
+                minP: document.getElementById(`${type}MinP`),
+                topK: document.getElementById(`${type}TopK`),
+                frequencyPenalty: document.getElementById(`${type}FreqPenalty`),
+                presencePenalty: document.getElementById(`${type}PresPenalty`),
+                minimalMode: document.getElementById(`${type}MinimalMode`)
+            };
+        });
 
         return elements;
     }
@@ -88,34 +84,24 @@ export class OptionsPanel {
     populateTokenizerDropdowns() {
         const tokenizers = MessageBuilder.availableTokenizers();
         
-        // Add empty option for chat tokenizer
-        const emptyOption = document.createElement('option');
-        emptyOption.value = '';
-        emptyOption.textContent = '(Auto-detect)';
-        this.elements.modelConfigs.chat.tokenizer.appendChild(emptyOption);
-        
-        // Populate chat tokenizer dropdown
-        tokenizers.forEach(tokenizer => {
-            const option = document.createElement('option');
-            option.value = tokenizer.id;
-            option.textContent = tokenizer.name;
-            option.title = tokenizer.description;
-            this.elements.modelConfigs.chat.tokenizer.appendChild(option);
-        });
-        
-        // Add empty option for creative tokenizer
-        const creativeEmptyOption = document.createElement('option');
-        creativeEmptyOption.value = '';
-        creativeEmptyOption.textContent = '(Same as Chat)';
-        this.elements.modelConfigs.creative.tokenizer.appendChild(creativeEmptyOption);
-        
-        // Populate creative tokenizer dropdown (with same options)
-        tokenizers.forEach(tokenizer => {
-            const option = document.createElement('option');
-            option.value = tokenizer.id;
-            option.textContent = tokenizer.name;
-            option.title = tokenizer.description;
-            this.elements.modelConfigs.creative.tokenizer.appendChild(option);
+        ['chat', 'thought', 'code', 'creative'].forEach(type => {
+            const dropdown = this.elements.modelConfigs[type]?.tokenizer;
+            if (!dropdown) return;
+            
+            // Add default option
+            const emptyOption = document.createElement('option');
+            emptyOption.value = '';
+            emptyOption.textContent = type === 'chat' ? '(Auto-detect)' : '(Same as Chat)';
+            dropdown.appendChild(emptyOption);
+            
+            // Add tokenizer options
+            tokenizers.forEach(tokenizer => {
+                const option = document.createElement('option');
+                option.value = tokenizer.id;
+                option.textContent = tokenizer.name;
+                option.title = tokenizer.description;
+                dropdown.appendChild(option);
+            });
         });
     }
 
@@ -135,6 +121,19 @@ export class OptionsPanel {
         this.elements.userHeader.value = settings.aim?.userHeader || '';
         this.elements.userFooter.value = settings.aim?.userFooter || '';
 
+        // Provider settings
+        if (settings.ai?.providers) {
+            for (const provider in this.elements.providerInputs) {
+                const providerConfig = settings.ai.providers[provider];
+                if (providerConfig) {
+                    for (const key in this.elements.providerInputs[provider]) {
+                        if (this.elements.providerInputs[provider][key]) {
+                            this.elements.providerInputs[provider][key].value = providerConfig[key] || '';
+                        }
+                    }
+                }
+            }
+        }
         
         // Model settings
         if (settings.ai?.models) {
@@ -159,6 +158,11 @@ export class OptionsPanel {
                 }
             }
         }
+        
+        // Update all model summaries after loading settings
+        ['chat', 'thought', 'code', 'creative'].forEach(modelId => {
+            this.updateModelSummary(modelId);
+        });
     }
 
     /**
@@ -235,5 +239,302 @@ export class OptionsPanel {
         }
 
         return settings;
+    }
+
+    /**
+     * Render dynamic sections
+     */
+    renderDynamicSections() {
+        this.renderModelConfigs();
+        this.renderProviderSettings();
+    }
+
+    /**
+     * Render model configuration sections
+     */
+    renderModelConfigs() {
+        const container = document.getElementById('model-configs');
+        if (!container) return;
+        
+        container.innerHTML = '';
+        
+        const models = [
+            { id: 'chat', title: 'Chat Model (Primary)', placeholder: 'e.g., gpt-4-turbo', defaultTemp: '0.8', defaultMaxTokens: '2048', defaultMaxContentTokens: '16384', defaultMinP: '0.05' },
+            { id: 'thought', title: 'Thought Model (Optional)', placeholder: 'Leave blank to use Chat Model', isOptional: true },
+            { id: 'code', title: 'Code Model (Optional)', placeholder: 'Leave blank to use Chat Model', isOptional: true },
+            { id: 'creative', title: 'Creative Model (Optional)', placeholder: 'Leave blank to use Chat Model', isOptional: true }
+        ];
+        
+        const providers = ['featherless', 'openai', 'google', 'anthropic', 'groq', 'meta', 'openrouter', 'hyperbolic', 'huggingface', 'local'];
+        
+        models.forEach(model => {
+            const div = document.createElement('div');
+            div.className = 'model-config collapsible';
+            div.dataset.modelId = model.id;
+            div.innerHTML = `
+                <div class="model-header">
+                    <h3>${model.title}</h3>
+                    <button class="toggle-btn" data-model-id="${model.id}" aria-label="Toggle ${model.title}">
+                        <span class="toggle-icon">▼</span>
+                    </button>
+                </div>
+                <div class="model-summary" data-model-id="${model.id}" style="display: none;">
+                    <span class="summary-text">Not configured</span>
+                </div>
+                <div class="model-content" data-model-id="${model.id}">
+                    <div class="grid">
+                        <div class="form-group">
+                            <label for="${model.id}Model">Model Name:</label>
+                            <input type="text" id="${model.id}Model" placeholder="${model.placeholder}">
+                        </div>
+                        <div class="form-group">
+                            <label for="${model.id}Provider">Provider:</label>
+                            <select id="${model.id}Provider">
+                                ${model.isOptional ? '<option value="">(Same as Chat)</option>' : ''}
+                                ${providers.map(p => `<option value="${p}">${p.charAt(0).toUpperCase() + p.slice(1)}</option>`).join('')}
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="${model.id}Tokenizer">Tokenizer: <a href="guide.html#tokenizers" target="_blank" class="provider-link">?</a></label>
+                            <select id="${model.id}Tokenizer">
+                                <!-- Options will be populated dynamically -->
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="${model.id}Temp">Temperature: <a href="guide.html#samplers" target="_blank" class="provider-link">?</a></label>
+                            <input type="number" id="${model.id}Temp" min="0" max="2" step="0.1" placeholder="${model.defaultTemp || 'Optional'}">
+                        </div>
+                        <div class="form-group">
+                            <label for="${model.id}MaxTokens">Max Response Tokens:</label>
+                            <input type="number" id="${model.id}MaxTokens" min="1" placeholder="${model.defaultMaxTokens || 'Optional'}">
+                            <small>Maximum tokens for AI response</small>
+                        </div>
+                        <div class="form-group">
+                            <label for="${model.id}MaxContentTokens">Max Content Tokens:</label>
+                            <input type="number" id="${model.id}MaxContentTokens" min="1" placeholder="${model.defaultMaxContentTokens || 'Optional'}">
+                            <small>Maximum tokens for page content/context</small>
+                        </div>
+                        <div class="form-group">
+                            <label for="${model.id}TopP">Top P:</label>
+                            <input type="number" id="${model.id}TopP" min="0" max="1" step="0.01" placeholder="Optional">
+                        </div>
+                        <div class="form-group">
+                            <label for="${model.id}MinP">Min P:</label>
+                            <input type="number" id="${model.id}MinP" min="0" max="1" step="0.01" placeholder="${model.defaultMinP || 'Optional'}">
+                        </div>
+                        <div class="form-group">
+                            <label for="${model.id}TopK">Top K:</label>
+                            <input type="number" id="${model.id}TopK" min="1" step="1" placeholder="Optional">
+                        </div>
+                        <div class="form-group">
+                            <label for="${model.id}FreqPenalty">Frequency Penalty:</label>
+                            <input type="number" id="${model.id}FreqPenalty" min="-2" max="2" step="0.1" placeholder="Optional">
+                        </div>
+                        <div class="form-group">
+                            <label for="${model.id}PresPenalty">Presence Penalty:</label>
+                            <input type="number" id="${model.id}PresPenalty" min="-2" max="2" step="0.1" placeholder="Optional">
+                        </div>
+                        <div class="form-group checkbox-group">
+                            <input type="checkbox" id="${model.id}MinimalMode">
+                            <label for="${model.id}MinimalMode">Minimal Mode</label>
+                            <small>Use minimal system prompt for this model</small>
+                        </div>
+                    </div>
+                </div>
+            `;
+            container.appendChild(div);
+        });
+
+        // Setup collapse event listeners
+        this.setupCollapseListeners();
+        
+        // Set initial states - chat open, others closed
+        this.setInitialCollapseStates();
+    }
+
+    /**
+     * Render provider settings
+     */
+    renderProviderSettings() {
+        const container = document.getElementById('provider-settings');
+        if (!container) return;
+        
+        container.innerHTML = '';
+        
+        const providers = [
+            { id: 'openai', name: 'OpenAI', url: 'https://platform.openai.com/api-keys' },
+            { id: 'anthropic', name: 'Anthropic', url: 'https://console.anthropic.com/settings/keys' },
+            { id: 'google', name: 'Google AI Studio', url: 'https://aistudio.google.com/app/apikey' },
+            { id: 'featherless', name: 'Featherless', url: 'https://featherless.ai/keys' },
+            { id: 'groq', name: 'Groq', url: 'https://console.groq.com/keys' },
+            { id: 'meta', name: 'Meta Llama', url: 'https://llama.developer.meta.com/api-keys' },
+            { id: 'openrouter', name: 'OpenRouter', url: 'https://openrouter.ai/keys' },
+            { id: 'hyperbolic', name: 'Hyperbolic', url: 'https://app.hyperbolic.xyz/keys' },
+            { id: 'huggingface', name: 'Hugging Face', url: 'https://huggingface.co/settings/tokens' }
+        ];
+        
+        const grid = document.createElement('div');
+        grid.className = 'ww-grid-2';
+        
+        providers.forEach(provider => {
+            const formGroup = document.createElement('div');
+            formGroup.className = 'form-group';
+            formGroup.innerHTML = `
+                <label for="${provider.id}ApiKey">
+                    ${provider.name} API Key:
+                    <a href="${provider.url}" target="_blank" class="provider-link">🔗</a>
+                </label>
+                <input type="password" id="${provider.id}ApiKey" placeholder="Enter ${provider.name} API key">
+            `;
+            grid.appendChild(formGroup);
+        });
+        
+        container.appendChild(grid);
+        
+        // Local models section
+        const localSection = document.createElement('div');
+        localSection.innerHTML = `
+            <h3>Local Models <a href="guide.html#local-models" target="_blank" class="provider-link">📖 Configuration Guide</a></h3>
+            <div class="ww-grid-2">
+                <div class="form-group">
+                    <label for="localModelEndpoint">Local Model Endpoint:</label>
+                    <input type="text" id="localModelEndpoint" placeholder="e.g. http://localhost:8000/v1">
+                </div>
+                <div class="form-group">
+                    <label for="localModelApiKey">Local Model API Key (Optional):</label>
+                    <input type="password" id="localModelApiKey" placeholder="Enter Local Model API key">
+                </div>
+            </div>
+        `;
+        container.appendChild(localSection);
+    }
+
+    /**
+     * Setup collapse/expand event listeners for model sections
+     */
+    setupCollapseListeners() {
+        const toggleButtons = document.querySelectorAll('.toggle-btn');
+        toggleButtons.forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const modelId = btn.dataset.modelId;
+                this.toggleModelSection(modelId);
+                // Update summary when toggling
+                this.updateModelSummary(modelId);
+            });
+        });
+
+        // Also update summaries when model inputs change
+        ['chat', 'thought', 'code', 'creative'].forEach(modelId => {
+            const modelInput = document.getElementById(`${modelId}Model`);
+            const providerSelect = document.getElementById(`${modelId}Provider`);
+            const tempInput = document.getElementById(`${modelId}Temp`);
+            const maxTokensInput = document.getElementById(`${modelId}MaxTokens`);
+            const maxContentTokensInput = document.getElementById(`${modelId}MaxContentTokens`);
+
+            [modelInput, providerSelect, tempInput, maxTokensInput, maxContentTokensInput].forEach(el => {
+                if (el) {
+                    el.addEventListener('change', () => this.updateModelSummary(modelId));
+                    el.addEventListener('input', () => this.updateModelSummary(modelId));
+                }
+            });
+        });
+    }
+
+    /**
+     * Set initial collapse states - chat open, others closed
+     */
+    setInitialCollapseStates() {
+        ['chat', 'thought', 'code', 'creative'].forEach(modelId => {
+            const isChat = modelId === 'chat';
+            const content = document.querySelector(`.model-content[data-model-id="${modelId}"]`);
+            const summary = document.querySelector(`.model-summary[data-model-id="${modelId}"]`);
+            const icon = document.querySelector(`.toggle-btn[data-model-id="${modelId}"] .toggle-icon`);
+            
+            if (content && summary && icon) {
+                if (isChat) {
+                    // Chat starts open
+                    content.style.display = 'block';
+                    summary.style.display = 'none';
+                    icon.textContent = '▼';
+                } else {
+                    // Others start closed
+                    content.style.display = 'none';
+                    summary.style.display = 'block';
+                    icon.textContent = '▶';
+                }
+            }
+            
+            // Update summary for all sections
+            this.updateModelSummary(modelId);
+        });
+    }
+
+    /**
+     * Toggle a model section between collapsed and expanded
+     */
+    toggleModelSection(modelId) {
+        const content = document.querySelector(`.model-content[data-model-id="${modelId}"]`);
+        const summary = document.querySelector(`.model-summary[data-model-id="${modelId}"]`);
+        const icon = document.querySelector(`.toggle-btn[data-model-id="${modelId}"] .toggle-icon`);
+        
+        if (content && summary && icon) {
+            const isCollapsed = content.style.display === 'none';
+            
+            if (isCollapsed) {
+                // Expand
+                content.style.display = 'block';
+                summary.style.display = 'none';
+                icon.textContent = '▼';
+            } else {
+                // Collapse
+                content.style.display = 'none';
+                summary.style.display = 'block';
+                icon.textContent = '▶';
+            }
+        }
+    }
+
+    /**
+     * Generate and update summary for a model configuration
+     */
+    updateModelSummary(modelId) {
+        const summaryEl = document.querySelector(`.model-summary[data-model-id="${modelId}"] .summary-text`);
+        if (!summaryEl) return;
+
+        const modelInput = document.getElementById(`${modelId}Model`);
+        const providerSelect = document.getElementById(`${modelId}Provider`);
+        const tempInput = document.getElementById(`${modelId}Temp`);
+        const maxContentTokensInput = document.getElementById(`${modelId}MaxContentTokens`);
+
+        const modelName = modelInput?.value?.trim() || '';
+        const provider = providerSelect?.value || '';
+        const temperature = tempInput?.value || '';
+        const maxContentTokens = maxContentTokensInput?.value || '';
+
+        if (!modelName && !provider) {
+            summaryEl.textContent = 'Not configured';
+            summaryEl.className = 'summary-text summary-empty';
+        } else {
+            const parts = [];
+            
+            if (modelName) {
+                parts.push(modelName);
+            }
+            
+            if (provider) {
+                parts.push(provider.charAt(0).toUpperCase() + provider.slice(1));
+            }
+            
+            if (temperature) {
+                parts.push(`temp: ${temperature}`);
+            }
+            
+            if (maxContentTokens) {
+                parts.push(`${maxContentTokens} tokens`);
+            }
+            
+            summaryEl.textContent = parts.join(' • ');
+            summaryEl.className = 'summary-text summary-configured';
+        }
     }
 } 
