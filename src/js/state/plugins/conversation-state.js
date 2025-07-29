@@ -672,17 +672,29 @@ export class ConversationStatePlugin {
         
         console.log(`[ConversationState] Patching conversation ${threadId} with ${messages?.length || 0} messages`);
         
-        // Update conversation metadata
+        // Update conversation metadata - ensure it exists
         if (metadata) {
             state.metadata[threadId] = {
                 ...metadata,
                 threadId: threadId  // Ensure threadId is set
+            };
+        } else {
+            // Create minimal metadata if none provided
+            state.metadata[threadId] = {
+                threadId: threadId,
+                status: 'active',
+                startTime: Date.now(),
+                userName: this.stateService.state.settings?.aim?.userName || 'User',
+                personaName: this.stateService.state.settings?.aim?.personaName || 'WebWire Assistant'
             };
         }
         
         // Update conversation messages if provided
         if (messages && Array.isArray(messages)) {
             state.history[threadId] = messages;
+        } else {
+            // Ensure history array exists
+            state.history[threadId] = state.history[threadId] || [];
         }
         
         // If this is marked as active, ensure it's the only active conversation
@@ -699,7 +711,7 @@ export class ConversationStatePlugin {
                 state.metadata[threadId].status = 'active';
             }
             
-            // Set this as the active thread for this tab
+            // Now that metadata is guaranteed to exist, set as active
             this.setActiveConversation(threadId, {tabId: this.stateService.ui.getTabId()});
         }
         

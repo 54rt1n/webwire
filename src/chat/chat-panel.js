@@ -86,7 +86,7 @@ export class WebChatPanel {
             sendBtn: this.container.querySelector('.ww-send-button'),
             cancelBtn: this.container.querySelector('.ww-cancel-button'),
             statusIndicatorAi: this.container.querySelector('.ww-status-indicator-ai'),
-            statusIndicatorMcp: this.container.querySelector('.ww-status-indicator-mcp'),
+            statusIndicatorMcp: this.container.querySelector('.ww-status-indicator-mcp') || null,
             statusText: this.container.querySelector('.ww-status-text'),
             saveIndicator: this.container.querySelector('.ww-save-indicator'),
             conversationId: this.container.querySelector('.ww-conversation-id'),
@@ -877,8 +877,8 @@ export class WebChatPanel {
         }
     }
 
-    updateConnectionStatus(message, ai = {connected: undefined, connecting: undefined, unavailable: undefined, disconnected: undefined, message: undefined}, mcp = {connected: undefined, connecting: undefined, unavailable: undefined, disconnected: undefined, message: undefined}) {
-        if (!this.elements.statusText || !this.elements.statusIndicatorAi || !this.elements.statusIndicatorMcp) return;
+    updateConnectionStatus(message, ai = {connected: undefined, connecting: undefined, unavailable: undefined, disconnected: undefined, message: undefined}, mcp = {connected: undefined, connecting: undefined, unavailable: undefined, disconnected: undefined, message: undefined, hidden: undefined}) {
+        if (!this.elements.statusText || !this.elements.statusIndicatorAi) return;
 
         const colors = {
             'connected': '#10b981',     // Keep original green
@@ -889,7 +889,7 @@ export class WebChatPanel {
 
         // Clear all classes first
         this.elements.statusIndicatorAi.classList.remove('connecting', 'streaming');
-        this.elements.statusIndicatorMcp.classList.remove('connecting');
+        this.elements.statusIndicatorMcp?.classList.remove('connecting');
 
         // Handle AI indicator
         this.elements.statusIndicatorAi.style.color = ai.connected ? colors.connected : ai.connecting ? colors.connecting : ai.unavailable ? colors.unavailable : colors.disconnected;
@@ -900,9 +900,17 @@ export class WebChatPanel {
             this.elements.statusIndicatorAi.classList.add('streaming');
         }
         
-        // Handle MCP indicator
-        this.elements.statusIndicatorMcp.style.color = mcp.connected ? colors.connected : mcp.connecting ? colors.connecting : mcp.unavailable ? colors.unavailable : colors.disconnected;
-        this.elements.statusIndicatorMcp.title = mcp.message || 'MCP: Disconnected';
+        // Handle MCP indicator - only if it exists
+        if (this.elements.statusIndicatorMcp) {
+            if (mcp.hidden) {
+                this.elements.statusIndicatorMcp.style.display = 'none';
+            } else {
+                this.elements.statusIndicatorMcp.style.display = 'inline-block';
+                this.elements.statusIndicatorMcp.style.color = mcp.connected ? colors.connected : mcp.connecting ? colors.connecting : mcp.unavailable ? colors.unavailable : colors.disconnected;
+                this.elements.statusIndicatorMcp.title = mcp.message || 'MCP: Disconnected';
+            }
+        }
+        
         this.elements.statusText.textContent = message || 'Configuring...';
     }
 

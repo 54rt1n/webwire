@@ -605,17 +605,39 @@ export class ChatService extends EventBindableComponent {
     async handleNewConversationRequest(payload) {
         console.log('[ChatService] Handling new conversation request');
         
-        // End the current conversation via backend (which will create a new empty one)
-        const result = await this.eventBus.emitAsync(EVENTS.CHAT.END_CONVERSATION, {}, { target: EVENT_CONTEXT.BACKGROUND });
-        
-        if (result && result.newThreadId) {
-            console.log('[ChatService] New conversation created by END_CONVERSATION:', result.newThreadId);
-            // Request the newly created conversation to update the UI
-            await this.sendGetOrCreateThread();
-        } else {
-            console.log('[ChatService] END_CONVERSATION did not return new thread, creating one');
-            // Fallback: create new conversation if END_CONVERSATION didn't
-            await this.sendGetOrCreateThread({ createOnly: true });
+        try {
+            // End the current conversation via backend (which will create a new empty one)
+            const result = await this.eventBus.emitAsync(EVENTS.CHAT.END_CONVERSATION, {}, { target: EVENT_CONTEXT.BACKGROUND });
+            
+            if (result && result.newThreadId) {
+                console.log('[ChatService] New conversation created by END_CONVERSATION:', result.newThreadId);
+                
+                // Update local conversation state with the new thread ID
+                if (this.stateService && this.stateService.conversation) {
+                    this.stateService.conversation.setActiveConversation(result.newThreadId);
+                }
+                
+                // Create a minimal conversation object for the panel
+                const newConversation = {
+                    threadId: result.newThreadId,
+                    messages: [],
+                    metadata: {
+                        threadId: result.newThreadId,
+                        status: 'active',
+                        startTime: Date.now()
+                    }
+                };
+                
+                // Update the panel directly with the new conversation
+                await this.handleConversationLoaded({ conversation: newConversation });
+            } else {
+                console.log('[ChatService] END_CONVERSATION did not return new thread, creating one');
+                // Fallback: create new conversation if END_CONVERSATION didn't
+                await this.sendGetOrCreateThread({ createOnly: true });
+            }
+        } catch (error) {
+            console.error('[ChatService] Error creating new conversation:', error);
+            this.panel.displayError(`Failed to create new conversation: ${error.message}`);
         }
     }
 
@@ -842,29 +864,33 @@ export class ChatService extends EventBindableComponent {
             aiStatus.message = 'AI: Not configured';
         }
         
-        // Build MCP status object
+        // Build MCP status object - only if MCP service exists
         const mcpStatus = {};
-        const mcpError = this.stateService.mcp.getMcpError();
-        const isHTTPSDowngrade = this.stateService.mcp.isHTTPSDowngrade();
-        
-        if (this.stateService.mcp.isMcpConnected() && this.stateService.mcp.isMcpInitialized()) {
-            mcpStatus.connected = true;
-            mcpStatus.message = 'MCP: Connected';
-        } else if (this.stateService.mcp.isMcpConnected() && !this.stateService.mcp.isMcpInitialized()) {
-            mcpStatus.connecting = true;
-            mcpStatus.message = 'MCP: Initializing...';
-        } else if (isHTTPSDowngrade) {
-            mcpStatus.unavailable = true;
-            mcpStatus.message = 'MCP: Security downgrade (HTTPS to HTTP)';
-        } else if (mcpError) {
-            mcpStatus.disconnected = true;
-            mcpStatus.message = `MCP: ${mcpError}`;
-        } else if (this.stateService.mcp.getMcpServerUrl()) {
-            mcpStatus.unavailable = true;
-            mcpStatus.message = 'MCP: Disconnected';
+        if (this.stateService.mcp) {
+            const mcpError = this.stateService.mcp.getMcpError();
+            const isHTTPSDowngrade = this.stateService.mcp.isHTTPSDowngrade();
+            
+            if (this.stateService.mcp.isMcpConnected() && this.stateService.mcp.isMcpInitialized()) {
+                mcpStatus.connected = true;
+                mcpStatus.message = 'MCP: Connected';
+            } else if (this.stateService.mcp.isMcpConnected() && !this.stateService.mcp.isMcpInitialized()) {
+                mcpStatus.connecting = true;
+                mcpStatus.message = 'MCP: Initializing...';
+            } else if (isHTTPSDowngrade) {
+                mcpStatus.unavailable = true;
+                mcpStatus.message = 'MCP: Security downgrade (HTTPS to HTTP)';
+            } else if (mcpError) {
+                mcpStatus.disconnected = true;
+                mcpStatus.message = `MCP: ${mcpError}`;
+            } else if (this.stateService.mcp.getMcpServerUrl()) {
+                mcpStatus.unavailable = true;
+                mcpStatus.message = 'MCP: Disconnected';
+            } else {
+                mcpStatus.unavailable = true;
+                mcpStatus.message = 'MCP: Not configured';
+            }
         } else {
-            mcpStatus.unavailable = true;
-            mcpStatus.message = 'MCP: Not configured';
+            mcpStatus.hidden = true;
         }
         
         // Build overall status message
@@ -1023,20 +1049,26 @@ export class ChatService extends EventBindableComponent {
     async sendGetOrCreateThread(options = {}) {
         console.log('[ChatService] Requesting current conversation from host...', options);
         
-        // Request the current conversation from the host
-        const conversationData = await this.eventBus.emitAsync(EVENTS.CHAT.GET_OR_CREATE_THREAD, {
-            ...this.pageUtils.getPageLocation(),
-            ...options
-        }, { target: EVENT_CONTEXT.BACKGROUND });
+        try {
+            // Request the current conversation from the host
+            const conversationData = await this.eventBus.emitAsync(EVENTS.CHAT.GET_OR_CREATE_THREAD, {
+                ...this.pageUtils.getPageLocation(),
+                ...options
+            }, { target: EVENT_CONTEXT.BACKGROUND });
 
-        console.log('[ChatService] Current conversation loaded:', conversationData);
+            console.log('[ChatService] Current conversation loaded:', conversationData);
 
-        // Handle the conversation result
-        if (conversationData) {
-            // Trigger the conversation loaded handler to update the panel
-            await this.handleConversationLoaded({ conversation: conversationData });
-        } else {
-            console.warn('[ChatService] Failed to load conversation or no conversation returned:', conversationData);
+            // Handle the conversation result
+            if (conversationData) {
+                // Trigger the conversation loaded handler to update the panel
+                await this.handleConversationLoaded({ conversation: conversationData });
+            } else {
+                console.warn('[ChatService] Failed to load conversation or no conversation returned:', conversationData);
+                this.panel.displayError('Failed to load conversation: No data returned');
+            }
+        } catch (error) {
+            console.error('[ChatService] Error loading conversation:', error);
+            this.panel.displayError(`Failed to load conversation: ${error.message}`);
         }
     }
 

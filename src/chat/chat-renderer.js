@@ -167,10 +167,11 @@ export class ChatUIRenderer {
      * Create connection status HTML
      */
     createConnectionStatusHTML() {
+        const showMcp = this.config && this.config.get && this.config.get('features.mcp.enabled', false);
         return `
             <div class="ww-connection-status">
                 <span class="ww-status-indicator-ai">${this.templates.icons.statusIndicator}</span>
-                <span class="ww-status-indicator-mcp">${this.templates.icons.statusIndicator}</span>
+                ${showMcp ? `<span class="ww-status-indicator-mcp">${this.templates.icons.statusIndicator}</span>` : ''}
                 <span class="ww-status-text">Ready</span>
                 <span class="ww-save-indicator">${this.templates.icons.disk}</span>
             </div>

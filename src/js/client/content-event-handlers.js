@@ -417,12 +417,20 @@ export class ContentEventHandlers extends EventBindableComponent {
                 // CRITICAL: Update local conversation state from background data
                 if (this.stateService && this.stateService.conversation) {
                     console.log('[ContentEventHandlers] Syncing thread state from background:', response.result.threadId);
-                    this.stateService.conversation.patchConversation({
+                    
+                    // Ensure we have the proper conversation structure
+                    const conversationData = {
                         threadId: response.result.threadId,
-                        metadata: response.result.metadata,
-                        messages: response.result.messages,
+                        metadata: response.result.metadata || {
+                            threadId: response.result.threadId,
+                            status: 'active',
+                            startTime: Date.now()
+                        },
+                        messages: response.result.messages || [],
                         isActive: true  // This is the current active thread
-                    });
+                    };
+                    
+                    this.stateService.conversation.patchConversation(conversationData);
                 }
                 
                 this.eventBus.emit(EVENTS.CHAT.CONVERSATION_LOADED, {
@@ -458,12 +466,20 @@ export class ContentEventHandlers extends EventBindableComponent {
                 // CRITICAL: Update local conversation state from background data
                 if (this.stateService && this.stateService.conversation) {
                     console.log('[ContentEventHandlers] Syncing new thread state from background:', response.thread.threadId);
-                    this.stateService.conversation.patchConversation({
+                    
+                    // Ensure we have the proper conversation structure
+                    const conversationData = {
                         threadId: response.thread.threadId,
-                        metadata: response.thread.metadata,
+                        metadata: response.thread.metadata || {
+                            threadId: response.thread.threadId,
+                            status: 'active',
+                            startTime: Date.now()
+                        },
                         messages: response.thread.messages || [],
                         isActive: true  // This is the new active thread
-                    });
+                    };
+                    
+                    this.stateService.conversation.patchConversation(conversationData);
                 }
                 
                 // Emit conversation loaded event for ChatService
