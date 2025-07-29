@@ -49,6 +49,7 @@ class WebWirePopupApp {
     setupEventListeners() {
         this.popup.setupEventListeners({
             onConversations: (e) => this.openConversations(e),
+            onPrompts: (e) => this.openPrompts(e),
             onSettings: () => this.openSettings(),
             onHelp: (e) => this.openHelp(e)
         });
@@ -142,6 +143,33 @@ class WebWirePopupApp {
         } catch (error) {
             console.error('[WebWirePopupApp] Failed to open Conversations panel:', error);
             this.popup.showError(`Failed to open Conversations panel: ${error.message}`);
+            
+            // Don't close popup if there's an error so user can see it
+        }
+    }
+
+    /**
+     * Opens the Prompts panel in a new tab
+     * @param {Event} e - Click event
+     */
+    async openPrompts(e) {
+        try {
+            e.preventDefault();
+            console.log('[WebWirePopupApp] Opening Prompts panel...');
+            
+            const promptsUrl = chrome.runtime.getURL('prompts.html');
+            console.log('[WebWirePopupApp] Prompts URL:', promptsUrl);
+            
+            const tab = await chrome.tabs.create({
+                url: promptsUrl
+            });
+            console.log('[WebWirePopupApp] Tab created:', tab);
+            
+            this.popup.close();
+            
+        } catch (error) {
+            console.error('[WebWirePopupApp] Failed to open Prompts panel:', error);
+            this.popup.showError(`Failed to open Prompts panel: ${error.message}`);
             
             // Don't close popup if there's an error so user can see it
         }

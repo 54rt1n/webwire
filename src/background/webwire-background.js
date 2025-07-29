@@ -602,7 +602,15 @@ class WebWireBackground {
         }
         
         // Handle state service storage changes (from options panel)
-        const settingsKeys = ['webwireState', 'webwireSettingsState', 'app-settings'];
+        const settingsKeys = [
+            'webwireState', 
+            'webwireSettingsState', 
+            'app-settings',      // SettingsAdapter
+            'app-state',         // StateAdapter  
+            'app-tab',           // TabAdapter
+            'app-stash',         // StashAdapter
+            'webwire-prompts'    // PromptAdapter
+        ];
         const hasSettingsChange = settingsKeys.some(key => changes[key]);
         
         // Handle manual trigger from options page (fallback mechanism)
@@ -616,9 +624,32 @@ class WebWireBackground {
             
             console.log('[WebWireBackground] 🔄 WebWire state/settings changed, reloading state...');
             try {
-                await this.stateService.settings.loadFromStorage();
-                await this.stateService.tab.loadFromStorage();
-                await this.stateService.disk.loadFromStorage();
+                // Reload specific state based on what changed
+                if (changes['app-settings'] && this.stateService.settings) {
+                    await this.stateService.settings.loadFromStorage();
+                    console.log('[WebWireBackground] ✅ Settings state reloaded after storage change');
+                }
+                
+                if (changes['app-tab'] && this.stateService.tab) {
+                    await this.stateService.tab.loadFromStorage();
+                    console.log('[WebWireBackground] ✅ Tab state reloaded after storage change');
+                }
+                
+                if (changes['app-state'] && this.stateService.disk) {
+                    await this.stateService.disk.loadFromStorage();
+                    console.log('[WebWireBackground] ✅ Disk state reloaded after storage change');
+                }
+                
+                if (changes['app-stash'] && this.stateService.stash) {
+                    await this.stateService.stash.loadFromStorage();
+                    console.log('[WebWireBackground] ✅ Stash state reloaded after storage change');
+                }
+                
+                if (changes['webwire-prompts'] && this.stateService.prompts) {
+                    await this.stateService.prompts.loadFromStorage();
+                    console.log('[WebWireBackground] ✅ Prompts state reloaded after storage change');
+                }
+                
                 console.log('[WebWireBackground] ✅ WebWire state reloaded after storage change');
                 
                 // TODO the tabs will need to be updated with the dispatcher
@@ -789,6 +820,7 @@ class WebWireBackground {
             let state = {
                 settings: this.stateService.state.settings || {},
                 conversation: this.stateService.state.conversation || {}, // TODO: tabs don't need all conversations
+                prompts: this.stateService.state.prompts || {},
                 tabs: {
                     default: this.stateService.state.tabs.default,
                     [tabId]: tabState // The client just needs it's own tab state

@@ -111,6 +111,14 @@ export const EVENTS = {
         SCROLL: 'dom:scroll',
         OPERATION_COMPLETE: 'dom:operation_complete',
         OPERATION_ERROR: 'dom:operation_error'
+    },
+    PROMPT: {
+        UPDATED: 'prompt:updated',
+        CREATED: 'prompt:created',
+        DELETED: 'prompt:deleted',
+        STATUS_CHANGED: 'prompt:status_changed',
+        IMPORTED: 'prompt:imported',
+        EXPORTED: 'prompt:exported'
     }
 }; 
 

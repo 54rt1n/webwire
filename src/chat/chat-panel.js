@@ -79,7 +79,6 @@ export class WebChatPanel {
             fab: this.container.querySelector('.ww-fab'),
             closeBtn: this.container.querySelector('#close-panel'),
             resyncBtn: this.container.querySelector('#resync'),
-            analyzePageBtn: this.container.querySelector('#analyze-page-btn'),
             newConversationBtn: this.container.querySelector('#new-conversation'),
             chatContent: this.container.querySelector('.ww-content'),
             chatInput: this.container.querySelector('.ww-input'),
@@ -283,14 +282,11 @@ export class WebChatPanel {
                 return;
             }
 
-            // Analyze page button (in welcome message)
-            if (e.target.closest('#analyze-page-btn')) {
-                this.handlePageAnalysisRequest('analysis');
-            }
-
-            // Timeline page button (in welcome message)
-            if (e.target.closest('#timeline-page-btn')) {
-                this.handlePageAnalysisRequest('timeline');
+            // Dynamic prompt buttons (in welcome message)
+            const promptButton = e.target.closest('[data-prompt-id]');
+            if (promptButton) {
+                const promptId = promptButton.dataset.promptId;
+                this.handlePromptRequest(promptId);
             }
         });
     }
@@ -659,11 +655,12 @@ export class WebChatPanel {
 
     /**
      * Show welcome message
+     * @param {Object} activePrompts - Active prompts to display as buttons
      */
-    showWelcomeMessage() {
+    showWelcomeMessage(activePrompts = {}) {
         if (!this.elements.chatContent) return;
         
-        const welcomeEl = this.renderer.createWelcomeElement();
+        const welcomeEl = this.renderer.createWelcomeElement(activePrompts);
         this.elements.chatContent.appendChild(welcomeEl);
     }
 
@@ -701,7 +698,22 @@ export class WebChatPanel {
     clearMessages() {
         if (this.elements.chatContent) {
             this.elements.chatContent.innerHTML = '';
-            this.showWelcomeMessage();
+            this.showWelcomeMessage(this.activePrompts);
+        }
+    }
+    
+    /**
+     * Set active prompts and refresh welcome message if visible
+     * @param {Object} activePrompts - Active prompts from state service
+     */
+    setActivePrompts(activePrompts) {
+        this.activePrompts = activePrompts;
+        
+        // If welcome message is currently visible, refresh it
+        const existingWelcome = this.elements.chatContent?.querySelector('.ww-welcome-message');
+        if (existingWelcome) {
+            existingWelcome.remove();
+            this.showWelcomeMessage(activePrompts);
         }
     }
 
@@ -1092,8 +1104,11 @@ export class WebChatPanel {
         }, 1500);
     }
 
-    handlePageAnalysisRequest(promptType) {
-        this.eventBus.emit(EVENTS.CHAT.ANALYZE_PAGE, { promptType });
+    /**
+     * Handle prompt request with prompt ID
+     */
+    handlePromptRequest(promptId) {
+        this.eventBus.emit(EVENTS.CHAT.ANALYZE_PAGE, { promptId });
     }
 
     handleNewConversationRequest() {

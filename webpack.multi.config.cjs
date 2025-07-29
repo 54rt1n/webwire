@@ -20,6 +20,7 @@ const createConfig = (env, argv, variant) => {
       options: `./${appDir}/options/index.js`,
       guide: `./${appDir}/guide/index.js`,
       conversations: './src/conversations/index.js',
+      prompts: './src/prompts/index.js',
       // Only include MCP entries for full version
       ...(isLite ? {} : {
         mcp_status: './src/mcp/index.js'
@@ -78,7 +79,8 @@ const createConfig = (env, argv, variant) => {
             }
           },
           { from: `./${appDir}/icons`, to: 'icons' },
-          { from: './assets/tokenizers', to: 'tokenizers' }
+          { from: './assets/tokenizers', to: 'tokenizers' },
+          { from: './assets/prompts', to: 'prompts' }
         ]
       }),
       new HtmlWebpackPlugin({
@@ -100,6 +102,11 @@ const createConfig = (env, argv, variant) => {
         template: `./${appDir}/guide/index.html`,
         filename: 'guide.html',
         chunks: ['guide']
+      }),
+      new HtmlWebpackPlugin({
+        template: './src/prompts/index.html',
+        filename: 'prompts.html',
+        chunks: ['prompts']
       }),
       // Only include MCP HTML for full version
       ...(isLite ? [] : [

@@ -4,6 +4,7 @@ import { MCPConnector } from '../mcp/mcp-connector.js';
 import { StateService, ContentStateService } from '../state/state-service.js';
 import { StorageManager } from '../storage/storage-manager.js';
 import { createInitialState } from '../state/state-container.js';
+import { PromptLoader } from '../utils/prompt-loader.js';
 
 export async function contextFactory(eventBus, context,
     {storage = false, state = false, contentState = false, ai = false, mcp = false},
@@ -51,9 +52,44 @@ export async function contextFactory(eventBus, context,
         }
         if (loadState) {
             await results.stateService.disk.loadFromStorage();
+            // Also load prompts from storage
+            await results.stateService.prompts.loadFromStorage();
         }
         if (loadStash) {
             await results.stateService.stash.loadFromStorage();
+        }
+        
+        // Initialize prompts if this is a background context with full state
+        if (backgroundIsLocal && loadState) {
+            try {
+                // Check if prompts already exist in state (from storage)
+                const existingPrompts = results.stateService.prompts.getAllPrompts();
+                
+                if (Object.keys(existingPrompts).length === 0) {
+                    // First time - load default prompts from JSON files
+                    console.log('[ContextFactory] No prompts found in storage, loading defaults from JSON files...');
+                    const defaultPrompts = await PromptLoader.loadPromptsWithFallback();
+                    
+                    if (Object.keys(defaultPrompts).length > 0) {
+                        console.log('[ContextFactory] Loaded default prompts:', Object.keys(defaultPrompts));
+                        results.stateService.prompts.setPrompts(defaultPrompts);
+                        
+                        // Save to storage for next time
+                        await results.stateService.prompts.saveToStorage();
+                        console.log('[ContextFactory] Prompts saved to storage');
+                    } else {
+                        console.warn('[ContextFactory] No default prompts found in JSON files');
+                    }
+                } else {
+                    console.log('[ContextFactory] Found existing prompts in storage:', Object.keys(existingPrompts));
+                }
+                
+                // Verify prompts are in state
+                const finalPrompts = results.stateService.prompts.getAllPrompts();
+                console.log('[ContextFactory] Final prompts in state:', finalPrompts);
+            } catch (error) {
+                console.error('[ContextFactory] Failed to initialize prompts:', error);
+            }
         }
     } else if (contentState) {
         if (!initialState) {

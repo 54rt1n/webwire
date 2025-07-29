@@ -2,6 +2,7 @@ import { SettingsAdapter } from './adapters/settings-adapter.js';
 import { StateAdapter, StateValidator } from './adapters/state-adapter.js';
 import { TabAdapter } from './adapters/tab-adapter.js';
 import { StashAdapter } from './adapters/stash-adapter.js';
+import { PromptAdapter } from './adapters/prompt-adapter.js';
 
 /**
  * Factory and container for specialized storage adapters handling different data types.
@@ -53,6 +54,11 @@ export class StorageManager {
 
             stash: new StashAdapter({
                 storageKey: this.config.keys?.stash || 'app-stash',
+                version: this.version
+            }, eventBus),
+
+            prompts: new PromptAdapter({
+                storageKey: this.config.keys?.prompts || 'webwire-prompts',
                 version: this.version
             }, eventBus)
         };

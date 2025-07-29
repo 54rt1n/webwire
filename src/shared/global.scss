@@ -19,6 +19,7 @@
 
 /* Base styles applied to all WebWire containers */
 #ww-container,
+.ww-container-base,
 .ww-panel,
 .ww-dashboard,
 .ww-conversations,
@@ -1165,6 +1166,10 @@
         transition: all var(--transition-normal);
         font-size: var(--font-size-sm);
         font-weight: var(--font-weight-medium);
+        
+        .ww-btn-icon {
+          font-size: var(--font-size-lg);
+        }
         
         &:hover {
           background: var(--color-gray-100);

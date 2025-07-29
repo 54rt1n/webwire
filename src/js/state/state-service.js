@@ -5,6 +5,7 @@ import { AIMStatePlugin } from './plugins/aim-state.js';
 import { ConversationStatePlugin } from './plugins/conversation-state.js';
 import { DiskStatePlugin } from './plugins/disk-state.js';
 import { MCPStatePlugin } from './plugins/mcp-state.js';
+import { PromptStatePlugin } from './plugins/prompt-state.js';
 import { SettingsStatePlugin } from './plugins/settings-state.js';
 import { StashStatePlugin } from './plugins/stash-state.js';
 import { TabStatePlugin } from './plugins/tab-state.js';
@@ -51,6 +52,7 @@ class StateService {
         this.conversation = new ConversationStatePlugin(this);
         this.disk = new DiskStatePlugin(this);
         this.mcp = new MCPStatePlugin(this);
+        this.prompts = new PromptStatePlugin(this);
         this.settings = new SettingsStatePlugin(this);
         this.stash = new StashStatePlugin(this);
         this.tab = new TabStatePlugin(this);
@@ -101,6 +103,7 @@ class ContentStateService {
         this.aim = new AIMStatePlugin(this);
         this.conversation = new ConversationStatePlugin(this);
         this.mcp = new MCPStatePlugin(this);
+        this.prompts = new PromptStatePlugin(this);
         this.stash = new StashStatePlugin(this);
         this.tab = new TabStatePlugin(this);
         this.ui = new UiStatePlugin(this);

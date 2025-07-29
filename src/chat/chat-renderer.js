@@ -204,22 +204,28 @@ export class ChatUIRenderer {
 
     /**
      * Create welcome message HTML
+     * @param {Object} activePrompts - Active prompts from state service (promptId -> promptData)
      */
-    createWelcomeHTML() {
+    createWelcomeHTML(activePrompts = {}) {
+        const promptButtons = Object.entries(activePrompts).map(([promptId, prompt]) => {
+            // Use emoji directly from buttonIcon
+            const icon = prompt.buttonIcon || '📖';
+            
+            return `
+                <button class="ww-btn" data-prompt-id="${promptId}">
+                    <span class="ww-btn-icon">${icon}</span>
+                    ${prompt.buttonText}
+                </button>
+            `;
+        }).join('');
+        
         return `
             <div class="ww-welcome-message">
                 <div class="ww-welcome-icon">🤖</div>
                 <h3>WebWire Assistant</h3>
                 <p>I can analyze this webpage and help you with questions. I also have access to various tools through MCP integration.</p>
                 <div class="ww-quick-actions">
-                    <button class="ww-btn" id="analyze-page-btn">
-                        ${this.templates.icons.analyze}
-                        Summarize This Page
-                    </button>
-                    <button class="ww-btn" id="timeline-page-btn">
-                        ${this.templates.icons.timeline}
-                        Timeline Analysis
-                    </button>
+                    ${promptButtons}
                 </div>
             </div>
         `;
@@ -519,11 +525,12 @@ export class ChatUIRenderer {
 
     /**
      * Create welcome element (for dynamic insertion)
+     * @param {Object} activePrompts - Active prompts from state service
      */
-    createWelcomeElement() {
+    createWelcomeElement(activePrompts = {}) {
         const welcomeEl = document.createElement('div');
         welcomeEl.className = 'ww-welcome-message';
-        welcomeEl.innerHTML = this.createWelcomeHTML().match(/<div class="ww-welcome-message">([\s\S]*)<\/div>/)[1];
+        welcomeEl.innerHTML = this.createWelcomeHTML(activePrompts).match(/<div class="ww-welcome-message">([\s\S]*)<\/div>/)[1];
         return welcomeEl;
     }
 

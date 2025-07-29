@@ -46,6 +46,7 @@ export class WebWirePopup {
 
         // Action buttons
         this.conversationsBtn = document.getElementById('conversations-btn');
+        this.promptsBtn = document.getElementById('prompts-btn');
         this.settingsBtn = document.getElementById('settings-btn');
         this.helpBtn = document.getElementById('help-btn');
     }
@@ -77,6 +78,7 @@ export class WebWirePopup {
      */
     setupEventListeners(handlers) {
         this.conversationsBtn.addEventListener('click', handlers.onConversations);
+        this.promptsBtn.addEventListener('click', handlers.onPrompts);
         this.settingsBtn.addEventListener('click', handlers.onSettings);
         this.helpBtn.addEventListener('click', handlers.onHelp);
     }

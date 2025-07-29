@@ -1,0 +1,204 @@
+@use '../shared/design-tokens.scss';
+
+// Modal container
+.emoji-browser-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+}
+
+// Overlay
+.emoji-browser-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+}
+
+// Content
+.emoji-browser-content {
+    position: relative;
+    background: var(--color-surface);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-xl);
+    width: 90%;
+    max-width: 600px;
+    max-height: 80vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+// Header
+.emoji-browser-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--space-6);
+    border-bottom: 1px solid var(--color-border);
+
+    h3 {
+        margin: 0;
+        font-size: var(--font-size-xl);
+        font-weight: var(--font-weight-semibold);
+        color: var(--color-text-primary);
+    }
+}
+
+.emoji-close-btn {
+    background: transparent;
+    border: none;
+    font-size: var(--font-size-2xl);
+    color: var(--color-text-secondary);
+    cursor: pointer;
+    padding: 0;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--radius-sm);
+    transition: all 0.2s ease;
+
+    &:hover {
+        background: var(--color-gray-100);
+        color: var(--color-text-primary);
+    }
+}
+
+// Search
+.emoji-browser-search {
+    padding: var(--space-4) var(--space-6);
+    border-bottom: 1px solid var(--color-border);
+}
+
+.emoji-search {
+    width: 100%;
+    padding: var(--space-2) var(--space-4);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    background: var(--color-surface);
+    color: var(--color-text-primary);
+    font-size: var(--font-size-base);
+
+    &:focus {
+        outline: none;
+        border-color: var(--color-primary-500);
+        box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
+    }
+
+    &::placeholder {
+        color: var(--color-text-muted);
+    }
+}
+
+// Categories container
+.emoji-browser-categories {
+    flex: 1;
+    overflow-y: auto;
+    padding: var(--space-6);
+}
+
+// Category
+.emoji-category {
+    margin-bottom: var(--space-8);
+
+    &:last-child {
+        margin-bottom: 0;
+    }
+}
+
+.emoji-category-title {
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-semibold);
+    color: var(--color-text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin: 0 0 var(--space-2) 0;
+}
+
+// Emoji grid
+.emoji-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(44px, 1fr));
+    gap: var(--space-1);
+}
+
+// Emoji item
+.emoji-item {
+    width: 44px;
+    height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: var(--radius-md);
+    font-size: 24px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    padding: 0;
+
+    &:hover {
+        background: var(--color-gray-100);
+        border-color: var(--color-border);
+        transform: scale(1.1);
+    }
+
+    &:active {
+        transform: scale(0.95);
+    }
+
+    &:focus {
+        outline: none;
+        border-color: var(--color-primary-500);
+        box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
+    }
+}
+
+// Scrollbar styling
+.emoji-browser-categories {
+    &::-webkit-scrollbar {
+        width: 8px;
+    }
+
+    &::-webkit-scrollbar-track {
+        background: var(--color-surface);
+        border-radius: var(--radius-sm);
+    }
+
+    &::-webkit-scrollbar-thumb {
+        background: var(--color-border);
+        border-radius: var(--radius-sm);
+
+        &:hover {
+            background: var(--color-gray-300);
+        }
+    }
+}
+
+// Responsive
+@media (max-width: 600px) {
+    .emoji-browser-content {
+        width: 95%;
+        max-height: 90vh;
+    }
+
+    .emoji-grid {
+        grid-template-columns: repeat(auto-fill, minmax(40px, 1fr));
+    }
+
+    .emoji-item {
+        width: 40px;
+        height: 40px;
+        font-size: 20px;
+    }
+}

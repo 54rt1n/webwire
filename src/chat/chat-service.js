@@ -10,8 +10,6 @@ import { MessageBuilder } from './message-builder.js';
 import { ToolExecutor } from './tool-executor.js';
 import { AIResponseHandler } from './ai-response-handler.js';
 import { AIClientFactory } from '../js/ai/ai-client-factory.js';
-import * as analysis from '../js/prompts/analysis-prompt.js';
-import * as timeline from '../js/prompts/timeline-prompt.js';
 
 /**
  * WebWire Chat Service - Platform-Agnostic Core
@@ -188,6 +186,13 @@ export class ChatService extends EventBindableComponent {
             // Update initial connection status
             this.updateConnectionStatus();
             console.log('[ChatService] Connection status updated');
+            
+            // Set active prompts for dynamic buttons
+            if (this.stateService.prompts) {
+                const activePrompts = this.stateService.prompts.getActivePrompts();
+                this.panel.setActivePrompts(activePrompts);
+                console.log('[ChatService] Active prompts set:', Object.keys(activePrompts));
+            }
             
             // Load current conversation on startup
             console.log('[ChatService] Loading current conversation on startup...');
@@ -490,25 +495,27 @@ export class ChatService extends EventBindableComponent {
      */
     async handlePageAnalysisRequest(payload) {
         console.log('[ChatService] Handling page analysis request', payload);
-
-        const { promptType } = payload;
-
-        let userMessage = '';
-        let systemPrompt = '';
-
-        if (promptType === 'analysis') {
-            userMessage = analysis.buildPrompt();
-            systemPrompt = analysis.buildSystemPrompt();
-        } else if (promptType === 'timeline') {
-            userMessage = timeline.buildPrompt();
-            systemPrompt = timeline.buildSystemPrompt();
+        
+        const { promptId } = payload;
+        const prompt = this.stateService.prompts.getPrompt(promptId);
+        
+        if (!prompt) {
+            console.error(`[ChatService] Prompt not found: ${promptId}`);
+            return;
         }
         
-        // Force page content inclusion and add custom system prompt for analysis requests
-        await this.handleUserMessage({ message: userMessage }, { 
-            forcePageContent: true, 
-            customSystemPrompt: systemPrompt 
-        });
+        // Build options from prompt features
+        const options = { 
+            customSystemPrompt: prompt.systemPrompt,
+            forcePageContent: prompt.features.pageContent,
+            enableMcp: prompt.features.mcp,
+            autoThink: prompt.features.autoThink,
+            noBaseSystemPrompt: prompt.features.noBaseSystemPrompt,
+            enableBrowserTools: prompt.features.browserTools,
+            autoExecuteTools: prompt.features.autoExecuteTools
+        };
+        
+        await this.handleUserMessage({ message: prompt.userPrompt }, options);
     }
 
     /**
