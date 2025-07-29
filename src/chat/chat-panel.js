@@ -8,9 +8,10 @@ import { buildToolMessages } from './message-utils.js';
  * All HTML generation is delegated to the WebWireUIRenderer
  */
 export class WebChatPanel {
-    constructor(eventBus) {
+    constructor(eventBus, config = null) {
         this.eventBus = eventBus;
-        this.renderer = new ChatUIRenderer();
+        this.config = config;
+        this.renderer = new ChatUIRenderer(this.config);
         this.container = null;
         this.isInjected = false;
         this.isVisible = false;
@@ -102,7 +103,7 @@ export class WebChatPanel {
             chevronIcon: this.container.querySelector('.ww-chevron-icon'),
             modelChatRadio: this.container.querySelector('.ww-model-chat'),
             modelThoughtRadio: this.container.querySelector('.ww-model-thought'),
-            modelToolRadio: this.container.querySelector('.ww-model-tool'),
+            modelCodeRadio: this.container.querySelector('.ww-model-code'),
             modelCreativeRadio: this.container.querySelector('.ww-model-creative'),
             modelNameDisplay: this.container.querySelector('.ww-model-name'),
             modelTempDisplay: this.container.querySelector('.ww-model-temp'),
@@ -229,9 +230,9 @@ export class WebChatPanel {
             }
         });
 
-        this.elements.modelToolRadio?.addEventListener('change', (e) => {
+        this.elements.modelCodeRadio?.addEventListener('change', (e) => {
             if (e.target.checked) {
-                this.handleSelectedModelChange('tool');
+                this.handleSelectedModelChange('code');
                 this.updateDrawerSummary();
             }
         });

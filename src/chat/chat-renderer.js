@@ -4,7 +4,8 @@ import { generateMessageId } from '../js/utils/id-generator.js';
  * ChatUIRenderer - Handles all HTML generation for the Chat panel
  */
 export class ChatUIRenderer {
-    constructor() {
+    constructor(config = null) {
+        this.config = config;
         // Store templates for reusability
         this.templates = {
             icons: {
@@ -247,18 +248,7 @@ export class ChatUIRenderer {
                                 <input type="checkbox" class="ww-checkbox ww-page-content-checkbox" checked>
                                 <span class="ww-text">Include page content</span>
                             </label>
-                            <label class="ww-label">
-                                <input type="checkbox" class="ww-checkbox ww-mcp-checkbox">
-                                <span class="ww-text">Use MCP</span>
-                            </label>
-                            <label class="ww-label">
-                                <input type="checkbox" class="ww-checkbox ww-browser-tools-checkbox">
-                                <span class="ww-text">Use browser tools</span>
-                            </label>
-                            <label class="ww-label">
-                                <input type="checkbox" class="ww-checkbox ww-auto-execute-checkbox">
-                                <span class="ww-text">Auto-execute tools</span>
-                            </label>
+                            ${this._renderConditionalCheckboxes()}
                         </div>
                         <div class="ww-model-selector">
                             <div class="ww-model-selector-grid">
@@ -275,8 +265,8 @@ export class ChatUIRenderer {
                                     </div>
                                     <div class="ww-model-radio-row">
                                         <label class="ww-label">
-                                            <input type="radio" name="ww-selected-model" value="tool" class="ww-radio ww-model-tool">
-                                            <span class="ww-text">Tool</span>
+                                            <input type="radio" name="ww-selected-model" value="code" class="ww-radio ww-model-code">
+                                            <span class="ww-text">Code</span>
                                         </label>
                                         <label class="ww-label">
                                             <input type="radio" name="ww-selected-model" value="creative" class="ww-radio ww-model-creative">
@@ -617,5 +607,37 @@ export class ChatUIRenderer {
      */
     createErrorNotificationHTML(message) {
         return `<div class="ww-notification">${this.escapeHTML(message)}</div>`;
+    }
+
+    /**
+     * Render conditional checkboxes based on configuration
+     * @returns {string} HTML for conditional checkboxes
+     */
+    _renderConditionalCheckboxes() {
+        let checkboxes = '';
+        
+        // Only show MCP checkbox if MCP is enabled
+        if (this.config && this.config.get && this.config.get('features.mcp.enabled', false)) {
+            checkboxes += `
+                <label class="ww-label">
+                    <input type="checkbox" class="ww-checkbox ww-mcp-checkbox">
+                    <span class="ww-text">Use MCP</span>
+                </label>`;
+        }
+        
+        // Only show tools checkboxes if tools are enabled
+        if (this.config && this.config.get && this.config.get('features.tools.enabled', false)) {
+            checkboxes += `
+                <label class="ww-label">
+                    <input type="checkbox" class="ww-checkbox ww-browser-tools-checkbox">
+                    <span class="ww-text">Use browser tools</span>
+                </label>
+                <label class="ww-label">
+                    <input type="checkbox" class="ww-checkbox ww-auto-execute-checkbox">
+                    <span class="ww-text">Auto-execute tools</span>
+                </label>`;
+        }
+        
+        return checkboxes;
     }
 }

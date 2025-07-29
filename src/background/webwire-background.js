@@ -865,16 +865,21 @@ class WebWireBackground {
     }
 }
 
-async function factory() {
-    // Initialize the background script
+/**
+ * Static factory for creating and initializing WebWireBackground instances
+ * 
+ * @param {Object} config - Configuration object from AppConfig
+ * @returns {Promise<WebWireBackground>} Initialized background instance
+ */
+WebWireBackground.factory = async function(config) {
+    if (!config) {
+        throw new Error('WebWire config not found');
+    }
+    
     const webwireBackground = new WebWireBackground();
     await webwireBackground.initialize();
-
+    
     return webwireBackground;
-}
+};
 
-factory().then(webwireBackground => {
-    self.webwireBackground = webwireBackground;
-}, (error) => {
-    console.error('Failed to initialize background script:', error);
-});
+export { WebWireBackground };

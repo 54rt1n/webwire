@@ -4,12 +4,26 @@
  * This wrapper configures the content script with all features except MCP tools.
  */
 
-// Configure global settings before importing
-window.__WEBWIRE_CONFIG__ = {
-    enableMcp: false,
-    enableTools: false,
-    version: 'lite'
-};
+import { AppConfig } from '../src/js/core/app-config.js';
+import { WebWireContentHost } from '../src/content/index.js';
+import { DOM_READY_STATES } from '../src/js/core/cc-actions.js';
 
-// Import the main content script which will use the config
-import '../src/content/index.js';
+// Create configuration
+const config = AppConfig.contentFactory('lite');
+
+// Initialize when DOM is ready
+function initializeContent() {
+    WebWireContentHost.factory(config).then(contentHost => {
+        window.webwireContentHost = contentHost;
+        console.log('[WebWire Lite] Content host initialized');
+    }).catch(error => {
+        console.error('[WebWire Lite] Failed to initialize content host:', error);
+    });
+}
+
+// Wait for DOM to be ready
+if (document.readyState === DOM_READY_STATES.LOADING) {
+    document.addEventListener('DOMContentLoaded', initializeContent);
+} else {
+    initializeContent();
+}

@@ -28,15 +28,18 @@ import { BrowserEventHandlers } from '../js/client/browser-event-handlers.js';
  * All the core chat logic has been moved to ChatService.
  */
 class WebWireContentHost {
-    constructor() {
+    constructor(config) {
+        // Global app config
+        this.config = config;
+
         // Create event bus for communication with ChatService
         this.eventBus = new EventBus({domain: 'content', debug: true});
         
         // Create WebWire core for infrastructure
-        this.core = new WebWireClientCore(this.eventBus);
+        this.core = new WebWireClientCore(this.eventBus, this.config);
         
         // Create the chat service (platform-agnostic core)
-        this.chatService = new ChatService(this.eventBus);
+        this.chatService = new ChatService(this.eventBus, this.config);
         
         // Host state
         this.pageUtils = new PageUtils();
@@ -251,35 +254,31 @@ class WebWireContentHost {
     }
 }
 
-// Global instance
-let webwireContentHost = null;
-
-// Wait for DOM to be ready
-if (document.readyState === DOM_READY_STATES.LOADING) {
-    document.addEventListener('DOMContentLoaded', factory);
-} else {
-    factory();
-}
-
 /**
- * Initialize the WebWire content host
+ * Static factory for creating and initializing WebWireContentHost instances
+ * 
+ * @param {Object} config - Configuration object from AppConfig
+ * @returns {Promise<WebWireContentHost>} Initialized content host instance
  */
-async function factory() {
-    console.log('[WebWireContentHost] Initializing...');
-    
-    try {
-        // Setup debug methods (will need to adapt for new architecture)
-        setupDebugMethods(WebWireContentHost);
-        
-        // Create and initialize the host
-        webwireContentHost = new WebWireContentHost();
-        await webwireContentHost.initialize();
-        
-        console.log('[WebWireContentHost] Initialized successfully');
-    } catch (error) {
-        console.error('[WebWireContentHost] Failed to initialize:', error);
-    } finally {
-        // Setup global debug access
-        setupGlobalDebugAccess(webwireContentHost);
+WebWireContentHost.factory = async function(config) {
+    if (!config) {
+        throw new Error('WebWire config not found');
     }
-}
+    
+    console.log('[WebWireContentHost] Factory creating instance...');
+    
+    // Setup debug methods
+    setupDebugMethods(WebWireContentHost);
+    
+    // Create and initialize the host
+    const webwireContentHost = new WebWireContentHost(config);
+    await webwireContentHost.initialize();
+    
+    // Setup global debug access
+    setupGlobalDebugAccess(webwireContentHost);
+    
+    console.log('[WebWireContentHost] Factory initialization complete');
+    return webwireContentHost;
+};
+
+export { WebWireContentHost };

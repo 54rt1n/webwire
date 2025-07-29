@@ -7,7 +7,7 @@ import { createInitialState } from '../state/state-container.js';
 
 export async function contextFactory(eventBus, context,
     {storage = false, state = false, contentState = false, ai = false, mcp = false},
-    {backgroundIsLocal = false, loadSettings = false, loadState = false, loadStash = false, modelType = null, initialState = null, readInitialState = false} = {}) {
+    {backgroundIsLocal = false, loadSettings = false, loadState = false, loadStash = false, modelType = null, initialState = null, readInitialState = false, config = null} = {}) {
 
     if ((ai || mcp) && ((!state || !loadSettings) && (!readInitialState && !initialState))) {
         console.error('[ContextFactory] Invalid context configuration: loading settings is required for AI and MCP', {ai, mcp, state, loadSettings, readInitialState, initialState});
@@ -39,7 +39,9 @@ export async function contextFactory(eventBus, context,
     }
 
     if (storage) {
-        results.storage = new StorageManager(results.eventBus);
+        // Pass storage config from app config if available
+        const storageConfig = config ? { storage: config.get('storage', {}) } : {};
+        results.storage = new StorageManager(results.eventBus, storageConfig);
     }
 
     if (state) {
@@ -63,10 +65,21 @@ export async function contextFactory(eventBus, context,
 
     // AI client creation removed - now handled lazily by ChatService.getAiClient()
 
-    if (mcp) {
+    if (mcp && config && config.get('features.mcp.enabled', false)) {
         const serverUrl = results.stateService.mcp.getMcpServerUrl();
         if (serverUrl) {
             results.mcpConnector = new MCPConnector(serverUrl);
+            
+            // Apply MCP-specific config
+            const reconnectDelay = config.get('features.mcp.reconnectDelay');
+            if (reconnectDelay) {
+                results.mcpConnector.reconnectDelay = reconnectDelay;
+            }
+            
+            const maxReconnectAttempts = config.get('features.mcp.maxReconnectAttempts');
+            if (maxReconnectAttempts) {
+                results.mcpConnector.maxReconnectAttempts = maxReconnectAttempts;
+            }
         }
     }
 

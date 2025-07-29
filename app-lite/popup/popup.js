@@ -8,7 +8,7 @@ import { BACKGROUND_ACTIONS } from '../../src/js/core/cc-actions.js';
  * Handles status updates, button interactions, and communication with the background script.
  * 
  * @example
- * const popup = new WebWirePopup();
+ * const popup = new WebWirePopup(config);
  * await popup.initialize();
  * 
  * // Setup event handlers
@@ -23,7 +23,8 @@ import { BACKGROUND_ACTIONS } from '../../src/js/core/cc-actions.js';
  */
 
 export class WebWirePopup {
-    constructor() {
+    constructor(config) {
+        this.config = config;
         this.initializeElements();
         this.currentTab = null;
         this.dispatcher = new EventDispatcher('popup');

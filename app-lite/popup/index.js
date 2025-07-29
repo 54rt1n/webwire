@@ -6,7 +6,7 @@ import { WebWirePopup } from './popup.js';
  * and options navigation for the WebWire extension.
  * 
  * @example
- * const app = new WebWirePopupApp();
+ * const app = new WebWirePopupApp(config);
  * await app.initialize();
  * 
  * // App automatically handles:
@@ -17,8 +17,8 @@ import { WebWirePopup } from './popup.js';
  * // - Help documentation access
  */
 class WebWirePopupApp {
-    constructor() {
-        this.popup = new WebWirePopup();
+    constructor(config) {
+        this.popup = new WebWirePopup(config);
     }
 
     /**
@@ -160,6 +160,8 @@ class WebWirePopupApp {
 
 // Initialize the application when DOM is ready
 document.addEventListener('DOMContentLoaded', () => {
-    const app = new WebWirePopupApp();
+    // import { AppConfig } from '../src/core/app-config.js';
+    // const config = AppConfig.pageFactory('lite');
+    const app = new WebWirePopupApp(config);
     app.initialize();
 }); 

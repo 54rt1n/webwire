@@ -31,11 +31,14 @@ const MESSAGE_ROLES = {
 };
 
 export class ChatService extends EventBindableComponent {
-    constructor(eventBus) {
+    constructor(eventBus, config = null) {
         super(eventBus);
         
+        // Store config
+        this.config = config;
+        
         // UI Components
-        this.panel = new WebChatPanel(this.eventBus);
+        this.panel = new WebChatPanel(this.eventBus, this.config);
         this.pageUtils = new PageUtils();
 
         // AI/MCP Components  
