@@ -66,14 +66,14 @@ export class OptionsPanel {
      * Show a status message
      */
     showStatus(message, isError = false) {
+        if (!this.elements.status) {
+            console.error('[OptionsPanel] Status element not found!');
+            return;
+        }
+        
         this.elements.status.textContent = message;
         this.elements.status.className = `ww-status-message ${isError ? 'status-error' : 'status-success'}`;
-        this.elements.status.style.display = 'block';
-        
-        // Auto-hide after 3 seconds
-        setTimeout(() => {
-            this.elements.status.style.display = 'none';
-        }, 3000);
+        this.elements.status.style.display = 'flex';
     }
 
     /**
@@ -521,8 +521,9 @@ export class OptionsPanel {
      * Generate and update summary for a model configuration
      */
     updateModelSummary(modelId) {
-        const summaryEl = document.querySelector(`.ww-model-summary[data-model-id="${modelId}"] .ww-summary-text`);
-        if (!summaryEl) return;
+        const summaryContainer = document.querySelector(`.ww-model-summary[data-model-id="${modelId}"]`);
+        const summaryEl = summaryContainer?.querySelector('.ww-summary-text');
+        if (!summaryEl || !summaryContainer) return;
 
         const modelInput = document.getElementById(`${modelId}Model`);
         const providerSelect = document.getElementById(`${modelId}Provider`);
@@ -536,7 +537,8 @@ export class OptionsPanel {
 
         if (!modelName && !provider) {
             summaryEl.textContent = 'Not configured';
-            summaryEl.className = 'summary-text summary-empty';
+            summaryEl.className = 'ww-summary-text summary-empty';
+            summaryContainer.classList.remove('summary-configured');
         } else {
             const parts = [];
             
@@ -557,7 +559,8 @@ export class OptionsPanel {
             }
             
             summaryEl.textContent = parts.join(' • ');
-            summaryEl.className = 'summary-text summary-configured';
+            summaryEl.className = 'ww-summary-text summary-configured';
+            summaryContainer.classList.add('summary-configured');
         }
     }
 } 

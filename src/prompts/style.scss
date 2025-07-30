@@ -297,15 +297,15 @@
 
             &.btn-edit {
               &:hover {
-                color: var(--color-warning);
-                border-color: var(--color-warning);
+                color: var(--color-warning-500);
+                border-color: var(--color-warning-500);
               }
             }
 
             &.btn-delete {
               &:hover {
-                color: var(--color-error);
-                border-color: var(--color-error);
+                color: var(--color-error-500);
+                border-color: var(--color-error-500);
               }
             }
 

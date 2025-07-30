@@ -128,11 +128,11 @@
   /* Keep play button visible when speaking */
   .ww-play-button.ww-speaking {
     opacity: 1 !important;
-    color: var(--color-primary);
+    color: var(--color-primary-500);
   }
   
   .ww-play-button.ww-speaking.ww-paused {
-    color: var(--color-warning);
+    color: var(--color-warning-500);
   }
 
   /* Status indicator styling with nice visual effects */

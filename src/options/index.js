@@ -333,18 +333,8 @@ class OptionsApp {
             await this.stateService.settings.saveToStorage();
             console.log('[OptionsApp] 4. Settings saved to storage');
             
-            console.log('[OptionsApp] 5. Notifying background script of settings update...');
-
-            // Our dispatcher handles the complexity of targeting the service worker,
-            // even if it's inactive. It will wake it up.
-            await this.dispatcher.dispatch(
-                BACKGROUND_ACTIONS.SETTINGS_UPDATED,
-                { settings: settings },
-                { target: 'background' }
-            );
-
-            console.log('[OptionsApp] 6. Background script notified.');
-            this.panel.showStatus('All settings saved successfully!', false);
+            // No need to notify background - it will detect the storage change automatically
+            this.panel.showStatus('Saved', false);
             console.log('[OptionsApp] ===== SAVE ALL SETTINGS COMPLETED =====');
 
         } catch (error) {
