@@ -4,6 +4,7 @@ import { BACKGROUND_ACTIONS } from '../js/core/cc-actions.js';
 import { createInitialState, createInitialSettingsState } from '../js/state/state-container.js';
 import { EventBus } from '../js/core/event-bus.js';
 import { EVENT_CONTEXT } from '../js/core/events.js';
+import { deepMerge } from '../js/utils/deep-merge.js';
 
 /**
  * Options Page Script
@@ -44,35 +45,22 @@ class OptionsApp {
      * Setup real-time validation for better UX
      */
     setupRealtimeValidation() {
-        const requiredFields = [
-            'chatModel',
-            'chatProvider', 
-            'featherlessApiKey',
-            'openaiApiKey',
-            'googleApiKey',
-            'anthropicApiKey',
-            'groqApiKey',
-            'metaApiKey',
-            'aimindApiKey',
-            'openrouterApiKey'
-        ];
+        // Get all fields with validation attributes
+        const fieldsWithValidation = document.querySelectorAll('[data-validate], [data-depends-on]');
 
-        requiredFields.forEach(fieldId => {
-            const field = document.getElementById(fieldId);
-            if (field) {
-                field.addEventListener('input', () => {
-                    // Clear highlight when user starts typing
-                    if (field.style.border) {
-                        field.style.border = '';
-                        field.style.backgroundColor = '';
-                    }
-                });
+        fieldsWithValidation.forEach(field => {
+            field.addEventListener('input', () => {
+                // Clear highlight when user starts typing
+                if (field.style.border) {
+                    field.style.border = '';
+                    field.style.backgroundColor = '';
+                }
+            });
 
-                field.addEventListener('blur', () => {
-                    // Show validation on field blur
-                    this.validateSingleField(field);
-                });
-            }
+            field.addEventListener('blur', () => {
+                // Show validation on field blur
+                this.validateSingleField(field);
+            });
         });
     }
 
@@ -81,7 +69,7 @@ class OptionsApp {
      */
     validateSingleField(field) {
         const value = field.value.trim();
-        const isRequired = this.isFieldRequired(field.id);
+        const isRequired = this.isFieldRequired(field);
         
         if (isRequired && !value) {
             field.style.border = '2px solid #ef4444';
@@ -96,19 +84,26 @@ class OptionsApp {
     }
 
     /**
-     * Check if a field is required based on current settings
+     * Check if a field is required based on data attributes and current settings
      */
-    isFieldRequired(fieldId) {
-        if (fieldId === 'chatModel' || fieldId === 'chatProvider') {
+    isFieldRequired(field) {
+        // Check for data-validate="required" attribute
+        if (field.dataset.validate === 'required') {
             return true;
         }
 
-        // API key is required if provider is selected
-        const providerSelect = document.getElementById('chatProvider');
-        const selectedProvider = providerSelect?.value;
-        
-        if (selectedProvider && fieldId === `${selectedProvider}ApiKey`) {
-            return true;
+        // Check for conditional requirements (data-depends-on)
+        if (field.dataset.dependsOn) {
+            const dependsOn = field.dataset.dependsOn;
+            const provider = field.dataset.provider;
+            
+            if (dependsOn === 'chatProvider' && provider) {
+                const providerSelect = document.getElementById('chatProvider');
+                const selectedProvider = providerSelect?.value;
+                
+                // API key is required if this provider is selected
+                return selectedProvider === provider;
+            }
         }
 
         return false;
@@ -192,39 +187,7 @@ class OptionsApp {
      * preventing errors from missing keys if the structure changed.
      */
     hydrateSettings(loadedSettings) {
-        // Deep merge of loadedSettings onto initialState.
-        // A simple structuredClone and Object.assign won't work for deep objects.
-        const hydrated = JSON.parse(JSON.stringify(this.initialState.settings));
-
-        if (!loadedSettings) return hydrated;
-
-        for (const key in hydrated) {
-            if (loadedSettings[key]) {
-                Object.assign(hydrated[key], loadedSettings[key]);
-            }
-        }
-        
-        // Deep merge for nested providers and models
-        if (loadedSettings.ai?.providers) {
-            for (const provider in hydrated.ai.providers) {
-                if (loadedSettings.ai.providers[provider]) {
-                    Object.assign(hydrated.ai.providers[provider], loadedSettings.ai.providers[provider]);
-                }
-            }
-        }
-
-        if (loadedSettings.ai?.models) {
-             for (const modelType in hydrated.ai.models) {
-                if (loadedSettings.ai.models[modelType]) {
-                    if (typeof hydrated.ai.models[modelType] !== 'object' || hydrated.ai.models[modelType] === null) {
-                        hydrated.ai.models[modelType] = {};
-                    }
-                    Object.assign(hydrated.ai.models[modelType], loadedSettings.ai.models[modelType]);
-                }
-            }
-        }
-
-        return hydrated;
+        return deepMerge(this.initialState.settings, loadedSettings);
     }
 
     /**
@@ -234,27 +197,20 @@ class OptionsApp {
         const errors = [];
         const missingFields = [];
 
-        // Check for required Chat Model fields
-        if (!settings.ai?.models?.chat?.model || settings.ai.models.chat.model.trim() === '') {
-            errors.push('Chat Model Name is required');
-            missingFields.push('chatModel');
-        }
-
-        if (!settings.ai?.models?.chat?.provider || settings.ai.models.chat.provider.trim() === '') {
-            errors.push('Chat Provider is required');
-            missingFields.push('chatProvider');
-        }
-
-        // Check if provider has required API key
-        if (settings.ai?.models?.chat?.provider) {
-            const provider = settings.ai.models.chat.provider;
-            const providerConfig = settings.ai?.providers?.[provider];
-            
-            if (!providerConfig?.apiKey || providerConfig.apiKey.trim() === '') {
-                errors.push(`${provider} API Key is required`);
-                missingFields.push(`${provider}ApiKey`);
+        // Get all fields with validation attributes
+        const fieldsToValidate = document.querySelectorAll('[data-validate], [data-depends-on]');
+        
+        fieldsToValidate.forEach(field => {
+            if (this.isFieldRequired(field)) {
+                const value = field.value?.trim() || '';
+                
+                if (!value) {
+                    const fieldLabel = this.getFieldLabel(field.id);
+                    errors.push(`${fieldLabel} is required`);
+                    missingFields.push(field.id);
+                }
             }
-        }
+        });
 
         const isValid = errors.length === 0;
         const message = isValid ? 'Validation passed' : `Please fix the following: ${errors.join(', ')}`;
@@ -275,14 +231,14 @@ class OptionsApp {
         this.clearFieldHighlights();
 
         // Highlight missing fields
-        fieldIds.forEach(fieldId => {
+        fieldIds.forEach((fieldId, index) => {
             const field = document.getElementById(fieldId);
             if (field) {
                 field.style.border = '2px solid #ef4444';
                 field.style.backgroundColor = '#fef2f2';
                 
                 // Scroll to first missing field
-                if (fieldIds.indexOf(fieldId) === 0) {
+                if (index === 0) {
                     field.scrollIntoView({ behavior: 'smooth', block: 'center' });
                     field.focus();
                 }

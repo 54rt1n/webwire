@@ -72,7 +72,22 @@ export class OptionsPanel {
         }
         
         this.elements.status.textContent = message;
-        this.elements.status.className = `ww-status-message ${isError ? 'status-error' : 'status-success'}`;
+        const baseClass = `ww-status-message ${isError ? 'status-error' : 'status-success'}`;
+        
+        // Add animation for successful saves
+        if (!isError && message.toLowerCase().includes('saved')) {
+            this.elements.status.className = `${baseClass} status-animated`;
+            
+            // Remove animation class after animation completes (3s)
+            setTimeout(() => {
+                if (this.elements.status.classList.contains('status-animated')) {
+                    this.elements.status.classList.remove('status-animated');
+                }
+            }, 3000);
+        } else {
+            this.elements.status.className = baseClass;
+        }
+        
         this.elements.status.style.display = 'flex';
     }
 
@@ -290,11 +305,11 @@ export class OptionsPanel {
                     <div class="ww-model-grid">
                         <div class="ww-form-group">
                             <label class="ww-form-label" for="${model.id}Model">Model Name:</label>
-                            <input type="text" id="${model.id}Model" class="ww-form-input" placeholder="${model.placeholder}">
+                            <input type="text" id="${model.id}Model" class="ww-form-input" placeholder="${model.placeholder}" data-validate="required">
                         </div>
                         <div class="ww-form-group">
                             <label class="ww-form-label" for="${model.id}Provider">Provider:</label>
-                            <select id="${model.id}Provider" class="ww-form-select">
+                            <select id="${model.id}Provider" class="ww-form-select" data-validate="required">
                                 ${model.isOptional ? '<option value="">(Same as Chat)</option>' : ''}
                                 ${providers.map(p => `<option value="${p}">${p.charAt(0).toUpperCase() + p.slice(1)}</option>`).join('')}
                             </select>
@@ -403,7 +418,7 @@ export class OptionsPanel {
                     ${provider.name} API Key:
                     <a href="${provider.url}" target="_blank" class="ww-label-help">🔗</a>
                 </label>
-                <input type="password" id="${provider.id}ApiKey" class="ww-form-input" placeholder="Enter ${provider.name} API key">
+                <input type="password" id="${provider.id}ApiKey" class="ww-form-input" placeholder="Enter ${provider.name} API key" data-depends-on="chatProvider" data-provider="${provider.id}">
             `;
             grid.appendChild(formGroup);
         });

@@ -244,6 +244,10 @@ export class ChatService extends EventBindableComponent {
         
         // Check if we need to create or update the AI client
         if (!this.aiClient || this.aiClient.needsUpdate?.(currentConfig)) {
+            // If we have an existing client, we need to abort the current stream
+            if (this.aiClient && this.aiClient.isStreaming()) {
+                this.cancelStreamingResponse();
+            }
             console.log('[ChatService] Creating/updating AI client for model:', selectedModel, 'provider:', currentConfig.provider);
             console.log('[ChatService] Full config being passed to factory:', JSON.stringify(currentConfig));
             this.aiClient = AIClientFactory.createClient(this.eventBus, currentConfig);
@@ -322,7 +326,8 @@ export class ChatService extends EventBindableComponent {
             }))).reduce((total, msg) => total + msg, 0);
             const userMessageTokens = await this.messageBuilder.countTokens(userMessage.content) + wrapperTokens;
             const maxContentTokens = this.aiClient.samplerConfig?.maxContentTokens || 16384;
-            const maxTextTokens = maxContentTokens - aiResponseTokens - conversationTokens - systemPromptTokens - userMessageTokens - 512;
+            const paddingTokens = 256;
+            const maxTextTokens = maxContentTokens - aiResponseTokens - conversationTokens - systemPromptTokens - userMessageTokens - paddingTokens;
             console.log('[ChatService] Max text tokens:', maxTextTokens, 'aiResponseTokens:', aiResponseTokens, 'conversationTokens:', conversationTokens, 'systemPromptTokens:', systemPromptTokens, 'userMessageTokens:', userMessageTokens);
             const pageContext = await this.messageBuilder.buildPageContext(this.stateService, { forcePageContent, include: { navigation: false, links: true }, maxTextTokens });
             let { messagesForAPI, enhancedUserMessage } = this.messageBuilder.prepareMessagesForAPI(
@@ -463,6 +468,20 @@ export class ChatService extends EventBindableComponent {
                 console.error('[ChatService] Error handling user message:', error);
                 this.panel.displayError(error.message, streamingState.currentMessage?.messageId);
             }
+
+            // Store the cancelled message in conversation state
+            const assistantMsg = { 
+                role: MESSAGE_ROLES.ASSISTANT, 
+                content: error.message,
+                timestamp: Date.now(),
+                error: true,
+            };
+                    
+            this.stateService.conversation.storeAssistantMessage(threadId, assistantMsg, {
+                ...persona,
+                url: location,
+                title: document.title,
+            });
             
             // Re-enable retry button after error
             this.panel.updateRetryButton(true);
