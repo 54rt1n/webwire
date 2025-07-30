@@ -172,21 +172,27 @@ export class ConversationModal extends EventBindableComponent {
             return this._renderEmptyState('No messages in this conversation yet');
         }
 
-        return messages.map(message => this._renderMessage(message)).join('');
+        return messages.map(message => this._renderMessage(message, this.currentConversation)).join('');
     }
 
     /**
      * Renders a single message
      * @param {Object} message - Message object
+     * @param {Object} conversationData - Conversation metadata with participant names
      * @returns {string} HTML for message
      * @private
      */
-    _renderMessage(message) {
+    _renderMessage(message, conversationData) {
         const timestamp = new Date(message.timestamp).toLocaleString();
         const toolMessages = buildToolMessages(message.toolCalls, message.toolResults);
         const hasToolCalls = toolMessages && toolMessages.length > 0;
         const hasThinking = message.think && message.think.trim();
         const messageId = message.messageId || message.id || `msg-${Date.now()}-${Math.random()}`;
+
+        // Get participant names
+        const participantName = message.role === 'user' 
+            ? (conversationData?.userName || 'User')
+            : (conversationData?.personaName || 'Assistant');
 
         // Add action buttons for all messages (both user and assistant)
         const actionButtons = `
@@ -208,8 +214,7 @@ export class ConversationModal extends EventBindableComponent {
         return `
             <div class="ww-message message-${message.role}" data-message-id="${messageId}">
                 <div class="ww-message-header">
-                    <span class="ww-message-role">${message.role}</span>
-                    <span class="ww-message-timestamp">${timestamp}</span>
+                    <span class="ww-message-role">${this._escapeHtml(participantName)}</span>
                     ${actionButtons}
                 </div>
                 <div class="ww-message-content">
@@ -217,6 +222,10 @@ export class ConversationModal extends EventBindableComponent {
                 </div>
                 ${hasThinking ? this._renderThinking(message.think) : ''}
                 ${hasToolCalls ? this._renderToolMessages(toolMessages) : ''}
+                <div class="ww-message-footer">
+                    <span class="ww-message-timestamp">${timestamp}</span>
+                    <span class="ww-message-id">${messageId}</span>
+                </div>
             </div>
         `;
     }

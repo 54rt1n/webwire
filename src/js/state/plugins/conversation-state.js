@@ -255,6 +255,13 @@ export class ConversationStatePlugin {
             };
         } else {
             // Update existing metadata
+            const currentLocation = state.metadata[threadId].location;
+            if (location && currentLocation !== location) {
+                state.metadata[threadId].location = location;
+            }
+            if (title && currentTitle !== title) {
+                state.metadata[threadId].title = title;
+            }
             state.metadata[threadId].endTime = timestamp;
             state.metadata[threadId].duration = timestamp - state.metadata[threadId].startTime;
         }

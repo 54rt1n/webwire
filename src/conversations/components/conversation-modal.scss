@@ -98,37 +98,24 @@
       background: var(--color-gray-50);
       border-radius: var(--radius-lg);
       padding: var(--space-4);
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-4);
     }
 
     /* Message styles */
     .ww-message {
-      background: var(--color-surface);
-      border: 1px solid var(--color-border);
       border-radius: var(--radius-lg);
       padding: var(--space-4);
-      margin-bottom: var(--space-4);
-      box-shadow: var(--shadow-sm);
       position: relative;
+      width: 70%;
       
-      &:last-child {
-        margin-bottom: 0;
-      }
-      
-      &.user {
-        background: var(--color-primary-50);
-        border-color: var(--color-primary-200);
-        margin-left: var(--space-10);
-        
-        &::before {
-          content: '';
-          position: absolute;
-          left: -4px;
-          top: 0;
-          bottom: 0;
-          width: 4px;
-          background: var(--color-primary-500);
-          border-radius: var(--radius-sm) 0 0 var(--radius-sm);
-        }
+      &.message-user {
+        background: var(--color-primary-100);
+        align-self: flex-end;
+        border-bottom-right-radius: var(--radius-sm);
+        color: var(--color-text-primary);
+        box-shadow: inset 3px 0 0 var(--color-primary-300), inset 0 1px 0 var(--color-primary-300);
         
         .ww-message-role {
           color: var(--color-primary-700);
@@ -136,21 +123,13 @@
         }
       }
       
-      &.assistant {
-        background: var(--color-gray-50);
-        border-color: var(--color-gray-300);
-        margin-right: var(--space-10);
-        
-        &::before {
-          content: '';
-          position: absolute;
-          right: -4px;
-          top: 0;
-          bottom: 0;
-          width: 4px;
-          background: var(--color-gray-500);
-          border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
-        }
+      &.message-assistant {
+        background: var(--color-surface);
+        align-self: flex-start;
+        border-bottom-left-radius: var(--radius-sm);
+        color: var(--color-text-primary);
+        box-shadow: inset -3px 0 0 var(--color-gray-300), inset 0 -1px 0 var(--color-gray-300);
+        border: 1px solid var(--color-border);
         
         .ww-message-role {
           color: var(--color-text-secondary);
@@ -163,19 +142,12 @@
         align-items: center;
         justify-content: space-between;
         margin-bottom: var(--space-3);
-        padding-bottom: var(--space-2);
-        border-bottom: 1px solid var(--color-border);
         
         .ww-message-role {
           font-weight: var(--font-weight-semibold);
           font-size: var(--font-size-sm);
           text-transform: uppercase;
           letter-spacing: 0.025em;
-        }
-        
-        .ww-message-timestamp {
-          font-size: var(--font-size-xs);
-          color: var(--color-text-secondary);
         }
         
         .ww-message-actions {
@@ -264,6 +236,28 @@
           overflow-x: auto;
           margin: var(--space-2) 0;
           font-family: var(--font-family-mono);
+        }
+      }
+
+      .ww-message-footer {
+        margin-top: var(--space-3);
+        padding-top: var(--space-2);
+        border-top: 1px solid var(--color-border);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-size: var(--font-size-xs);
+        color: var(--color-text-secondary);
+        font-style: italic;
+        
+        .ww-message-timestamp {
+          opacity: 0.8;
+        }
+        
+        .ww-message-id {
+          opacity: 0.6;
+          font-family: var(--font-family-mono);
+          font-size: var(--font-size-xs);
         }
       }
       
@@ -450,12 +444,14 @@
     
     .ww-modal-body {
       .ww-message {
-        &.user {
-          margin-left: 0;
+        width: 90%;
+        
+        &.message-user {
+          align-self: flex-end;
         }
         
-        &.assistant {
-          margin-right: 0;
+        &.message-assistant {
+          align-self: flex-start;
         }
       }
     }

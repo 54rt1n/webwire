@@ -28,6 +28,8 @@ export class ConversationsPanel {
             // Main containers
             conversationsContainer: document.getElementById('conversations-list-container'),
             conversationsCountDisplay: document.getElementById('conversations-count-display'),
+            activeConversationsDisplay: document.getElementById('active-conversations'),
+            completedConversationsDisplay: document.getElementById('completed-conversations'),
             
             // Action buttons
             refreshConversationsBtn: document.getElementById('refresh-conversations-btn'),
@@ -145,9 +147,14 @@ export class ConversationsPanel {
     renderConversations(conversations) {
         console.log(`[ConversationsPanel] Rendering ${conversations.length} conversations`);
         
-        // Update count
-        this.elements.conversationsCountDisplay.textContent = 
-            `${conversations.length} conversation${conversations.length !== 1 ? 's' : ''}`;
+        // Calculate stats
+        const activeCount = conversations.filter(c => c.status === 'active').length;
+        const completedCount = conversations.filter(c => c.status === 'completed').length;
+        
+        // Update counts
+        this.elements.conversationsCountDisplay.textContent = conversations.length;
+        this.elements.activeConversationsDisplay.textContent = activeCount;
+        this.elements.completedConversationsDisplay.textContent = completedCount;
 
         // Clear existing content
         this.elements.conversationsContainer.innerHTML = '';
@@ -229,6 +236,9 @@ export class ConversationsPanel {
                 <div class="ww-stat">
                     <span class="ww-stat-icon">📌</span>
                     <span>${status}</span>
+                </div>
+                <div class="ww-debug-info" title="threadId: ${conversation.threadId}, title: ${conversation.title || 'none'}, location: ${conversation.location || 'none'}">
+                    <span class="ww-debug-icon">ℹ️</span>
                 </div>
             </div>
         `;

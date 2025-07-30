@@ -63,46 +63,27 @@
 
   // Stats bar
   .ww-stats-bar {
-    @include common.ww-widget-base;
     display: flex;
-    gap: var(--space-6);
-    margin-bottom: var(--space-6);
-    padding: var(--space-4);
-    background: linear-gradient(135deg, var(--color-primary-50) 0%, var(--color-blue-50) 100%);
-    border: 1px solid var(--color-primary-100);
+    gap: var(--space-4);
+    margin-bottom: var(--space-4);
+    padding: var(--space-3) 0;
+    border-bottom: 1px solid var(--color-border);
 
     .ww-stat-item {
-      text-align: center;
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
       
       .ww-stat-value {
-        font-size: var(--font-size-xl);
-        font-weight: var(--font-weight-bold);
+        font-size: var(--font-size-lg);
+        font-weight: var(--font-weight-semibold);
         color: var(--color-primary-600);
-        display: block;
-        margin-bottom: var(--space-1);
       }
 
       .ww-stat-label {
         font-size: var(--font-size-sm);
         color: var(--color-text-secondary);
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
-      }
-    }
-
-    @media (max-width: 768px) {
-      flex-direction: column;
-      gap: var(--space-4);
-      
-      .ww-stat-item {
-        text-align: left;
-        display: flex;
-        align-items: center;
-        gap: var(--space-3);
-        
-        .ww-stat-value {
-          margin: 0;
-        }
+        text-transform: lowercase;
       }
     }
   }
@@ -385,7 +366,7 @@
           color: var(--color-text-secondary);
           padding: var(--space-2) var(--space-3);
           background: var(--color-gray-100);
-          border-radius: var(--radius-full);
+          border-radius: var(--radius-md);
 
           .ww-stat-icon {
             width: 12px;
@@ -400,6 +381,20 @@
           &.stat-tools {
             background: var(--color-primary-100);
             color: var(--color-primary-600);
+          }
+        }
+
+        .ww-debug-info {
+          margin-left: auto;
+          
+          .ww-debug-icon {
+            font-size: 10px;
+            opacity: 0.3;
+            cursor: help;
+            
+            &:hover {
+              opacity: 0.8;
+            }
           }
         }
       }
