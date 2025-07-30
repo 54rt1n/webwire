@@ -260,6 +260,45 @@ export class PromptStatePlugin {
     }
 
     /**
+     * Search prompts by query string across all text fields
+     * @param {string} query - Search query (case-insensitive)
+     * @returns {Object} Matching prompt configurations keyed by prompt ID
+     */
+    searchPrompts(query) {
+        if (!query || typeof query !== 'string') {
+            return this.getAllPrompts();
+        }
+
+        const searchQuery = query.toLowerCase().trim();
+        if (searchQuery === '') {
+            return this.getAllPrompts();
+        }
+
+        const allPrompts = this.getAllPrompts();
+        const matchingPrompts = {};
+
+        Object.entries(allPrompts).forEach(([promptId, prompt]) => {
+            const searchableFields = [
+                prompt.buttonText || '',
+                prompt.userPrompt || '',
+                prompt.systemPrompt || '',
+                promptId // Also search the prompt ID itself
+            ];
+
+            // Search through all text fields
+            const hasMatch = searchableFields.some(field => 
+                field.toLowerCase().includes(searchQuery)
+            );
+
+            if (hasMatch) {
+                matchingPrompts[promptId] = prompt;
+            }
+        });
+
+        return matchingPrompts;
+    }
+
+    /**
      * Validate a prompt configuration
      * @param {Object} promptData - The prompt data to validate
      * @returns {Object} Validation result with isValid boolean and errors array

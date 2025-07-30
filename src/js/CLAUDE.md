@@ -34,8 +34,6 @@ src/js
 │   ├── mcp-connector.js
 │   ├── tool-formatter.js
 │   └── tool-parser.js
-├── prompts/                # AI prompt templates
-│   └── analysis-prompt.js  # Page analysis prompt generation
 ├── state/                  # State management system
 │   ├── plugins/            # Domain-specific state managers
 │   ├── state-container.js
@@ -217,20 +215,6 @@ Utilities for extracting and processing page content:
 const content = PageUtils.getPageContent();
 const metadata = PageUtils.extractMetadata();
 const selection = PageUtils.getSelectedText();
-```
-
-### 7. Prompts (`prompts/`)
-
-AI prompt generation and templates:
-
-#### AnalysisPrompt (`analysis-prompt.js`)
-Generates structured prompts for page analysis:
-```javascript
-const prompt = AnalysisPrompt.generate({
-    pageContent,
-    userQuery,
-    context
-});
 ```
 
 ### 8. Client Core (`client/`)

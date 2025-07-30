@@ -48,7 +48,8 @@ class PromptsPanelApp extends EventBindableComponent {
             onSavePrompt: this.savePrompt.bind(this),
             onImportPrompts: this.importPrompts.bind(this),
             onExportPrompts: this.exportPrompts.bind(this),
-            onRefreshPrompts: this.refreshPrompts.bind(this)
+            onRefreshPrompts: this.refreshPrompts.bind(this),
+            onSearchPrompts: this.searchPrompts.bind(this)
         };
         this.panel.initialize(handlers);
 
@@ -277,6 +278,31 @@ class PromptsPanelApp extends EventBindableComponent {
         };
         
         input.click();
+    }
+
+    /**
+     * Search prompts by query
+     * @param {string} query - Search query string
+     * @returns {Object} Matching prompts
+     */
+    async searchPrompts(query) {
+        if (!this.core.stateService || !this.core.stateService.prompts) {
+            console.error('[PromptsPanelApp] No prompts state service available');
+            return {};
+        }
+
+        try {
+            console.log(`[PromptsPanelApp] Searching prompts with query: "${query}"`);
+            
+            const results = this.core.stateService.prompts.searchPrompts(query);
+            
+            console.log(`[PromptsPanelApp] Found ${Object.keys(results).length} matching prompts`);
+            return results;
+            
+        } catch (error) {
+            console.error('[PromptsPanelApp] Failed to search prompts:', error);
+            return {};
+        }
     }
 
     /**

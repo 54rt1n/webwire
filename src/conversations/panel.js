@@ -34,6 +34,13 @@ export class ConversationsPanel {
             // Action buttons
             refreshConversationsBtn: document.getElementById('refresh-conversations-btn'),
             
+            // Search elements
+            searchInput: document.getElementById('conversations-search'),
+            searchClearBtn: document.getElementById('conversations-search-clear-btn'),
+            searchResults: document.getElementById('conversations-search-results'),
+            visibleCount: document.getElementById('conversations-visible-count'),
+            totalCount: document.getElementById('conversations-total-count'),
+            
             // Bulk actions
             selectAllCheckbox: document.getElementById('select-all-conversations'),
             bulkDeleteBtn: document.getElementById('bulk-delete-btn'),
@@ -86,6 +93,22 @@ export class ConversationsPanel {
                 this.handlers.onRefreshConversations();
             }
         });
+
+        // Search functionality
+        this.elements.searchInput.addEventListener('input', (e) => {
+            const value = e.target.value.trim();
+            this._updateSearchUI(value);
+            this._handleSearch(value);
+        });
+
+        // Search clear button
+        if (this.elements.searchClearBtn) {
+            this.elements.searchClearBtn.addEventListener('click', () => {
+                this.elements.searchInput.value = '';
+                this.elements.searchInput.dispatchEvent(new Event('input'));
+                this.elements.searchInput.focus();
+            });
+        }
 
         // Bulk actions
         this.elements.selectAllCheckbox.addEventListener('change', (e) => {
@@ -760,5 +783,54 @@ export class ConversationsPanel {
         const div = document.createElement('div');
         div.textContent = text;
         return div.innerHTML;
+    }
+
+    /**
+     * Updates search UI elements
+     * @param {string} searchTerm - The search term
+     * @private
+     */
+    _updateSearchUI(searchTerm) {
+        // Show/hide clear button
+        if (this.elements.searchClearBtn) {
+            this.elements.searchClearBtn.style.display = searchTerm ? 'flex' : 'none';
+        }
+        
+        // Show/hide search results
+        if (this.elements.searchResults) {
+            this.elements.searchResults.style.display = searchTerm ? 'block' : 'none';
+        }
+    }
+
+    /**
+     * Handles search using the state service search method
+     * @param {string} searchTerm - The search term
+     * @private
+     */
+    async _handleSearch(searchTerm) {
+        if (!this.handlers.onSearchConversations) {
+            console.warn('[ConversationsPanel] No search handler available');
+            return;
+        }
+        
+        try {
+            // Use the state service search method
+            const searchResults = await this.handlers.onSearchConversations(searchTerm);
+            
+            // Re-render with search results
+            this.renderConversations(searchResults);
+            
+            // Update search results display
+            if (this.elements.searchResults && this.elements.visibleCount && this.elements.totalCount) {
+                const resultCount = searchResults.length;
+                const totalCount = this.stateService ? this.stateService.conversation.listConversations().length : 0;
+                
+                this.elements.visibleCount.textContent = resultCount;
+                this.elements.totalCount.textContent = totalCount;
+            }
+            
+        } catch (error) {
+            console.error('[ConversationsPanel] Search failed:', error);
+        }
     }
 }

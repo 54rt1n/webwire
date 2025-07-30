@@ -78,9 +78,6 @@ WebWire is a Chrome extension providing AI-powered web page analysis with Model 
 - `dom-connector.js` - DOM connection management
 - `page-utils.js` - Page content extraction utilities
 
-**Prompts (`prompts/`):**
-- `analysis-prompt.js` - Page analysis prompt generation
-
 **MCP Integration (`mcp/`):**
 - `mcp-connector.js` - Server-Sent Events connection to MCP servers
 - `tool-formatter.js` - Converts MCP tools to OpenAI format

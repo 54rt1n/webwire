@@ -27,11 +27,19 @@ export class PromptsPanel {
         return {
             // Main containers
             promptsContainer: document.getElementById('prompts-list-container'),
-            promptsCountDisplay: document.getElementById('prompts-count-display'),
             emptyState: document.getElementById('prompts-empty-state'),
+            
+            // Stats
+            totalPromptsCount: document.getElementById('total-prompts-count'),
+            activePromptsCount: document.getElementById('active-prompts-count'),
+            inactivePromptsCount: document.getElementById('inactive-prompts-count'),
             
             // Search
             searchInput: document.getElementById('prompts-search'),
+            searchClearBtn: document.getElementById('search-clear-btn'),
+            searchResults: document.getElementById('search-results'),
+            visibleCount: document.getElementById('visible-count'),
+            totalCount: document.getElementById('total-count'),
             
             // Action buttons
             newPromptBtn: document.getElementById('new-prompt-btn'),
@@ -117,8 +125,19 @@ export class PromptsPanel {
 
         // Search functionality
         this.elements.searchInput.addEventListener('input', (e) => {
-            this._filterPrompts(e.target.value);
+            const value = e.target.value.trim();
+            this._updateSearchUI(value);
+            this._handleSearch(value);
         });
+
+        // Search clear button
+        if (this.elements.searchClearBtn) {
+            this.elements.searchClearBtn.addEventListener('click', () => {
+                this.elements.searchInput.value = '';
+                this.elements.searchInput.dispatchEvent(new Event('input'));
+                this.elements.searchInput.focus();
+            });
+        }
 
         // Delete modal
         this.elements.confirmDeleteBtn.addEventListener('click', () => {
@@ -187,10 +206,14 @@ export class PromptsPanel {
         const promptEntries = Object.entries(prompts);
         console.log(`[PromptsPanel] Rendering ${promptEntries.length} prompts`);
         
-        // Update count
+        // Update stats
+        const totalCount = promptEntries.length;
         const activeCount = promptEntries.filter(([_, p]) => p.status === 'active').length;
-        this.elements.promptsCountDisplay.textContent = 
-            `${promptEntries.length} prompts (${activeCount} active)`;
+        const inactiveCount = totalCount - activeCount;
+        
+        this.elements.totalPromptsCount.textContent = totalCount;
+        this.elements.activePromptsCount.textContent = activeCount;
+        this.elements.inactivePromptsCount.textContent = inactiveCount;
 
         // Clear existing content
         this.elements.promptsContainer.innerHTML = '';
@@ -220,7 +243,7 @@ export class PromptsPanel {
      */
     _createPromptElement(promptId, prompt) {
         const promptEl = this._createEl('div', {
-            className: `prompt-card ${prompt.status === 'inactive' ? 'inactive' : ''}`,
+            className: `ww-prompt-card ${prompt.status === 'inactive' ? 'inactive' : ''}`,
             'data-prompt-id': promptId
         });
 
@@ -230,38 +253,37 @@ export class PromptsPanel {
             .map(([feature, _]) => this._getFeatureLabel(feature));
 
         promptEl.innerHTML = `
-            <div class="prompt-card-header">
-                <h3 class="prompt-card-title">
-                    <span class="prompt-icon">${prompt.buttonIcon || '📖'}</span>
-                    ${this._escapeHtml(prompt.buttonText)}
-                </h3>
-                <div class="prompt-status ${prompt.status}">
-                    ${prompt.status === 'active' ? 'Active' : 'Inactive'}
+            <div class="ww-prompt-header">
+                <div class="ww-prompt-info">
+                    <h3 class="ww-prompt-title">
+                        <span class="ww-prompt-icon">${prompt.buttonIcon || '📖'}</span>
+                        ${this._escapeHtml(prompt.buttonText)}
+                    </h3>
+                    <span class="ww-status-badge status-${prompt.status}">
+                        ${prompt.status === 'active' ? 'Active' : 'Inactive'}
+                    </span>
                 </div>
-            </div>
-            <div class="prompt-id">${promptId}</div>
-            <div class="prompt-card-body">
-                <div class="prompt-preview">
-                    ${this._escapeHtml(prompt.userPrompt.substring(0, 150))}${prompt.userPrompt.length > 150 ? '...' : ''}
-                </div>
-            </div>
-            <div class="prompt-card-footer">
-                <div class="prompt-features">
-                    ${activeFeatures.length > 0 ? 
-                        activeFeatures.map(f => `<span class="feature-badge">${f}</span>`).join('') :
-                        '<span class="no-features">No special features</span>'
-                    }
-                </div>
-                <div class="prompt-actions">
-                    <button class="action-btn edit" title="Edit prompt" data-prompt-id="${promptId}">
+                <div class="ww-prompt-actions">
+                    <button class="ww-action-btn btn-edit" title="Edit prompt" data-prompt-id="${promptId}">
                         ✏️
                     </button>
-                    <button class="action-btn toggle" title="Toggle status" data-prompt-id="${promptId}">
+                    <button class="ww-action-btn btn-toggle" title="Toggle status" data-prompt-id="${promptId}">
                         ${prompt.status === 'active' ? '⏸️' : '▶️'}
                     </button>
-                    <button class="action-btn delete" title="Delete prompt" data-prompt-id="${promptId}">
+                    <button class="ww-action-btn btn-delete" title="Delete prompt" data-prompt-id="${promptId}">
                         🗑️
                     </button>
+                </div>
+            </div>
+            <div class="ww-prompt-description">
+                ${this._escapeHtml(prompt.userPrompt.substring(0, 150))}${prompt.userPrompt.length > 150 ? '...' : ''}
+            </div>
+            <div class="ww-prompt-footer">
+                <div class="ww-prompt-tags">
+                    ${activeFeatures.length > 0 ? 
+                        activeFeatures.map(f => `<span class="ww-tag">${f}</span>`).join('') :
+                        '<span class="ww-no-features">No special features</span>'
+                    }
                 </div>
             </div>
         `;
@@ -281,7 +303,7 @@ export class PromptsPanel {
      */
     _setupPromptEventListeners(promptEl, promptId, prompt) {
         // Edit button
-        const editBtn = promptEl.querySelector('.action-btn.edit');
+        const editBtn = promptEl.querySelector('.ww-action-btn.btn-edit');
         editBtn.addEventListener('click', (e) => {
             e.stopPropagation();
             if (this.handlers.onEditPrompt) {
@@ -290,7 +312,7 @@ export class PromptsPanel {
         });
 
         // Toggle button
-        const toggleBtn = promptEl.querySelector('.action-btn.toggle');
+        const toggleBtn = promptEl.querySelector('.ww-action-btn.btn-toggle');
         toggleBtn.addEventListener('click', (e) => {
             e.stopPropagation();
             if (this.handlers.onTogglePrompt) {
@@ -299,7 +321,7 @@ export class PromptsPanel {
         });
 
         // Delete button
-        const deleteBtn = promptEl.querySelector('.action-btn.delete');
+        const deleteBtn = promptEl.querySelector('.ww-action-btn.btn-delete');
         deleteBtn.addEventListener('click', (e) => {
             e.stopPropagation();
             this._showDeleteConfirmation(promptId, prompt);
@@ -352,7 +374,7 @@ export class PromptsPanel {
         }
         
         // Show modal
-        this.elements.promptModal.style.display = 'flex';
+        this.elements.promptModal.classList.add('show');
         
         // Focus first field
         setTimeout(() => {
@@ -368,7 +390,7 @@ export class PromptsPanel {
      * Closes the prompt edit modal
      */
     closePromptModal() {
-        this.elements.promptModal.style.display = 'none';
+        this.elements.promptModal.classList.remove('show');
         this.currentEditingPromptId = null;
     }
 
@@ -442,7 +464,7 @@ export class PromptsPanel {
             <div class="prompt-id-small">ID: ${promptId}</div>
         `;
         
-        this.elements.deleteModal.style.display = 'flex';
+        this.elements.deleteModal.classList.add('show');
     }
 
     /**
@@ -450,7 +472,7 @@ export class PromptsPanel {
      * @private
      */
     _hideDeleteModal() {
-        this.elements.deleteModal.style.display = 'none';
+        this.elements.deleteModal.classList.remove('show');
         this.pendingDeletePromptId = null;
     }
 
@@ -466,40 +488,52 @@ export class PromptsPanel {
     }
 
     /**
-     * Filters prompts based on search term
+     * Updates search UI elements
      * @param {string} searchTerm - The search term
      * @private
      */
-    _filterPrompts(searchTerm) {
-        const term = searchTerm.toLowerCase();
-        const promptItems = this.elements.promptsContainer.querySelectorAll('.prompt-card');
+    _updateSearchUI(searchTerm) {
+        // Show/hide clear button
+        if (this.elements.searchClearBtn) {
+            this.elements.searchClearBtn.style.display = searchTerm ? 'flex' : 'none';
+        }
         
-        let visibleCount = 0;
-        let activeCount = 0;
+        // Show/hide search results
+        if (this.elements.searchResults) {
+            this.elements.searchResults.style.display = searchTerm ? 'block' : 'none';
+        }
+    }
+
+    /**
+     * Handles search using the state service search method
+     * @param {string} searchTerm - The search term
+     * @private
+     */
+    async _handleSearch(searchTerm) {
+        if (!this.handlers.onSearchPrompts) {
+            console.warn('[PromptsPanel] No search handler available');
+            return;
+        }
         
-        promptItems.forEach(item => {
-            const promptId = item.dataset.promptId.toLowerCase();
-            const title = item.querySelector('.prompt-card-title').textContent.toLowerCase();
-            const preview = item.querySelector('.prompt-preview').textContent.toLowerCase();
+        try {
+            // Use the state service search method
+            const searchResults = await this.handlers.onSearchPrompts(searchTerm);
             
-            const matches = !term || 
-                promptId.includes(term) || 
-                title.includes(term) || 
-                preview.includes(term);
+            // Re-render with search results
+            this.renderPrompts(searchResults);
             
-            item.style.display = matches ? 'block' : 'none';
-            
-            if (matches) {
-                visibleCount++;
-                if (!item.classList.contains('inactive')) {
-                    activeCount++;
-                }
+            // Update search results display
+            if (this.elements.searchResults && this.elements.visibleCount && this.elements.totalCount) {
+                const resultCount = Object.keys(searchResults).length;
+                const totalCount = this.stateService ? Object.keys(this.stateService.prompts.getAllPrompts()).length : 0;
+                
+                this.elements.visibleCount.textContent = resultCount;
+                this.elements.totalCount.textContent = totalCount;
             }
-        });
-        
-        // Update count
-        this.elements.promptsCountDisplay.textContent = 
-            `${visibleCount} prompts (${activeCount} active)`;
+            
+        } catch (error) {
+            console.error('[PromptsPanel] Search failed:', error);
+        }
     }
 
     /**

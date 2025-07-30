@@ -56,6 +56,7 @@ class ConversationsPanelApp extends EventBindableComponent {
             onSetActiveConversation: this.setActiveConversation.bind(this),
             onRefreshConversations: this.refreshConversations.bind(this),
             onCreateNewConversation: this.createNewConversation.bind(this),
+            onSearchConversations: this.searchConversations.bind(this),
         };
         this.panel.initialize(handlers);
 
@@ -246,6 +247,31 @@ class ConversationsPanelApp extends EventBindableComponent {
             
         } catch (error) {
             console.error('[ConversationsApp] Failed to create new conversation:', error);
+        }
+    }
+
+    /**
+     * Search conversations by query
+     * @param {string} query - Search query string
+     * @returns {Array} Matching conversations
+     */
+    async searchConversations(query) {
+        if (!this.core.stateService || !this.core.stateService.conversation) {
+            console.error('[ConversationsApp] No conversation state service available');
+            return [];
+        }
+
+        try {
+            console.log(`[ConversationsApp] Searching conversations with query: "${query}"`);
+            
+            const results = this.core.stateService.conversation.searchConversations(query);
+            
+            console.log(`[ConversationsApp] Found ${results.length} matching conversations`);
+            return results;
+            
+        } catch (error) {
+            console.error('[ConversationsApp] Failed to search conversations:', error);
+            return [];
         }
     }
 }

@@ -88,6 +88,70 @@
     }
   }
 
+  // Search section
+  .ww-search-section {
+    @include common.ww-widget-base;
+    margin-bottom: var(--space-6);
+    
+    .ww-search-wrapper {
+      position: relative;
+      
+      .ww-search-input {
+        @include common.ww-form-input-base;
+        width: 100%;
+        padding-left: var(--space-10);
+        padding-right: var(--space-10);
+        font-size: var(--font-size-base);
+        height: 48px;
+      }
+
+      .ww-search-icon {
+        position: absolute;
+        left: var(--space-4);
+        top: 50%;
+        transform: translateY(-50%);
+        width: 20px;
+        height: 20px;
+        color: var(--color-text-secondary);
+        pointer-events: none;
+      }
+
+      .ww-search-clear {
+        position: absolute;
+        right: var(--space-3);
+        top: 50%;
+        transform: translateY(-50%);
+        @include common.ww-button-base;
+        padding: var(--space-1);
+        background: transparent;
+        border: none;
+        width: 28px;
+        height: 28px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        opacity: 0.6;
+        transition: opacity var(--transition-fast);
+
+        &:hover {
+          opacity: 1;
+          background: var(--color-gray-100);
+        }
+
+        .ww-icon {
+          width: 16px;
+          height: 16px;
+        }
+      }
+    }
+
+    .ww-search-results {
+      margin-top: var(--space-3);
+      font-size: var(--font-size-sm);
+      color: var(--color-text-secondary);
+    }
+  }
+
   // Filter and search bar
   .ww-filters {
     @include common.ww-widget-base;

@@ -774,4 +774,67 @@ export class ConversationStatePlugin {
             totalMessages
         };
     }
+
+    /**
+     * Search conversations by query string across message content
+     * @param {string} query - Search query (case-insensitive)
+     * @returns {Array} Array of matching conversation metadata objects
+     */
+    searchConversations(query) {
+        if (!query || typeof query !== 'string') {
+            return this.listConversations();
+        }
+
+        const searchQuery = query.toLowerCase().trim();
+        if (searchQuery === '') {
+            return this.listConversations();
+        }
+
+        const state = this._safeConversationState();
+        const allConversations = Object.values(state.metadata);
+        const matchingConversations = [];
+
+        allConversations.forEach(conversation => {
+            const threadId = conversation.threadId;
+            const messages = this.getConversationMessages(threadId);
+            
+            // Search through conversation metadata
+            const searchableMetadata = [
+                conversation.userName || '',
+                conversation.personaName || '',
+                conversation.location || '',
+                threadId
+            ];
+
+            // Check if metadata matches
+            const metadataMatch = searchableMetadata.some(field => 
+                field.toLowerCase().includes(searchQuery)
+            );
+
+            // Search through message content
+            const messageMatch = messages.some(message => {
+                const searchableContent = [
+                    message.content || '',
+                    message.think || '', // AI thinking content
+                    message.title || '', // Page title
+                    message.url || ''    // Page URL
+                ];
+
+                return searchableContent.some(content => 
+                    content.toLowerCase().includes(searchQuery)
+                );
+            });
+
+            if (metadataMatch || messageMatch) {
+                matchingConversations.push(conversation);
+            }
+        });
+
+        // Sort by last update (endTime or startTime), newest first
+        return matchingConversations.sort((a, b) => {
+            const timeA = a.endTime || a.startTime || 0;
+            const timeB = b.endTime || b.startTime || 0;
+            return timeB - timeA;
+        });
+    }
 }
