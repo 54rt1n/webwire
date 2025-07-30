@@ -18,16 +18,18 @@ class WebWireBackground {
         this.extensionSettings = {};
         this.dispatcher = null;
         this.errorBoundary = null;
+        this.sentryService = null;
     }
 
     async initialize() {
         console.log('WebWire background script initializing...');
 
-        const { dispatcher, errorBoundary, stateService, storage } = await initializeContext(this.eventBus, EVENT_CONTEXT.BACKGROUND);
+        const { dispatcher, errorBoundary, stateService, storage, sentryService } = await initializeContext(this.eventBus, EVENT_CONTEXT.BACKGROUND);
         this.dispatcher = dispatcher;
         this.errorBoundary = errorBoundary;
         this.stateService = stateService;
         this.storage = storage;
+        this.sentryService = sentryService;
         
         // Load extension settings and state
         await this.loadSettings();
@@ -256,6 +258,38 @@ class WebWireBackground {
             console.log('[WebWireBackground] Handling SETTINGS_UPDATED event');
             await this.handleSettingsUpdated(data, options.sender);
             return { success: true };
+        });
+
+        // Sentry error reporting handler
+        this.eventBus.onAsync(BACKGROUND_ACTIONS.REPORT_ERROR, async (data, options) => {
+            try {
+                if (!this.sentryService || !this.sentryService.initialized) {
+                    console.error('[WebWireBackground] Sentry not initialized, logging error locally:', data);
+                    return { success: false, error: 'Sentry not available' };
+                }
+
+                const { error, context = {}, level = 'error' } = data;
+                
+                // Add extension context
+                const enrichedContext = {
+                    ...context,
+                    source: options.source || 'unknown',
+                    tabId: options.sender?.tab?.id,
+                    url: options.sender?.tab?.url,
+                    extensionVersion: chrome.runtime.getManifest().version
+                };
+
+                if (level === 'message') {
+                    this.sentryService.captureMessage(error.message || String(error), level, enrichedContext);
+                } else {
+                    this.sentryService.captureException(error, enrichedContext);
+                }
+
+                return { success: true };
+            } catch (err) {
+                console.error('[WebWireBackground] Failed to report error to Sentry:', err);
+                return { success: false, error: err.message };
+            }
         });
 
         console.log('[WebWireBackground] EventBus listeners set up');

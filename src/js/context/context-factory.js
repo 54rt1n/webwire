@@ -5,9 +5,10 @@ import { StateService, ContentStateService } from '../state/state-service.js';
 import { StorageManager } from '../storage/storage-manager.js';
 import { createInitialState } from '../state/state-container.js';
 import { PromptLoader } from '../utils/prompt-loader.js';
+import { SentryService } from '../core/sentry-service.js';
 
 export async function contextFactory(eventBus, context,
-    {storage = false, state = false, contentState = false, ai = false, mcp = false},
+    {storage = false, state = false, contentState = false, ai = false, mcp = false, sentry = false},
     {backgroundIsLocal = false, loadSettings = false, loadState = false, loadStash = false, modelType = null, initialState = null, readInitialState = false, config = null} = {}) {
 
     if ((ai || mcp) && ((!state || !loadSettings) && (!readInitialState && !initialState))) {
@@ -24,6 +25,21 @@ export async function contextFactory(eventBus, context,
     results.eventBus = eventBus;
     results.dispatcher = new EventDispatcher(context, results.eventBus, {backgroundIsLocal});
     results.errorBoundary = new EventErrorBoundary(results.dispatcher);
+    
+    // Sentry for background context only
+    if (sentry) {
+        results.sentryService = new SentryService();
+        if (config) {
+            const sentryDsn = config.get('sentry.dsn');
+            if (sentryDsn) {
+                await results.sentryService.initialize({
+                    dsn: sentryDsn,
+                    context: context,
+                    environment: config.get('sentry.environment', 'production')
+                });
+            }
+        }
+    }
 
     if (readInitialState) {
         const response = await results.dispatcher.dispatch(

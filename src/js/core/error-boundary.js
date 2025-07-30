@@ -1,4 +1,5 @@
 import { EVENT_TYPES } from './events.js';
+import { BACKGROUND_ACTIONS } from './cc-actions.js';
 
 /**
  * EventErrorBoundary provides automatic error handling for event systems.
@@ -84,7 +85,13 @@ export class EventErrorBoundary {
 
     // Send error to background for centralized logging
     try {
-      await this.dispatcher.dispatch('ERROR_OCCURRED', errorReport, { 
+      await this.dispatcher.dispatch(BACKGROUND_ACTIONS.REPORT_ERROR, {
+        error: errorReport.error,
+        context: {
+          ...errorReport.context,
+          operation: 'event_handler_error'
+        }
+      }, { 
         target: 'background',
         timeout: 2000 
       });

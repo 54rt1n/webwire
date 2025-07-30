@@ -19,7 +19,7 @@ export async function initializeContext(eventBus, context = null, {initialState 
         centralState,
       */
       results = await contextFactory(eventBus, context,
-        {storage: true, state: true, ai: false, mcp: false},
+        {storage: true, state: true, ai: false, mcp: false, sentry: true},
         {backgroundIsLocal: true, loadSettings: true, loadState: true, loadStash: true, loadUi: true, config});
       break;
     case EVENT_CONTEXT.CONTENT:

@@ -79,7 +79,7 @@ class WebWireContentHost {
         
         console.log('[WebWireContentHost] Extension communication ready via EventDispatcher');
 
-        this.eventHandlers = new ContentEventHandlers(this.core, this.chatService, this.domAgent);
+        this.eventHandlers = new ContentEventHandlers(this.core);
         this.eventHandlers.setupEventListeners();
 
         // Set up keyboard shortcuts and injection listeners

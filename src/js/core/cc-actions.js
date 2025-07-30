@@ -32,7 +32,10 @@ export const BACKGROUND_ACTIONS = {
     GET_EXTENSION_STATS: 'GET_EXTENSION_STATS',
     
     // Health check
-    PING: 'PING'
+    PING: 'PING',
+    
+    // Error reporting
+    REPORT_ERROR: 'REPORT_ERROR'
 };
 
 /**

@@ -11,12 +11,53 @@ export class ContentEventHandlers extends EventBindableComponent {
         this.dispatcher = core.dispatcher;
     }
 
+    reportError(error, context = {}) {
+        // Ensure error is properly formatted
+        const errorObj = error instanceof Error ? {
+            message: error.message,
+            stack: error.stack,
+            name: error.name
+        } : {
+            message: String(error),
+            stack: new Error().stack,
+            name: 'UnknownError'
+        };
+        
+        this.dispatcher.dispatch(
+            BACKGROUND_ACTIONS.REPORT_ERROR,
+            { error: errorObj, context },
+            { target: 'background' }
+        ).catch(console.error);
+    }
+
     setupEventListeners() {
         console.log('[ContentEventHandlers] Setting up event listeners');
         this.setupStashListeners();
         this.setupSettingsListeners();
         this.setupChatListeners();
         this.setupContentActions();
+        this.setupGlobalErrorHandlers();
+    }
+
+    setupGlobalErrorHandlers() {
+        window.addEventListener('error', (event) => {
+            console.error('[ContentEventHandlers] Uncaught error:', event.error);
+            this.reportError(event.error, { 
+                operation: 'uncaught_error',
+                message: event.message,
+                filename: event.filename,
+                line: event.lineno,
+                column: event.colno
+            });
+        });
+        
+        window.addEventListener('unhandledrejection', (event) => {
+            console.error('[ContentEventHandlers] Unhandled promise rejection:', event.reason);
+            this.reportError(event.reason, {
+                operation: 'unhandled_rejection',
+                promise: true
+            });
+        });
     }
 
     /**
@@ -116,6 +157,7 @@ export class ContentEventHandlers extends EventBindableComponent {
             await this.dispatcher.dispatch(BACKGROUND_ACTIONS.SAVE_STASH, { announce, options }, { target: 'background', tabId: this.stateService.ui.getTabId() });
         } catch (error) {
             console.error('[MCPApp] Failed to save stash data:', error);
+            this.reportError(error, { operation: 'save_stash' });
         }
     }
 
@@ -201,6 +243,7 @@ export class ContentEventHandlers extends EventBindableComponent {
             }
         } catch (error) {
             console.error('[ContentEventHandlers] Failed to resync:', error);
+            this.reportError(error, { operation: 'resync' });
             return { success: false, error: error.message };
         }
     }
@@ -254,6 +297,7 @@ export class ContentEventHandlers extends EventBindableComponent {
             };
         } catch (error) {
             console.error('[MCPApp] Failed to execute tool:', error);
+            this.reportError(error, { operation: 'execute_tool', tool: data.name });
         }
     }
 
