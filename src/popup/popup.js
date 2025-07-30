@@ -121,7 +121,7 @@ export class WebWirePopup {
         const configValid = stats.configurationValid || false;
         this.configStatusElement.textContent = configValid ? 'Valid' : 'Invalid';
         this.configIndicatorElement.className = 
-            `status-indicator ${configValid ? 'connected' : 'warning'}`;
+            `ww-status-indicator ${configValid ? 'ww-connected' : 'ww-warning'}`;
         
         // Show/hide config message
         if (configValid) {

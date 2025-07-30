@@ -124,25 +124,6 @@
     gap: var(--space-4);
   }
   
-  .ww-flex {
-    display: flex;
-  }
-  
-  .ww-flex-col {
-    flex-direction: column;
-  }
-  
-  .ww-items-center {
-    align-items: center;
-  }
-  
-  .ww-justify-between {
-    justify-content: space-between;
-  }
-  
-  .ww-gap-2 { gap: var(--space-2); }
-  .ww-gap-3 { gap: var(--space-3); }
-  .ww-gap-4 { gap: var(--space-4); }
   
   /* Responsive */
   @media (max-width: 768px) {
@@ -1251,38 +1232,6 @@
    ======================================== */
 
 .ww-container, .ww-modal {
-  .ww-form-group {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-2);
-    margin-bottom: var(--space-4);
-  }
-  
-  .ww-form-section {
-    background: var(--color-surface);
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-lg);
-    padding: var(--space-5);
-    margin-bottom: var(--space-5);
-    
-    h2 {
-      margin-top: 0;
-      margin-bottom: var(--space-4);
-      padding-bottom: var(--space-3);
-      border-bottom: 2px solid var(--color-primary-500);
-      color: var(--color-text-primary);
-    }
-    
-    h3 {
-      margin-top: var(--space-6);
-      margin-bottom: var(--space-4);
-      padding-bottom: var(--space-2);
-      border-bottom: 1px solid var(--color-border);
-      color: var(--color-text-secondary);
-      font-size: var(--font-size-base);
-      font-weight: var(--font-weight-medium);
-    }
-  }
   
   label {
     font-weight: var(--font-weight-medium);
@@ -1344,24 +1293,6 @@
     min-width: 120px;
   }
   
-  .ww-checkbox-group {
-    display: flex;
-    align-items: center;
-    gap: var(--space-2);
-    margin-bottom: 0;
-    
-    input[type="checkbox"] {
-      width: auto;
-      margin: 0;
-      cursor: pointer;
-    }
-    
-    label {
-      margin: 0;
-      cursor: pointer;
-      font-weight: var(--font-weight-normal);
-    }
-  }
   
   .ww-model-config {
     background: var(--color-surface);
@@ -1527,11 +1458,6 @@
       border-color: var(--color-warning-500);
     }
     
-    &.ww-info {
-      background-color: var(--color-primary-50);
-      color: var(--color-primary-600);
-      border-color: var(--color-primary-500);
-    }
   }
   
   .ww-status-indicator {
@@ -1540,9 +1466,6 @@
     border-radius: var(--radius-full);
     display: inline-block;
     
-    &.ww-connected {
-      background-color: var(--color-success-500);
-    }
     
     &.ww-disconnected {
       background-color: var(--color-error-500);
@@ -1553,17 +1476,6 @@
     }
   }
   
-  .ww-field-tooltip {
-    position: absolute;
-    background: var(--color-error-500);
-    color: white;
-    padding: var(--space-1) var(--space-2);
-    border-radius: var(--radius-sm);
-    font-size: var(--font-size-xs);
-    z-index: var(--z-tooltip);
-    max-width: 200px;
-    margin-top: var(--space-1);
-  }
 }
 
 /* ========================================
@@ -1635,27 +1547,9 @@
   text-align: center;
 }
 
-.ww-text-left {
-  text-align: left;
-}
 
-.ww-text-right {
-  text-align: right;
-}
 
-.ww-font-mono {
-  font-family: var(--font-family-mono);
-}
 
-.ww-text-xs { font-size: var(--font-size-xs); }
-.ww-text-sm { font-size: var(--font-size-sm); }
-.ww-text-base { font-size: var(--font-size-base); }
-.ww-text-lg { font-size: var(--font-size-lg); }
-
-.ww-font-normal { font-weight: var(--font-weight-normal); }
-.ww-font-medium { font-weight: var(--font-weight-medium); }
-.ww-font-semibold { font-weight: var(--font-weight-semibold); }
-.ww-font-bold { font-weight: var(--font-weight-bold); }
 
 .ww-text-primary { color: var(--color-text-primary); }
 .ww-text-secondary { color: var(--color-text-secondary); }
@@ -1709,15 +1603,3 @@
   }
 }
 
-/* Animation utility classes */
-.ww-animate-fade-in {
-  animation: fadeIn var(--transition-slow) ease-out;
-}
-
-.ww-animate-slide-in {
-  animation: slideInDown var(--transition-bounce) ease-out;
-}
-
-.ww-animate-pulse {
-  animation: pulse 2s infinite;
-}
