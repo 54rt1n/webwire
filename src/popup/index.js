@@ -1,5 +1,5 @@
 import { WebWirePopup } from './popup.js';
-import { AppConfig } from '../../src/js/core/app-config.js';
+import { AppConfig } from '../js/core/app-config.js';
 
 /**
  * WebWire Popup Application - Main business logic for the extension popup.

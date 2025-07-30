@@ -1,6 +1,6 @@
 import '../../src/shared/global.scss';
 import './style.scss';
-import { MessageBuilder } from '../../src/chat/message-builder.js';
+import { MessageBuilder } from '../chat/message-builder.js';
 
 export class OptionsPanel {
     constructor(eventBus) {

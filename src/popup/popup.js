@@ -1,12 +1,14 @@
-import '../shared/global.scss';
+import '../../src/shared/global.scss';
 import './style.scss';
+import { EventDispatcher } from '../js/core/event-dispatcher.js';
+import { BACKGROUND_ACTIONS } from '../js/core/cc-actions.js';
 
 /**
  * UI management for the WebWire popup providing status display and user interaction controls.
  * Handles status updates, button interactions, and communication with the background script.
  * 
  * @example
- * const popup = new WebWirePopup();
+ * const popup = new WebWirePopup(config);
  * await popup.initialize();
  * 
  * // Setup event handlers
@@ -21,28 +23,32 @@ import './style.scss';
  */
 
 export class WebWirePopup {
-    constructor() {
+    constructor(config) {
+        this.config = config;
         this.initializeElements();
         this.currentTab = null;
+        this.dispatcher = new EventDispatcher('popup');
     }
 
     initializeElements() {
         // Status elements
         this.loadingElement = document.getElementById('loading');
         this.contentElement = document.getElementById('content');
-        this.panelStatusElement = document.getElementById('panel-status');
-        this.panelIndicatorElement = document.getElementById('panel-indicator');
-        this.mcpStatusElement = document.getElementById('mcp-status');
-        this.mcpIndicatorElement = document.getElementById('mcp-indicator');
-        this.toolsCountElement = document.getElementById('tools-count');
+        this.configMessageElement = document.getElementById('config-message');
+        
+        // Stat elements
+        this.conversationCountElement = document.getElementById('conversation-count');
+        this.conversationIndicatorElement = document.getElementById('conversation-indicator');
+        this.configStatusElement = document.getElementById('config-status');
+        this.configIndicatorElement = document.getElementById('config-indicator');
+        this.messageCountElement = document.getElementById('message-count');
+        this.messageIndicatorElement = document.getElementById('message-indicator');
 
         // Action buttons
-        this.togglePanelBtn = document.getElementById('toggle-panel');
-        this.analyzePageBtn = document.getElementById('analyze-page');
-        this.openOptionsBtn = document.getElementById('open-options');
-        this.helpLink = document.getElementById('help-link');
-        this.mcpLink = document.getElementById('mcp-link');
-        this.conversationsLink = document.getElementById('conversations-link');
+        this.conversationsBtn = document.getElementById('conversations-btn');
+        this.promptsBtn = document.getElementById('prompts-btn');
+        this.settingsBtn = document.getElementById('settings-btn');
+        this.helpBtn = document.getElementById('help-btn');
     }
 
     /**
@@ -71,12 +77,10 @@ export class WebWirePopup {
      * @param {Object} handlers - Object containing event handlers
      */
     setupEventListeners(handlers) {
-        this.togglePanelBtn.addEventListener('click', handlers.onTogglePanel);
-        this.analyzePageBtn.addEventListener('click', handlers.onAnalyzePage);
-        this.openOptionsBtn.addEventListener('click', handlers.onOpenOptions);
-        this.helpLink.addEventListener('click', handlers.onHelp);
-        this.mcpLink.addEventListener('click', handlers.onMCP);
-        this.conversationsLink.addEventListener('click', handlers.onConversations);
+        this.conversationsBtn.addEventListener('click', handlers.onConversations);
+        this.promptsBtn.addEventListener('click', handlers.onPrompts);
+        this.settingsBtn.addEventListener('click', handlers.onSettings);
+        this.helpBtn.addEventListener('click', handlers.onHelp);
     }
 
     /**
@@ -84,56 +88,55 @@ export class WebWirePopup {
      */
     async loadStatus() {
         try {
-            // Get WebWire state from background using the proper event pattern
-            const response = await chrome.runtime.sendMessage({
-                type: 'CROSS_CONTEXT_EVENT',
-                event: 'GET_WEBWIRE_STATE',
-                data: {},
-                source: 'popup'
-            });
+            this.showLoading('Loading stats...');
+            
+            const stats = await this.dispatcher.dispatch(
+                BACKGROUND_ACTIONS.GET_EXTENSION_STATS,
+                {},
+                { target: 'background' }
+            );
 
-            console.log('response', response);
-
-            if (response && response.success && response.result) {
-                this.updateStatus(response.result);
-            } else {
-                this.updateStatus({});
+            const { success, result } = stats;
+            if (!success) {
+                throw new Error('Failed to load stats');
             }
+
+            console.log('Extension stats:', result);
+            this.updateStatus(result);
+            this.showContent();
 
         } catch (error) {
             console.error('Failed to load status:', error);
             this.updateStatus({});
+            this.showContent();
         }
     }
 
     /**
-     * Update status display based on state
-     * @param {Object} state - WebWire state object
+     * Update status display based on stats
+     * @param {Object} stats - Extension stats object
      */
-    updateStatus(state) {
-        // Update panel status
-        const panelActive = state.panelInjected || false;
-        this.panelStatusElement.textContent = panelActive ? 'Active' : 'Inactive';
-        this.panelIndicatorElement.className = 
-            `status-indicator ${panelActive ? 'connected' : 'disconnected'}`;
-
-        // Update MCP status
-        const mcpConnected = state.mcpConnected || false;
-        this.mcpStatusElement.textContent = mcpConnected ? 'Connected' : 'Disconnected';
-        this.mcpIndicatorElement.className = 
-            `status-indicator ${mcpConnected ? 'connected' : 'disconnected'}`;
-
-        // Update tools count
-        const toolsCount = (state.tools && state.tools.length) || 0;
-        this.toolsCountElement.textContent = toolsCount.toString();
-
-        // Update button text
-        this.togglePanelBtn.innerHTML = `
-            <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-            </svg>
-            ${panelActive ? 'Hide Panel' : 'Show Panel'}
-        `;
+    updateStatus(stats) {
+        // Update configuration status (most important)
+        const configValid = stats.configurationValid || false;
+        this.configStatusElement.textContent = configValid ? 'Valid' : 'Invalid';
+        this.configIndicatorElement.className = 
+            `status-indicator ${configValid ? 'connected' : 'warning'}`;
+        
+        // Show/hide config message
+        if (configValid) {
+            this.configMessageElement.style.display = 'none';
+        } else {
+            this.configMessageElement.style.display = 'block';
+        }
+        
+        // Update conversation count
+        const conversationCount = stats.conversationCount || 0;
+        this.conversationCountElement.textContent = conversationCount;
+            
+        // Update message count
+        const messageCount = stats.totalMessages || 0;
+        this.messageCountElement.textContent = messageCount;
     }
 
     /**

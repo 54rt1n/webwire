@@ -1,6 +1,7 @@
 import { initializeContext } from '../js/context/context-init.js';
 import { OptionsPanel } from './panel.js';
-import { createInitialState } from '../js/state/state-container.js';
+import { BACKGROUND_ACTIONS } from '../js/core/cc-actions.js';
+import { createInitialState, createInitialSettingsState } from '../js/state/state-container.js';
 import { EventBus } from '../js/core/event-bus.js';
 import { EVENT_CONTEXT } from '../js/core/events.js';
 
@@ -25,35 +26,8 @@ class OptionsApp {
         this.stateService = stateService;
         this.storage = storage;
 
-        // Test background script connectivity
-        await this.testBackgroundConnection();
-
         await this.loadSettings();
         this.setupEventListeners();
-    }
-
-    async testBackgroundConnection() {
-        try {
-            console.log('[OptionsApp] Testing background script connection...');
-            
-            const response = await chrome.runtime.sendMessage({
-                action: 'PING',
-                source: 'options-page-test',
-                timestamp: Date.now()
-            });
-            
-            console.log('[OptionsApp] Background script ping response:', response);
-            
-            if (response && response.success) {
-                console.log('[OptionsApp] ✅ Background script is reachable');
-            } else {
-                console.warn('[OptionsApp] ⚠️ Background script responded but with error:', response);
-            }
-            
-        } catch (error) {
-            console.error('[OptionsApp] ❌ Cannot reach background script:', error);
-            console.error('[OptionsApp] This means settings notifications will not work!');
-        }
     }
 
     setupEventListeners() {
@@ -204,8 +178,8 @@ class OptionsApp {
     async loadSettings() {
         try {
             const settings = await this.stateService.settings.loadFromStorage();
-            // If no settings, use the default initial state structure
-            const hydratedSettings = this.hydrateSettings(settings);
+            const defaultSettings = settings || createInitialSettingsState();
+            const hydratedSettings = this.hydrateSettings(defaultSettings);
             this.panel.setAllSettings(hydratedSettings);
         } catch (error) {
             console.error('Error loading settings:', error);
@@ -344,6 +318,7 @@ class OptionsApp {
             
             // Enhanced validation with visual feedback
             const validationResult = this.validateSettings(settings);
+            
             if (!validationResult.isValid) {
                 console.log('[OptionsApp] ❌ Validation failed:', validationResult.errors);
                 this.highlightMissingFields(validationResult.missingFields);
@@ -358,63 +333,18 @@ class OptionsApp {
             await this.stateService.settings.saveToStorage();
             console.log('[OptionsApp] 4. Settings saved to storage');
             
-            console.log('[OptionsApp] 5. About to notify background script...');
+            console.log('[OptionsApp] 5. Notifying background script of settings update...');
 
-            // Notify background script that settings have been updated
-            console.log('[OptionsApp] About to notify background script...');
-            console.log('[OptionsApp] Chrome runtime available:', !!chrome?.runtime);
-            console.log('[OptionsApp] Extension context ID:', chrome?.runtime?.id);
-            
-            // Always attempt to notify, regardless of connectivity test results
-            const message = {
-                action: 'SETTINGS_UPDATED',
-                settings: settings,
-                timestamp: Date.now(),
-                source: 'options-page'
-            };
-            
-            console.log('[OptionsApp] Sending SETTINGS_UPDATED message to background:', message);
-            
-            try {
-                const response = await chrome.runtime.sendMessage(message);
-                
-                console.log('[OptionsApp] ✅ Response from background script:', response);
-                
-                if (response && response.success) {
-                    console.log('[OptionsApp] ✅ Background script successfully processed settings update');
-                } else {
-                    console.warn('[OptionsApp] ⚠️ Background script returned error or unexpected response:', response);
-                }
-                
-            } catch (error) {
-                console.error('[OptionsApp] ❌ Failed to notify background script:', error);
-                console.error('[OptionsApp] Error details:', {
-                    name: error.name,
-                    message: error.message,
-                    stack: error.stack
-                });
-                
-                // This is not critical, the storage listener should still catch the change
-                console.log('[OptionsApp] 📡 Relying on storage listener fallback...');
-                
-                // If direct messaging fails, manually trigger a storage change event
-                // by writing a special trigger key that the background can detect
-                try {
-                    console.log('[OptionsApp] 🔄 Triggering storage change fallback...');
-                    await chrome.storage.local.set({
-                        'webwire-settings-trigger': {
-                            timestamp: Date.now(),
-                            source: 'options-fallback'
-                        }
-                    });
-                    console.log('[OptionsApp] ✅ Storage trigger set successfully');
-                } catch (storageError) {
-                    console.error('[OptionsApp] ❌ Even storage fallback failed:', storageError);
-                }
-            }
+            // Our dispatcher handles the complexity of targeting the service worker,
+            // even if it's inactive. It will wake it up.
+            await this.dispatcher.dispatch(
+                BACKGROUND_ACTIONS.SETTINGS_UPDATED,
+                { settings: settings },
+                { target: 'background' }
+            );
 
-            console.log('[OptionsApp] 6. All steps completed successfully');
-            this.panel.showStatus('All settings saved successfully', false);
+            console.log('[OptionsApp] 6. Background script notified.');
+            this.panel.showStatus('All settings saved successfully!', false);
             console.log('[OptionsApp] ===== SAVE ALL SETTINGS COMPLETED =====');
 
         } catch (error) {

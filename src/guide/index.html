@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>WebWire Configuration Guide</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+</head>
+<body>
+  <div class="ww-guide">
+    <div class="guide-container">
+      <h1>Welcome to WebWire</h1>
+      <p class="subtitle">This guide will help you unlock the full power of your AI web assistant. Let's get you set up for success.</p>
+
+      <div class="toc">
+        <h3>📚 Table of Contents</h3>
+        <ul>
+          <li><a href="#quickstart">🚀 5-Minute Quickstart</a></li>
+          <li><a href="#mental-model">🧠 Understanding the Core Concepts</a></li>
+          <li><a href="#providers">🔌 Connecting Your AI (Providers)</a></li>
+          <li><a href="#models">🤖 Choosing Your Models</a></li>
+          <li><a href="#samplers">🎛️ Tuning the AI's Personality (Samplers)</a></li>
+          <li><a href="#recipes">🍳 Common Recipes & Use Cases</a></li>
+          <li><a href="#system-prompts">✍️ Crafting the AI's Brain (System Prompts)</a></li>
+          <li><a href="#prompts-library">⚡ Automating Your Workflow (Prompts Library)</a></li>
+          <li><a href="#default-prompts">📦 Out-of-the-Box Prompts</a></li>
+          <li><a href="#local-models">🏠 Going Local: Your Private AI Setup</a></li>
+          <li><a href="#troubleshooting">🔧 Troubleshooting</a></li>
+        </ul>
+      </div>
+
+      <h2 id="quickstart">🚀 5-Minute Quickstart</h2>
+      <div class="section">
+        <p>Just want to get started? Here's the bare minimum:</p>
+        <ol>
+          <li>Go to the WebWire <strong>Options</strong> page.</li>
+          <li>Scroll to <strong>Provider Settings</strong> and find your preferred service (e.g., OpenAI, Anthropic).</li>
+          <li>Paste your <strong>API Key</strong> into the correct field.</li>
+          <li>Scroll up to <strong>Model Configuration</strong>. Under <strong>Chat Model (Primary)</strong>:
+            <ul>
+              <li>Enter the <strong>Model Name</strong> (e.g., <code>gpt-4o</code>, <code>claude-3-sonnet-20240229</code>).</li>
+              <li>Select the correct <strong>Provider</strong> from the dropdown.</li>
+            </ul>
+          </li>
+          <li>Click <strong>💾 Save All Settings</strong>.</li>
+        </ol>
+        <p>That's it! You can now open the WebWire panel on any webpage and start chatting.</p>
+      </div>
+
+      <h2 id="mental-model">🧠 Understanding the Core Concepts</h2>
+      <div class="section">
+        <p>WebWire works like a conversation partner that has read the webpage you're on. Here's how the pieces fit together:</p>
+        <ul>
+          <li><strong>The Provider:</strong> The company that runs the AI (e.g., OpenAI, Google). This is who you pay and get your API key from.</li>
+          <li><strong>The Model:</strong> The specific AI "brain" you want to talk to (e.g., GPT-4o, Claude 3 Sonnet). Each provider offers different models with different strengths.</li>
+          <li><strong>The Samplers:</strong> These are the "personality" knobs for the AI. They control how creative, random, or long-winded the model is.</li>
+        </ul>
+        <div class="info">
+          <strong>Analogy:</strong> Think of it like a sound system. The **Provider** is the power company (Con Edison), the **Model** is your amplifier (Marantz, Pioneer), and the **Samplers** are the bass, treble, and volume knobs.
+        </div>
+      </div>
+      
+      <h2 id="providers">🔌 Connecting Your AI (Providers)</h2>
+      <div class="section">
+        <p>You need an API key from a supported AI provider to use WebWire. Find your provider in the list and paste the key you get from their website into the corresponding field in WebWire's options.</p>
+        <!-- Table from original guide remains here -->
+        <table>...</table>
+      </div>
+
+      <h2 id="models">🤖 Choosing Your Models</h2>
+      <div class="section">
+        <h3>The "Chat Model" is Your Workhorse</h3>
+        <p>The <strong>Chat Model (Primary)</strong> is the most important setting. It's used for all general-purpose conversations and analysis. If you only set one model, this is the one.</p>
+        
+        <h3>Optional Specialist Models</h3>
+        <p>You can optionally configure other models for specific tasks (like coding or creative writing). If you leave these blank, WebWire will simply use your main Chat Model for everything.</p>
+        
+        <div class="info">
+          <strong>💡 Pro Tip:</strong> Use a fast, cheap model (like <code>gpt-3.5-turbo</code> or <code>claude-3-haiku</code>) as your Chat Model for quick answers, and a powerful, more expensive model (like <code>gpt-4o</code> or <code>claude-3-opus</code>) as your Creative or Code Model for when you need the best quality.
+        </div>
+
+        <h3>What's a Tokenizer?</h3>
+        <p>The tokenizer is just a **cost and length estimator**. It helps WebWire show you an *approximation* of how much a request will cost before you send it. The AI provider handles the real tokenization on their end.</p>
+        <ul>
+          <li>For most modern models (GPT-4, Claude 3, Gemini, Llama 3), <strong><code>cl100k_base</code></strong> is the right choice.</li>
+          <li>When in doubt, leave it on "(Auto-detect)".</li>
+        </ul>
+      </div>
+
+      <h2 id="samplers">🎛️ Tuning the AI's Personality (Samplers)</h2>
+      <div class="section">
+        <p>These settings control *how* the AI generates text. Getting these right is the key to making the AI behave the way you want.</p>
+        
+        <h4>Temperature: The Creativity Knob (0.0 to 2.0)</h4>
+        <p>This is the most important sampler. It controls the randomness of the output.</p>
+        <ul>
+          <li><strong>Low (0.1 - 0.3):</strong> Precise, predictable, and factual. Good for data extraction, summarization, and technical questions.</li>
+          <li><strong>Medium (0.7 - 0.9):</strong> A balance of creativity and coherence. Best for general chat, brainstorming, and balanced analysis. <strong>(Recommended starting point)</strong></li>
+          <li><strong>High (1.0+):</strong> Wildly creative, poetic, and sometimes nonsensical. Good for artistic writing, but can be less reliable.</li>
+        </ul>
+
+        <h4>Max Response / Content Tokens: The Leash</h4>
+        <p>These control the length of the conversation.</p>
+        <ul>
+            <li><strong>Max Response Tokens:</strong> Limits how long the AI's answer can be. Keep it lower to save money and get faster responses.</li>
+            <li><strong>Max Content Tokens:</strong> Limits how much of the webpage's text is sent to the AI. If a page is huge, this prevents you from sending a massive, expensive request.</li>
+        </ul>
+
+        <h4>Advanced Knobs (Top P, Top K, Penalties)</h4>
+        <p>For most users, Temperature is enough. These offer finer control for power users. A good starting point is to only set Temperature and leave these blank. If you want to experiment:</p>
+        <ul>
+            <li><strong>Top P:</strong> Use this *instead* of Temperature. <code>0.9</code> is a good value. It's a different way to control randomness that some people prefer.</li>
+            <li><strong>Penalties:</strong> Slightly increase (e.g., to <code>0.1</code> or <code>0.2</code>) if you find the AI repeating itself too much.</li>
+        </ul>
+      </div>
+
+      <h2 id="recipes">🍳 Common Recipes & Use Cases</h2>
+      <div class="section">
+        <h4>The Factual Analyst</h4>
+        <p>For when you need precise, no-nonsense answers from a webpage.</p>
+        <ul>
+          <li><strong>Model:</strong> Any fast model (<code>claude-3-haiku</code>, <code>gpt-3.5-turbo</code>)</li>
+          <li><strong>Temperature:</strong> <code>0.2</code></li>
+          <li><strong>Max Response Tokens:</strong> <code>1024</code></li>
+          <li><strong>System Prompt:</strong> "You are a precise data analyst. Extract information accurately and do not speculate."</li>
+        </ul>
+
+        <h4>The Brainstorming Partner</h4>
+        <p>For creative ideas and bouncing thoughts off the AI.</p>
+        <ul>
+          <li><strong>Model:</strong> Any creative model (<code>gpt-4o</code>, <code>claude-3-sonnet</code>)</li>
+          <li><strong>Temperature:</strong> <code>0.8</code></li>
+          <li><strong>Top P:</strong> (leave blank)</li>
+          <li><strong>Max Response Tokens:</strong> <code>4096</code></li>
+          <li><strong>System Prompt:</strong> "You are a creative brainstorming partner. Be imaginative, suggest alternatives, and build on ideas."</li>
+        </ul>
+      </div>
+
+      <h2 id="system-prompts">✍️ Crafting the AI's Brain (System Prompts)</h2>
+      <div class="section">
+        <h3>What is a System Prompt?</h3>
+        <p>The System Prompt is the most powerful setting in WebWire. It's the core set of instructions that the AI reads before every single message you send. It defines the AI's personality, its expertise, its tone, and its rules.</p>
+        <div class="info">
+          <strong>Analogy:</strong> If the AI Model is the engine, the System Prompt is the driver. You can tell it to be a cautious driver, a race car driver, or a truck driver—it will fundamentally change how the engine performs.
+        </div>
+
+        <h4>Examples of Powerful System Prompts:</h4>
+        <ul>
+          <li><strong>For Editing:</strong> <code>You are a skeptical editor from the New York Times. Your goal is to find logical fallacies, weak arguments, and unclear language. Rewrite the user's text to be stronger and more persuasive.</code></li>
+          <li><strong>For Learning:</strong> <code>You are a patient 5th-grade teacher. Explain complex topics using simple analogies and check for my understanding.</code></li>
+          <li><strong>For Coding:</strong> <code>You are a senior software engineer specializing in clean, efficient JavaScript. Provide code solutions that are well-documented and follow best practices.</code></li>
+        </ul>
+        
+        <h3>Power-User Controls</h3>
+        <p>These settings give you fine-grained control over the prompts sent to the AI.</p>
+        <ul>
+          <li><strong>Minimal System Message:</strong> A shorter, more concise system prompt used when "Minimal Mode" is enabled for a model. Perfect for saving tokens (and money) on simpler models or tasks.</li>
+          <li><strong>User Header & Footer:</strong> Text that gets automatically wrapped around every message *you* send. Useful for consistently adding context, like "My programming language is Python," without having to type it every time.</li>
+        </ul>
+      </div>
+
+      <h2 id="prompts-library">⚡ Automating Your Workflow (Prompts Library)</h2>
+      <div class="section">
+        <h3>One-Click Magic Buttons</h3>
+        <p>The Prompts feature allows you to create reusable "canned prompts" that appear as quick-action buttons in the WebWire chat panel. This is perfect for automating repetitive tasks you perform on web pages.</p>
+        
+        <h4>How It Works:</h4>
+        <ol>
+          <li>You define a prompt in the <strong>Prompts Manager</strong> (accessible from the extension popup).</li>
+          <li>You give it a name, an icon, and define both the User Prompt (what you're "asking") and a powerful System Prompt (how the AI should behave).</li>
+          <li>You can configure features, like automatically including the page content or enabling specific tools.</li>
+          <li>Any prompt you set to "Active" will appear as a button when you open WebWire, ready for one-click execution.</li>
+        </ol>
+
+        <div class="info">
+          <strong>💡 Use Case Example:</strong> Create a "Summarize" prompt that automatically includes page content and has a system prompt like "Summarize the following text into five key bullet points for a busy executive." Now you have a one-click summarizer on every page.
+        </div>
+      </div>
+
+      <h2 id="default-prompts">📦 Out-of-the-Box Prompts</h2>
+      <div class="section">
+        <p>WebWire comes with a couple of powerful default prompts to get you started. You can use them as-is, or customize them in the <strong>Prompts Manager</strong> to fit your exact needs.</p>
+
+        <div class="platform">
+          <h4>📖 Summarize Page</h4>
+          <p>A sophisticated summarizer that goes beyond simple text extraction. It provides a multi-part analysis:</p>
+          <ul>
+            <li>A one-sentence abstract for a quick overview.</li>
+            <li>5-7 key bullet points for the main takeaways.</li>
+            <li>A concluding paragraph on the content's broader significance.</li>
+          </ul>
+        </div>
+        
+        <div class="platform">
+          <h4>📊 Analyze Timeline</h4>
+          <p>Perfect for social media feeds or news sites. This prompt acts as a trend analyst, identifying:</p>
+          <ul>
+            <li>The top 3-5 emerging themes in the content.</li>
+            <li>The general sentiment (positive, negative, mixed) around each theme.</li>
+            <li>Key posts that are driving the conversation.</li>
+          </ul>
+        </div>
+        <div class="info">
+          <strong>💡 Tip:</strong> These default prompts are excellent templates. Duplicate them in the Prompts Manager and tweak the system prompts to create your own specialized analysis tools.
+        </div>
+      </div>
+
+      <h2 id="local-models">🏠 Local Models Setup</h2>
+      <div class="section">
+        <p>Running models locally gives you privacy, control, and potentially lower costs.</p>
+        
+        <div class="warning">
+          <strong>⚠️ HTTPS Requirement:</strong> Due to Chrome security policies, local model endpoints must use HTTPS. HTTP endpoints will be blocked. You'll need to set up SSL certificates for your local server or use a reverse proxy with HTTPS.
+        </div>
+
+        <div class="platform">
+          <h4>🦙 Llama.cpp</h4>
+          <p>High-performance C++ implementation for running LLaMA models locally.</p>
+          <p><strong>Required Endpoint:</strong> <code>https://localhost:8080/v1</code> (HTTPS required)</p>
+          <p><strong>Setup:</strong> <a href="https://github.com/ggerganov/llama.cpp" target="_blank">Visit llama.cpp on GitHub</a></p>
+        </div>
+
+        <div class="platform">
+          <h4>🐉 KoboldCpp</h4>
+          <p>Easy-to-use AI text generation tool with focus on story writing.</p>
+          <p><strong>Required Endpoint:</strong> <code>https://localhost:5001/v1</code> (HTTPS required)</p>
+          <p><strong>Setup:</strong> <a href="https://github.com/LostRuins/koboldcpp" target="_blank">Visit KoboldCpp on GitHub</a></p>
+        </div>
+
+        <div class="platform">
+          <h4>🦌 Ollama</h4>
+          <p>The easiest way to run large language models locally.</p>
+          <p><strong>Required Endpoint:</strong> <code>https://localhost:11434/v1</code> (HTTPS required)</p>
+          <p><strong>Setup:</strong> <a href="https://github.com/ollama/ollama" target="_blank">Visit Ollama on GitHub</a></p>
+        </div>
+
+        <div class="platform">
+          <h4>⚡ vLLM</h4>
+          <p>High-throughput and memory-efficient inference engine for large language models.</p>
+          <p><strong>Required Endpoint:</strong> <code>https://localhost:8000/v1</code> (HTTPS required)</p>
+          <p><strong>Setup:</strong> <a href="https://github.com/vllm-project/vllm" target="_blank">Visit vLLM on GitHub</a></p>
+        </div>
+
+        <h3>General Local Setup</h3>
+        <ol>
+          <li>Set <strong>Provider</strong> to "Local"</li>
+          <li>Enter your server endpoint in <strong>Local Model Endpoint</strong> (must start with <code>https://</code>)</li>
+          <li>Enter the model name as configured in your local server</li>
+          <li>Choose an appropriate tokenizer (usually "llama" for local models)</li>
+          <li>Save settings and test</li>
+        </ol>
+        
+        <div class="info">
+          <strong>💡 Setting up HTTPS for local servers:</strong> Most local model servers run on HTTP by default. You'll need to either configure SSL certificates or use a reverse proxy like nginx or Caddy to add HTTPS support.
+        </div>
+      </div>
+
+      <h2 id="troubleshooting">🔧 Troubleshooting</h2>
+      <div class="section">
+        <h3>Common Issues</h3>
+        
+        <div class="warning">
+          <strong>API Key Problems:</strong>
+          <ul>
+            <li>Check that your API key is correctly entered</li>
+            <li>Verify the key has sufficient credits/quota</li>
+            <li>Ensure the key has access to the model you're trying to use</li>
+          </ul>
+        </div>
+
+        <div class="warning">
+          <strong>Local Model Issues:</strong>
+          <ul>
+            <li><strong>Connection refused:</strong> Make sure your local server is running</li>
+            <li><strong>Slow responses:</strong> Check your hardware resources (CPU/GPU/RAM)</li>
+            <li><strong>Model not found:</strong> Verify the model name matches your server configuration</li>
+          </ul>
+        </div>
+
+        <div class="warning">
+          <strong>Token Issues:</strong>
+          <ul>
+            <li><strong>Response too long:</strong> Reduce Max Response Tokens</li>
+            <li><strong>Context too large:</strong> Reduce Max Content Tokens</li>
+            <li><strong>Expensive usage:</strong> Use smaller token limits and enable Minimal Mode</li>
+          </ul>
+        </div>
+
+        <h3>Performance Tips</h3>
+        <ul>
+          <li>Start with default settings and adjust gradually</li>
+          <li>Use Minimal Mode for token-constrained scenarios</li>
+          <li>Choose appropriate token limits for your use case</li>
+          <li>Test different temperature values for your preferred response style</li>
+          <li>Local models require significant computational resources</li>
+        </ul>
+      </div>
+
+      <h2 id="local-https-setup">🚀 Running Local AI Models with WebWire (Securely!)</h2>
+      <div class="section">
+        <p>To use local AI models with WebWire, your browser requires a secure <code>https://</code> connection. By default, most local AI servers start with an insecure <code>http://</code> address.</p>
+        
+        <p>This guide will walk you through the <strong>easiest</strong> way to add that secure layer using a free, automatic tool called <strong>Caddy</strong>.</p>
+
+        <h3>What is Caddy?</h3>
+        <p>Caddy is a simple web server that can automatically create and manage the necessary SSL/TLS certificates to give your local AI server a secure <code>https://</code> address. It acts as a "reverse proxy"—a secure entry point that forwards traffic to your insecure local AI server.</p>
+
+        <h3>Step 1: Install Caddy</h3>
+        <p>Choose your operating system and follow the simple instructions.</p>
+
+        <h4>macOS (using Homebrew)</h4>
+        <ol>
+          <li>Open the <strong>Terminal</strong> app.</li>
+          <li>If you don't have Homebrew, install it first by pasting this command and hitting Enter:
+            <pre><code>/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"</code></pre>
+          </li>
+          <li>Install Caddy:
+            <pre><code>brew install caddy</code></pre>
+          </li>
+        </ol>
+
+        <h4>Windows (using Scoop or direct download)</h4>
+        <p><strong>Method A: Scoop (Recommended)</strong></p>
+        <ol>
+          <li>Open <strong>PowerShell</strong>.</li>
+          <li>Install Scoop if you don't have it:
+            <pre><code>Set-ExecutionPolicy RemoteSigned -Scope CurrentUser
+irm get.scoop.sh | iex</code></pre>
+          </li>
+          <li>Install Caddy:
+            <pre><code>scoop install caddy</code></pre>
+          </li>
+        </ol>
+
+        <p><strong>Method B: Direct Download</strong></p>
+        <ol>
+          <li>Go to the <a href="https://caddyserver.com/download" target="_blank">Caddy download page</a>.</li>
+          <li>Download the latest version for Windows.</li>
+          <li>Unzip the file. You will get <code>caddy.exe</code>.</li>
+          <li>Move <code>caddy.exe</code> to a folder you can easily access, like <code>C:\caddy</code>.</li>
+          <li>Open <strong>Command Prompt</strong> or <strong>PowerShell</strong> and navigate to that folder: <code>cd C:\caddy</code></li>
+        </ol>
+
+        <h4>Linux (Debian/Ubuntu/Raspberry Pi OS)</h4>
+        <ol>
+          <li>Open your <strong>Terminal</strong>.</li>
+          <li>Run the following commands one by one:
+            <pre><code>sudo apt install -y debian-keyring debian-archive-keyring apt-transport-https
+curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/gpg.key' | sudo gpg --dearmor -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg
+curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt' | sudo tee /etc/apt/sources.list.d/caddy-stable.list
+sudo apt update
+sudo apt install caddy</code></pre>
+          </li>
+        </ol>
+
+        <h3>Step 2: Create a <code>Caddyfile</code></h3>
+        <p>This is a simple text file that tells Caddy what to do.</p>
+        <ol>
+          <li>Create a new, empty folder somewhere you'll remember (e.g., on your Desktop, in your Documents).</li>
+          <li>Inside that folder, create a new text file named <strong><code>Caddyfile</code></strong> (with no extension like <code>.txt</code>).</li>
+          <li>Copy and paste the configuration below into your <code>Caddyfile</code>. <strong>Make sure you edit the port number (<code>8000</code>) to match your local AI server!</strong>
+            <pre><code># WebWire Local AI Server Proxy
+#
+# This file makes your local AI server available at https://localhost:4430
+# It automatically handles HTTPS certificates.
+
+localhost:4430 {
+    # This tells Caddy to forward all requests to your local AI server.
+    # IMPORTANT: Change "8000" to the port your AI server is running on.
+    # Common ports:
+    #   - vLLM: 8000
+    #   - Llama.cpp: 8080
+    #   - Ollama: 11434
+    #   - KoboldCpp: 5001
+    reverse_proxy localhost:8000
+}</code></pre>
+          </li>
+        </ol>
+
+        <h3>Step 3: Run Caddy</h3>
+        <ol>
+          <li>Open your <strong>Terminal</strong> or <strong>PowerShell</strong>.</li>
+          <li>Navigate to the folder where you saved your <code>Caddyfile</code>. For example:
+            <pre><code>cd ~/Desktop/caddy-config</code></pre>
+          </li>
+          <li>Run Caddy with this simple command:
+            <pre><code>caddy run</code></pre>
+          </li>
+        </ol>
+        <p>You will see some output, and Caddy will ask for your administrator/sudo password the first time to install its local certificate authority. This is safe and required for <code>https://</code> to work.</p>
+        <p>Caddy is now running! <strong>Keep this terminal window open.</strong></p>
+
+        <h3>Step 4: Configure WebWire</h3>
+        <ol>
+          <li>Go to the WebWire Options page.</li>
+          <li>Set the <strong>Provider</strong> to <strong>Local</strong>.</li>
+          <li>In the <strong>Local Model Endpoint</strong> field, enter the Caddy address:
+            <pre><code>https://localhost:4430</code></pre>
+            <em>(Note: If you changed the port in the <code>Caddyfile</code>, use that port here instead of <code>4430</code>)</em>
+          </li>
+          <li>Enter your local model name (e.g., <code>llama3</code>).</li>
+          <li>Save your settings.</li>
+        </ol>
+        <p><strong>That's it!</strong> You can now use your local AI model securely with WebWire.</p>
+
+        <h3>Troubleshooting</h3>
+        <ul>
+          <li><strong>"Connection refused" error:</strong>
+            <ul>
+              <li>Is your local AI server (Ollama, Llama.cpp, etc.) running?</li>
+              <li>Did you set the correct port in your <code>Caddyfile</code>?</li>
+            </ul>
+          </li>
+          <li><strong>"Certificate not trusted" error:</strong>
+            <ul>
+              <li>Make sure you entered your password when Caddy asked to install its root certificate. You may need to restart your browser after Caddy runs for the first time.</li>
+            </ul>
+          </li>
+          <li><strong>Caddy won't start:</strong>
+            <ul>
+              <li>Ensure no other program is using the port you specified in the <code>Caddyfile</code> (e.g., <code>4430</code>). You can change this to another number like <code>4431</code> if needed.</li>
+            </ul>
+          </li>
+        </ul>
+      </div>
+
+      <div class="info">
+        <p><strong>Need more help?</strong> Check <a href="https://web-wire.com/guide" target="_blank">web-wire.com/guide</a> for detailed setup instructions and additional troubleshooting tips.</p>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

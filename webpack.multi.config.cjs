@@ -16,9 +16,9 @@ const createConfig = (env, argv, variant) => {
     entry: {
       background: `./${appDir}/background.js`,
       content: `./${appDir}/content.js`,
-      popup: `./${appDir}/popup/index.js`,
-      options: `./${appDir}/options/index.js`,
-      guide: `./${appDir}/guide/index.js`,
+      popup: `./src/popup/index.js`,
+      options: `./src/options/index.js`,
+      guide: `./src/guide/index.js`,
       conversations: './src/conversations/index.js',
       prompts: './src/prompts/index.js',
       // Only include MCP entries for full version
@@ -78,18 +78,18 @@ const createConfig = (env, argv, variant) => {
               return JSON.stringify(manifest, null, 2);
             }
           },
-          { from: `./${appDir}/icons`, to: 'icons' },
+          { from: `./assets/icons/${variant}`, to: 'icons' },
           { from: './assets/tokenizers', to: 'tokenizers' },
           { from: './assets/prompts', to: 'prompts' }
         ]
       }),
       new HtmlWebpackPlugin({
-        template: `./${appDir}/options/index.html`,
+        template: `./src/options/index.html`,
         filename: 'options.html',
         chunks: ['options']
       }),
       new HtmlWebpackPlugin({ 
-        template: `./${appDir}/popup/index.html`,
+        template: `./src/popup/index.html`,
         filename: 'popup.html',
         chunks: ['popup']
       }),
@@ -99,7 +99,7 @@ const createConfig = (env, argv, variant) => {
         chunks: ['conversations']
       }),
       new HtmlWebpackPlugin({
-        template: `./${appDir}/guide/index.html`,
+        template: `./src/guide/index.html`,
         filename: 'guide.html',
         chunks: ['guide']
       }),
