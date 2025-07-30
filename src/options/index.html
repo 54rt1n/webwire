@@ -7,71 +7,113 @@
 </head>
 <body>
   <div class="ww-options">
-    <div class="ww-container">
-      <div class="ww-text-center margin-bottom-8">
-        <h1>WebWire Options</h1>
-        <p class="ww-text-secondary">Configure your AI assistant settings</p>
+    <!-- Header -->
+    <div class="ww-options-header">
+      <h1>
+        <svg class="ww-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M2 17L12 22L22 17" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M2 12L12 17L22 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        WebWire Options
+      </h1>
+      <div class="ww-header-actions">
+        <a href="guide.html" target="_blank" class="ww-btn-guide">
+          <span>📖</span> Setup Guide
+        </a>
       </div>
-    
-      <div class="section">
-        <h2>General Settings</h2>
-      <div class="ww-grid-2">
-        <div class="form-group">
-          <label for="userName">User Name:</label>
-          <input type="text" id="userName" placeholder="Enter your user name">
-          <small>Identifier for the current user.</small>
+    </div>
+
+    <!-- Main Container -->
+    <div class="ww-options-container">
+      <!-- General Settings Section -->
+      <div class="ww-section">
+        <div class="ww-section-header">
+          <h2>General Settings</h2>
+          <p class="ww-section-description">Configure your personal preferences and assistant identity</p>
         </div>
-        <div class="form-group">
-          <label for="personaName">Assistant Name:</label>
-          <input type="text" id="personaName" placeholder="Enter persona name">
-          <small>The assistant name to use for the AI.</small>
+        
+        <div class="ww-model-config">
+          <div class="ww-model-grid">
+            <div class="ww-form-group">
+              <label class="ww-form-label" for="userName">User Name:</label>
+              <input type="text" id="userName" class="ww-form-input" placeholder="Enter your user name">
+              <small class="ww-form-help">Identifier for the current user.</small>
+            </div>
+            <div class="ww-form-group">
+              <label class="ww-form-label" for="personaName">Assistant Name:</label>
+              <input type="text" id="personaName" class="ww-form-input" placeholder="Enter persona name">
+              <small class="ww-form-help">The assistant name to use for the AI.</small>
+            </div>
+          </div>
         </div>
       </div>
 
-      <div class="section">
-        <h2>Model Configuration <a href="guide.html#models" target="_blank" class="provider-link">📖 Guide</a></h2>
+      <!-- Model Configuration Section -->
+      <div class="ww-section">
+        <div class="ww-section-header">
+          <h2>Model Configuration</h2>
+          <p class="ww-section-description">Configure AI models for different contexts and use cases</p>
+        </div>
         <div id="model-configs">
           <!-- Model configurations will be dynamically generated here -->
         </div>
       </div>
 
-      <div class="section">
-        <h2>System Prompt Controls <a href="guide.html#samplers" target="_blank" class="provider-link">📖 Guide</a></h2>
-        <div class="form-group">
-          <label for="systemMessage">System Message:</label>
-          <textarea id="systemMessage" rows="4" placeholder="Enter custom system message"></textarea>
-          <small>Override the default system prompt for AI responses.</small>
+      <!-- System Prompt Controls Section -->
+      <div class="ww-section">
+        <div class="ww-section-header">
+          <h2>System Prompt Controls</h2>
+          <p class="ww-section-description">Customize the AI's behavior with system prompts and message formatting</p>
         </div>
-        <div class="form-group">
-          <label for="minimalSystemMessage">Minimal System Message:</label>
-          <textarea id="minimalSystemMessage" rows="3" placeholder="Enter minimal system message for token-constrained models"></textarea>
-          <small>System prompt used when minimal mode is enabled.</small>
-        </div>
-        <div class="form-group">
-          <label for="userHeader">User Header:</label>
-          <textarea id="userHeader" rows="2" placeholder="Enter text to prepend to user messages"></textarea>
-          <small>Text automatically added to the beginning of user messages.</small>
-        </div>
-        <div class="form-group">
-          <label for="userFooter">User Footer:</label>
-          <textarea id="userFooter" rows="2" placeholder="Enter text to append to user messages"></textarea>
-          <small>Text automatically added to the end of user messages.</small>
+        
+        <div class="ww-model-config">
+          <div class="ww-form-group">
+            <label class="ww-form-label" for="systemMessage">System Message:</label>
+            <textarea id="systemMessage" class="ww-form-textarea" rows="4" placeholder="Enter custom system message"></textarea>
+            <small class="ww-form-help">Override the default system prompt for AI responses.</small>
+          </div>
+          <div class="ww-form-group">
+            <label class="ww-form-label" for="minimalSystemMessage">Minimal System Message:</label>
+            <textarea id="minimalSystemMessage" class="ww-form-textarea" rows="3" placeholder="Enter minimal system message for token-constrained models"></textarea>
+            <small class="ww-form-help">System prompt used when minimal mode is enabled.</small>
+          </div>
+          <div class="ww-model-grid">
+            <div class="ww-form-group">
+              <label class="ww-form-label" for="userHeader">User Header:</label>
+              <textarea id="userHeader" class="ww-form-textarea" rows="2" placeholder="Enter text to prepend to user messages"></textarea>
+              <small class="ww-form-help">Text automatically added to the beginning of user messages.</small>
+            </div>
+            <div class="ww-form-group">
+              <label class="ww-form-label" for="userFooter">User Footer:</label>
+              <textarea id="userFooter" class="ww-form-textarea" rows="2" placeholder="Enter text to append to user messages"></textarea>
+              <small class="ww-form-help">Text automatically added to the end of user messages.</small>
+            </div>
+          </div>
         </div>
       </div>
 
-      <div class="section">
-        <h2>Provider Settings <a href="guide.html#providers" target="_blank" class="provider-link">📖 Guide</a></h2>
+      <!-- Provider Settings Section -->
+      <div class="ww-section">
+        <div class="ww-section-header">
+          <h2>Provider Settings</h2>
+          <p class="ww-section-description">Configure API keys and endpoints for AI providers</p>
+        </div>
         <div id="provider-settings">
           <!-- Provider settings will be dynamically generated here -->
         </div>
       </div>
-    
-    
-      <div id="status" class="status"></div>
-      <div class="ww-text-center margin-top-8">
-        <button id="saveBtn" class="btn primary lg">💾 Save All Settings</button>
-      </div>
     </div>
+
+    <!-- Actions Bar -->
+    <div class="ww-actions">
+      <button id="saveBtn" class="ww-btn-save">
+        <span>💾</span> Save All Settings
+      </button>
+    </div>
+
+    <!-- Status Message -->
+    <div id="status" class="ww-status-message" style="display: none;"></div>
   </div>
 </body>
 </html>

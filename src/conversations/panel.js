@@ -30,7 +30,6 @@ export class ConversationsPanel {
             conversationsCountDisplay: document.getElementById('conversations-count-display'),
             
             // Action buttons
-            deleteAllConversationsBtn: document.getElementById('delete-all-conversations-btn'),
             refreshConversationsBtn: document.getElementById('refresh-conversations-btn'),
             
             // Bulk actions
@@ -80,10 +79,6 @@ export class ConversationsPanel {
      */
     _setupEventListeners() {
         // Action buttons
-        this.elements.deleteAllConversationsBtn.addEventListener('click', () => {
-            this._showDeleteAllConfirmation();
-        });
-
         this.elements.refreshConversationsBtn.addEventListener('click', () => {
             if (this.handlers.onRefreshConversations) {
                 this.handlers.onRefreshConversations();
@@ -159,7 +154,7 @@ export class ConversationsPanel {
         
         if (!conversations || conversations.length === 0) {
             this.elements.conversationsContainer.innerHTML = 
-                '<div class="placeholder">No conversations found. Create a new conversation to get started.</div>';
+                '<div class="ww-empty-state"><div class="ww-empty-icon">💬</div><h3>No conversations yet</h3><p>Create a new conversation to get started.</p></div>';
             this._updateBulkActions();
             return;
         }
@@ -182,7 +177,7 @@ export class ConversationsPanel {
     _createConversationElement(conversation) {
         console.log('[ConversationsPanel] Creating conversation element:', conversation);
         const conversationEl = this._createEl('div', {
-            className: 'conversation-item',
+            className: 'ww-conversation-card',
             'data-thread-id': conversation.threadId
         });
 
@@ -193,35 +188,47 @@ export class ConversationsPanel {
         const status = conversation.status || 'active';
 
         conversationEl.innerHTML = `
-            <div class="conversation-item-header">
-                <div class="conversation-checkbox-area" data-thread-id="${conversation.threadId}">
-                    <input type="checkbox" class="conversation-checkbox" data-thread-id="${conversation.threadId}">
+            <div class="ww-conversation-header">
+                <div class="ww-conversation-checkbox" data-thread-id="${conversation.threadId}">
+                    <input type="checkbox" class="ww-checkbox" data-thread-id="${conversation.threadId}">
                 </div>
-                <div class="conversation-title">${this._escapeHtml(title)} <span class="thread-id">(${conversation.threadId})</span></div>
-                <div class="conversation-actions">
-                    <button class="btn-icon view-conversation" title="View Conversation" data-thread-id="${conversation.threadId}">
-                        👁️
+                <div class="ww-conversation-info">
+                    <div class="ww-conversation-title">${this._escapeHtml(title)}</div>
+                    <div class="ww-conversation-meta">
+                        <div class="ww-meta-item">
+                            <span class="ww-meta-icon">👤</span>
+                            <span>${this._escapeHtml(conversation.userName || 'User')} & ${this._escapeHtml(conversation.personaName || 'Assistant')}</span>
+                        </div>
+                        <div class="ww-meta-item">
+                            <span class="ww-meta-icon">🕐</span>
+                            <span>${lastUpdate}</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="ww-conversation-actions">
+                    <button class="ww-action-btn" title="View Conversation" data-thread-id="${conversation.threadId}">
+                        <span class="ww-icon">👁️</span>
                     </button>
-                    <button class="btn-icon delete-conversation" title="Delete Conversation" data-thread-id="${conversation.threadId}">
-                        🗑️
+                    <button class="ww-action-btn delete-conversation" title="Delete Conversation" data-thread-id="${conversation.threadId}">
+                        <span class="ww-icon">🗑️</span>
                     </button>
                 </div>
             </div>
-            <div class="conversation-meta">
-                <div class="conversation-meta-row">
-                    <span class="conversation-participants">${this._escapeHtml(conversation.userName || 'User')} & ${this._escapeHtml(conversation.personaName || 'Assistant')}</span>
-                    <span class="conversation-timestamp">${lastUpdate}</span>
+            <div class="ww-conversation-preview">
+                ${this._getConversationPreview(conversation.threadId)}
+            </div>
+            <div class="ww-conversation-stats">
+                <div class="ww-stat stat-messages">
+                    <span class="ww-stat-icon">💬</span>
+                    <span>${messageCount}</span>
                 </div>
-                <div class="conversation-stats">
-                    <div class="conversation-stat">
-                        <span>💬</span>
-                        <span>${messageCount} messages</span>
-                    </div>
-                    <div class="conversation-stat">
-                        <span>⏱️</span>
-                        <span>${this._formatDuration(conversation.duration)}</span>
-                    </div>
-                    <div class="conversation-status ${status}">${status}</div>
+                <div class="ww-stat">
+                    <span class="ww-stat-icon">⏱️</span>
+                    <span>${this._formatDuration(conversation.duration)}</span>
+                </div>
+                <div class="ww-stat">
+                    <span class="ww-stat-icon">📌</span>
+                    <span>${status}</span>
                 </div>
             </div>
         `;
@@ -240,8 +247,8 @@ export class ConversationsPanel {
      */
     _setupConversationEventListeners(conversationEl, conversation) {
         // Checkbox area and checkbox selection
-        const checkboxArea = conversationEl.querySelector('.conversation-checkbox-area');
-        const checkbox = conversationEl.querySelector('.conversation-checkbox');
+        const checkboxArea = conversationEl.querySelector('.ww-conversation-checkbox');
+        const checkbox = conversationEl.querySelector('.ww-checkbox');
         
         checkboxArea.addEventListener('click', (e) => {
             e.stopPropagation();
@@ -258,7 +265,7 @@ export class ConversationsPanel {
         });
 
         // View conversation (opens modal)
-        const viewBtn = conversationEl.querySelector('.view-conversation');
+        const viewBtn = conversationEl.querySelector('.ww-action-btn:not(.delete-conversation)');
         viewBtn.addEventListener('click', (e) => {
             e.stopPropagation();
             if (this.handlers.onViewConversation) {
@@ -280,6 +287,38 @@ export class ConversationsPanel {
                 this.handlers.onViewConversation(conversation);
             }
         });
+    }
+
+    /**
+     * Gets a preview of the conversation
+     * @param {string} threadId - Thread ID
+     * @returns {string} HTML string of preview
+     * @private
+     */
+    _getConversationPreview(threadId) {
+        if (!this.stateService || !this.stateService.conversation) {
+            return '';
+        }
+        
+        const messages = this.stateService.conversation.getConversationMessages(threadId);
+        if (!messages || messages.length === 0) {
+            return '<span class="ww-text-muted">No messages yet</span>';
+        }
+        
+        // Get the last user message or last message
+        let lastMessage = messages[messages.length - 1];
+        for (let i = messages.length - 1; i >= 0; i--) {
+            if (messages[i].role === 'user') {
+                lastMessage = messages[i];
+                break;
+            }
+        }
+        
+        const content = lastMessage.content.length > 100 ? 
+            lastMessage.content.substring(0, 100) + '...' : 
+            lastMessage.content;
+            
+        return this._escapeHtml(content);
     }
 
     /**
@@ -376,7 +415,7 @@ export class ConversationsPanel {
      */
     _selectConversation(conversation) {
         // Remove previous selection
-        const previousSelected = this.elements.conversationsContainer.querySelector('.conversation-item.selected');
+        const previousSelected = this.elements.conversationsContainer.querySelector('.ww-conversation-card.selected');
         if (previousSelected) {
             previousSelected.classList.remove('selected');
         }
@@ -388,7 +427,6 @@ export class ConversationsPanel {
         }
 
         this.currentSelectedConversation = conversation;
-        this._renderConversationDetails(conversation);
     }
 
     /**
@@ -485,7 +523,7 @@ export class ConversationsPanel {
      * @private
      */
     _handleSelectAll(selectAll) {
-        const checkboxes = this.elements.conversationsContainer.querySelectorAll('.conversation-checkbox');
+        const checkboxes = this.elements.conversationsContainer.querySelectorAll('.ww-checkbox');
         
         checkboxes.forEach(checkbox => {
             checkbox.checked = selectAll;
@@ -506,8 +544,8 @@ export class ConversationsPanel {
      * @private
      */
     _updateSelectAllState() {
-        const checkboxes = this.elements.conversationsContainer.querySelectorAll('.conversation-checkbox');
-        const checkedCount = this.elements.conversationsContainer.querySelectorAll('.conversation-checkbox:checked').length;
+        const checkboxes = this.elements.conversationsContainer.querySelectorAll('.ww-checkbox');
+        const checkedCount = this.elements.conversationsContainer.querySelectorAll('.ww-checkbox:checked').length;
         
         if (checkedCount === 0) {
             this.elements.selectAllCheckbox.indeterminate = false;
@@ -547,7 +585,7 @@ export class ConversationsPanel {
         this.elements.deleteConversationMeta.textContent = 
             `${messageCount} messages • ${conversation.userName || 'User'} & ${conversation.personaName || 'Assistant'}`;
         
-        this.elements.deleteModal.style.display = 'flex';
+        this.elements.deleteModal.classList.add('show');
         this.pendingDeleteThreadId = conversation.threadId;
     }
 
@@ -556,7 +594,7 @@ export class ConversationsPanel {
      * @private
      */
     _hideDeleteModal() {
-        this.elements.deleteModal.style.display = 'none';
+        this.elements.deleteModal.classList.remove('show');
         this.pendingDeleteThreadId = null;
     }
 
@@ -578,7 +616,7 @@ export class ConversationsPanel {
     _showBulkDeleteConfirmation() {
         const selectedCount = this.selectedConversations.size;
         this.elements.bulkDeleteCount.textContent = selectedCount;
-        this.elements.bulkDeleteModal.style.display = 'flex';
+        this.elements.bulkDeleteModal.classList.add('show');
     }
 
     /**
@@ -586,7 +624,7 @@ export class ConversationsPanel {
      * @private
      */
     _hideBulkDeleteModal() {
-        this.elements.bulkDeleteModal.style.display = 'none';
+        this.elements.bulkDeleteModal.classList.remove('show');
     }
 
     /**

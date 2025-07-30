@@ -67,8 +67,13 @@ export class OptionsPanel {
      */
     showStatus(message, isError = false) {
         this.elements.status.textContent = message;
-        this.elements.status.className = `status ${isError ? 'error' : 'success'}`;
+        this.elements.status.className = `ww-status-message ${isError ? 'status-error' : 'status-success'}`;
         this.elements.status.style.display = 'block';
+        
+        // Auto-hide after 3 seconds
+        setTimeout(() => {
+            this.elements.status.style.display = 'none';
+        }, 3000);
     }
 
     /**
@@ -269,75 +274,79 @@ export class OptionsPanel {
         
         models.forEach(model => {
             const div = document.createElement('div');
-            div.className = 'model-config collapsible';
+            div.className = 'ww-model-config';
             div.dataset.modelId = model.id;
             div.innerHTML = `
-                <div class="model-header">
+                <div class="ww-model-header">
                     <h3>${model.title}</h3>
-                    <button class="toggle-btn" data-model-id="${model.id}" aria-label="Toggle ${model.title}">
-                        <span class="toggle-icon">▼</span>
+                    <button class="ww-toggle-btn" data-model-id="${model.id}" aria-label="Toggle ${model.title}">
+                        <span class="ww-toggle-icon">▼</span>
                     </button>
                 </div>
-                <div class="model-summary" data-model-id="${model.id}" style="display: none;">
-                    <span class="summary-text">Not configured</span>
+                <div class="ww-model-summary" data-model-id="${model.id}" style="display: none;">
+                    <span class="ww-summary-text">Not configured</span>
                 </div>
-                <div class="model-content" data-model-id="${model.id}">
-                    <div class="grid">
-                        <div class="form-group">
-                            <label for="${model.id}Model">Model Name:</label>
-                            <input type="text" id="${model.id}Model" placeholder="${model.placeholder}">
+                <div class="ww-model-content" data-model-id="${model.id}">
+                    <div class="ww-model-grid">
+                        <div class="ww-form-group">
+                            <label class="ww-form-label" for="${model.id}Model">Model Name:</label>
+                            <input type="text" id="${model.id}Model" class="ww-form-input" placeholder="${model.placeholder}">
                         </div>
-                        <div class="form-group">
-                            <label for="${model.id}Provider">Provider:</label>
-                            <select id="${model.id}Provider">
+                        <div class="ww-form-group">
+                            <label class="ww-form-label" for="${model.id}Provider">Provider:</label>
+                            <select id="${model.id}Provider" class="ww-form-select">
                                 ${model.isOptional ? '<option value="">(Same as Chat)</option>' : ''}
                                 ${providers.map(p => `<option value="${p}">${p.charAt(0).toUpperCase() + p.slice(1)}</option>`).join('')}
                             </select>
                         </div>
-                        <div class="form-group">
-                            <label for="${model.id}Tokenizer">Tokenizer: <a href="guide.html#tokenizers" target="_blank" class="provider-link">?</a></label>
-                            <select id="${model.id}Tokenizer">
+                        <div class="ww-form-group">
+                            <label class="ww-form-label" for="${model.id}Tokenizer">Tokenizer: <a href="guide.html#tokenizers" target="_blank" class="ww-label-help">?</a></label>
+                            <select id="${model.id}Tokenizer" class="ww-form-select">
                                 <!-- Options will be populated dynamically -->
                             </select>
                         </div>
-                        <div class="form-group">
-                            <label for="${model.id}Temp">Temperature: <a href="guide.html#samplers" target="_blank" class="provider-link">?</a></label>
-                            <input type="number" id="${model.id}Temp" min="0" max="2" step="0.1" placeholder="${model.defaultTemp || 'Optional'}">
+                        <div class="ww-form-group">
+                            <label class="ww-form-label" for="${model.id}Temp">Temperature: <a href="guide.html#samplers" target="_blank" class="ww-label-help">?</a></label>
+                            <input type="number" id="${model.id}Temp" class="ww-form-input" min="0" max="2" step="0.1" placeholder="${model.defaultTemp || 'Optional'}">
                         </div>
-                        <div class="form-group">
-                            <label for="${model.id}MaxTokens">Max Response Tokens:</label>
-                            <input type="number" id="${model.id}MaxTokens" min="1" placeholder="${model.defaultMaxTokens || 'Optional'}">
-                            <small>Maximum tokens for AI response</small>
+                        <div class="ww-form-group">
+                            <label class="ww-form-label" for="${model.id}MaxTokens">Max Response Tokens:</label>
+                            <input type="number" id="${model.id}MaxTokens" class="ww-form-input" min="1" placeholder="${model.defaultMaxTokens || 'Optional'}">
+                            <small class="ww-form-help">Maximum tokens for AI response</small>
                         </div>
-                        <div class="form-group">
-                            <label for="${model.id}MaxContentTokens">Max Content Tokens:</label>
-                            <input type="number" id="${model.id}MaxContentTokens" min="1" placeholder="${model.defaultMaxContentTokens || 'Optional'}">
-                            <small>Maximum tokens for page content/context</small>
+                        <div class="ww-form-group">
+                            <label class="ww-form-label" for="${model.id}MaxContentTokens">Max Content Tokens:</label>
+                            <input type="number" id="${model.id}MaxContentTokens" class="ww-form-input" min="1" placeholder="${model.defaultMaxContentTokens || 'Optional'}">
+                            <small class="ww-form-help">Maximum tokens for page content/context</small>
                         </div>
-                        <div class="form-group">
-                            <label for="${model.id}TopP">Top P:</label>
-                            <input type="number" id="${model.id}TopP" min="0" max="1" step="0.01" placeholder="Optional">
+                        <div class="ww-form-group">
+                            <label class="ww-form-label" for="${model.id}TopP">Top P:</label>
+                            <input type="number" id="${model.id}TopP" class="ww-form-input" min="0" max="1" step="0.01" placeholder="Optional">
                         </div>
-                        <div class="form-group">
-                            <label for="${model.id}MinP">Min P:</label>
-                            <input type="number" id="${model.id}MinP" min="0" max="1" step="0.01" placeholder="${model.defaultMinP || 'Optional'}">
+                        <div class="ww-form-group">
+                            <label class="ww-form-label" for="${model.id}MinP">Min P:</label>
+                            <input type="number" id="${model.id}MinP" class="ww-form-input" min="0" max="1" step="0.01" placeholder="${model.defaultMinP || 'Optional'}">
                         </div>
-                        <div class="form-group">
-                            <label for="${model.id}TopK">Top K:</label>
-                            <input type="number" id="${model.id}TopK" min="1" step="1" placeholder="Optional">
+                        <div class="ww-form-group">
+                            <label class="ww-form-label" for="${model.id}TopK">Top K:</label>
+                            <input type="number" id="${model.id}TopK" class="ww-form-input" min="1" step="1" placeholder="Optional">
                         </div>
-                        <div class="form-group">
-                            <label for="${model.id}FreqPenalty">Frequency Penalty:</label>
-                            <input type="number" id="${model.id}FreqPenalty" min="-2" max="2" step="0.1" placeholder="Optional">
+                        <div class="ww-form-group">
+                            <label class="ww-form-label" for="${model.id}FreqPenalty">Frequency Penalty:</label>
+                            <input type="number" id="${model.id}FreqPenalty" class="ww-form-input" min="-2" max="2" step="0.1" placeholder="Optional">
                         </div>
-                        <div class="form-group">
-                            <label for="${model.id}PresPenalty">Presence Penalty:</label>
-                            <input type="number" id="${model.id}PresPenalty" min="-2" max="2" step="0.1" placeholder="Optional">
+                        <div class="ww-form-group">
+                            <label class="ww-form-label" for="${model.id}PresPenalty">Presence Penalty:</label>
+                            <input type="number" id="${model.id}PresPenalty" class="ww-form-input" min="-2" max="2" step="0.1" placeholder="Optional">
                         </div>
-                        <div class="form-group checkbox-group">
-                            <input type="checkbox" id="${model.id}MinimalMode">
-                            <label for="${model.id}MinimalMode">Minimal Mode</label>
-                            <small>Use minimal system prompt for this model</small>
+                        <div class="ww-checkbox-group">
+                            <div class="ww-checkbox-item">
+                                <input type="checkbox" id="${model.id}MinimalMode">
+                                <div class="ww-checkbox-label">
+                                    <div class="ww-checkbox-title">Minimal Mode</div>
+                                    <div class="ww-checkbox-description">Use minimal system prompt for this model</div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -373,36 +382,50 @@ export class OptionsPanel {
             { id: 'huggingface', name: 'Hugging Face', url: 'https://huggingface.co/settings/tokens' }
         ];
         
-        const grid = document.createElement('div');
-        grid.className = 'ww-grid-2';
+        // Create a provider section panel for API keys
+        const apiKeysSection = document.createElement('div');
+        apiKeysSection.className = 'ww-model-config';
+        apiKeysSection.innerHTML = `
+            <div class="ww-model-header">
+                <h3>API Keys</h3>
+            </div>
+            <div class="ww-model-grid" id="api-keys-grid">
+            </div>
+        `;
+        
+        const grid = apiKeysSection.querySelector('#api-keys-grid');
         
         providers.forEach(provider => {
             const formGroup = document.createElement('div');
-            formGroup.className = 'form-group';
+            formGroup.className = 'ww-form-group';
             formGroup.innerHTML = `
-                <label for="${provider.id}ApiKey">
+                <label class="ww-form-label" for="${provider.id}ApiKey">
                     ${provider.name} API Key:
-                    <a href="${provider.url}" target="_blank" class="provider-link">🔗</a>
+                    <a href="${provider.url}" target="_blank" class="ww-label-help">🔗</a>
                 </label>
-                <input type="password" id="${provider.id}ApiKey" placeholder="Enter ${provider.name} API key">
+                <input type="password" id="${provider.id}ApiKey" class="ww-form-input" placeholder="Enter ${provider.name} API key">
             `;
             grid.appendChild(formGroup);
         });
         
-        container.appendChild(grid);
+        container.appendChild(apiKeysSection);
         
         // Local models section
         const localSection = document.createElement('div');
+        localSection.className = 'ww-model-config';
         localSection.innerHTML = `
-            <h3>Local Models <a href="guide.html#local-models" target="_blank" class="provider-link">📖 Configuration Guide</a></h3>
-            <div class="ww-grid-2">
-                <div class="form-group">
-                    <label for="localModelEndpoint">Local Model Endpoint:</label>
-                    <input type="text" id="localModelEndpoint" placeholder="e.g. http://localhost:8000/v1">
+            <div class="ww-model-header">
+                <h3>Local Models</h3>
+                <a href="guide.html#local-models" target="_blank" class="ww-provider-link">📖 Configuration Guide</a>
+            </div>
+            <div class="ww-model-grid">
+                <div class="ww-form-group">
+                    <label class="ww-form-label" for="localModelEndpoint">Local Model Endpoint:</label>
+                    <input type="text" id="localModelEndpoint" class="ww-form-input" placeholder="e.g. http://localhost:8000/v1">
                 </div>
-                <div class="form-group">
-                    <label for="localModelApiKey">Local Model API Key (Optional):</label>
-                    <input type="password" id="localModelApiKey" placeholder="Enter Local Model API key">
+                <div class="ww-form-group">
+                    <label class="ww-form-label" for="localModelApiKey">Local Model API Key (Optional):</label>
+                    <input type="password" id="localModelApiKey" class="ww-form-input" placeholder="Enter Local Model API key">
                 </div>
             </div>
         `;
@@ -413,7 +436,7 @@ export class OptionsPanel {
      * Setup collapse/expand event listeners for model sections
      */
     setupCollapseListeners() {
-        const toggleButtons = document.querySelectorAll('.toggle-btn');
+        const toggleButtons = document.querySelectorAll('.ww-toggle-btn');
         toggleButtons.forEach(btn => {
             btn.addEventListener('click', (e) => {
                 const modelId = btn.dataset.modelId;
@@ -446,9 +469,9 @@ export class OptionsPanel {
     setInitialCollapseStates() {
         ['chat', 'thought', 'code', 'creative'].forEach(modelId => {
             const isChat = modelId === 'chat';
-            const content = document.querySelector(`.model-content[data-model-id="${modelId}"]`);
-            const summary = document.querySelector(`.model-summary[data-model-id="${modelId}"]`);
-            const icon = document.querySelector(`.toggle-btn[data-model-id="${modelId}"] .toggle-icon`);
+            const content = document.querySelector(`.ww-model-content[data-model-id="${modelId}"]`);
+            const summary = document.querySelector(`.ww-model-summary[data-model-id="${modelId}"]`);
+            const icon = document.querySelector(`.ww-toggle-btn[data-model-id="${modelId}"] .ww-toggle-icon`);
             
             if (content && summary && icon) {
                 if (isChat) {
@@ -473,9 +496,9 @@ export class OptionsPanel {
      * Toggle a model section between collapsed and expanded
      */
     toggleModelSection(modelId) {
-        const content = document.querySelector(`.model-content[data-model-id="${modelId}"]`);
-        const summary = document.querySelector(`.model-summary[data-model-id="${modelId}"]`);
-        const icon = document.querySelector(`.toggle-btn[data-model-id="${modelId}"] .toggle-icon`);
+        const content = document.querySelector(`.ww-model-content[data-model-id="${modelId}"]`);
+        const summary = document.querySelector(`.ww-model-summary[data-model-id="${modelId}"]`);
+        const icon = document.querySelector(`.ww-toggle-btn[data-model-id="${modelId}"] .ww-toggle-icon`);
         
         if (content && summary && icon) {
             const isCollapsed = content.style.display === 'none';
@@ -498,7 +521,7 @@ export class OptionsPanel {
      * Generate and update summary for a model configuration
      */
     updateModelSummary(modelId) {
-        const summaryEl = document.querySelector(`.model-summary[data-model-id="${modelId}"] .summary-text`);
+        const summaryEl = document.querySelector(`.ww-model-summary[data-model-id="${modelId}"] .ww-summary-text`);
         if (!summaryEl) return;
 
         const modelInput = document.getElementById(`${modelId}Model`);

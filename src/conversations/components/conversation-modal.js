@@ -73,7 +73,7 @@ export class ConversationModal extends EventBindableComponent {
         
         // Trigger entrance animation
         requestAnimationFrame(() => {
-            this.modal.classList.add('modal-visible');
+            this.modal.classList.add('show');
         });
 
         // Prevent body scroll
@@ -89,7 +89,7 @@ export class ConversationModal extends EventBindableComponent {
         this.isOpen = false;
         
         // Trigger exit animation
-        this.modal.classList.remove('modal-visible');
+        this.modal.classList.remove('show');
         
         // Remove from DOM after animation
         setTimeout(() => {
@@ -120,7 +120,7 @@ export class ConversationModal extends EventBindableComponent {
      */
     _createModal(conversationData) {
         this.modal = document.createElement('div');
-        this.modal.className = 'ww-modal conversation-modal-overlay';
+        this.modal.className = 'ww-modal';
         
         const title = this._getConversationTitle(conversationData);
         const messageCount = this._getMessageCount(conversationData.threadId);
@@ -129,25 +129,25 @@ export class ConversationModal extends EventBindableComponent {
         const isActive = status === 'active';
         
         this.modal.innerHTML = `
-            <div class="conversation-modal">
-                <div class="conversation-modal-header">
-                    <div>
-                        <h2 class="conversation-modal-title">${this._escapeHtml(title)}</h2>
-                        <div class="conversation-modal-meta">
+            <div class="ww-modal-content">
+                <div class="ww-modal-header">
+                    <div class="ww-modal-header-content">
+                        <h2>${this._escapeHtml(title)}</h2>
+                        <div class="ww-conversation-meta">
                             ${this._escapeHtml(participantsText)} • ${messageCount} messages
                         </div>
                     </div>
-                    <div class="conversation-modal-actions">
-                        <button class="btn ${isActive ? 'btn-complete' : 'btn-set-active'}" id="set-active-btn" title="${isActive ? 'Complete this active conversation' : 'Set as Active Conversation'}">
+                    <div class="ww-modal-header-actions">
+                        <button class="${isActive ? 'ww-btn-complete' : 'ww-btn-set-active'}" id="set-active-btn" title="${isActive ? 'Complete this active conversation' : 'Set as Active Conversation'}">
                             ${isActive ? '✅ Complete' : '➕ Set Active'}
                         </button>
-                        <button class="conversation-modal-close" id="close-modal-btn" title="Close">
-                            ×
+                        <button class="ww-modal-close" id="close-modal-btn" title="Close">
+                            <span class="ww-icon">×</span>
                         </button>
                     </div>
                 </div>
-                <div class="conversation-modal-content">
-                    <div class="conversation-messages-container" id="messages-container">
+                <div class="ww-modal-body">
+                    <div class="ww-messages-container" id="messages-container">
                         ${this._renderMessages(conversationData.threadId)}
                     </div>
                 </div>
@@ -190,13 +190,13 @@ export class ConversationModal extends EventBindableComponent {
 
         // Add action buttons for all messages (both user and assistant)
         const actionButtons = `
-            <div class="conversation-message-actions">
-                <button class="conversation-play-button" data-message-id="${messageId}" data-content="${this._escapeAttribute(message.content)}" title="Play message">
+            <div class="ww-message-actions">
+                <button class="ww-play-button" data-message-id="${messageId}" data-content="${this._escapeAttribute(message.content)}" title="Play message">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <polygon points="5 3 19 12 5 21 5 3"/>
                     </svg>
                 </button>
-                <button class="conversation-copy-button" data-message-id="${messageId}" data-content="${this._escapeAttribute(message.content)}" title="Copy to clipboard">
+                <button class="ww-copy-button" data-message-id="${messageId}" data-content="${this._escapeAttribute(message.content)}" title="Copy to clipboard">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
                         <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
@@ -206,13 +206,13 @@ export class ConversationModal extends EventBindableComponent {
         `;
 
         return `
-            <div class="conversation-message ${message.role}" data-message-id="${messageId}">
-                <div class="conversation-message-header">
-                    <span class="conversation-message-role">${message.role}</span>
-                    <span class="conversation-message-timestamp">${timestamp}</span>
+            <div class="ww-message message-${message.role}" data-message-id="${messageId}">
+                <div class="ww-message-header">
+                    <span class="ww-message-role">${message.role}</span>
+                    <span class="ww-message-timestamp">${timestamp}</span>
                     ${actionButtons}
                 </div>
-                <div class="conversation-message-content">
+                <div class="ww-message-content">
                     ${this._formatMessageContent(message.content)}
                 </div>
                 ${hasThinking ? this._renderThinking(message.think) : ''}
@@ -229,11 +229,11 @@ export class ConversationModal extends EventBindableComponent {
      */
     _renderThinking(thinking) {
         return `
-            <div class="conversation-thinking">
-                <div class="conversation-thinking-header">
+            <div class="ww-thinking">
+                <div class="ww-thinking-header">
                     🤔 AI Thinking
                 </div>
-                <div class="conversation-thinking-content">
+                <div class="ww-thinking-content">
                     ${this._escapeHtml(thinking)}
                 </div>
             </div>
@@ -255,12 +255,12 @@ export class ConversationModal extends EventBindableComponent {
             const toolArgs = toolMessage.function?.arguments || toolMessage.arguments || {};
             
             return `
-                <div class="conversation-tool-call tool-${status}">
-                    <div class="conversation-tool-call-name">
+                <div class="ww-tool-call tool-${status}">
+                    <div class="ww-tool-name">
                         🔧 ${this._escapeHtml(toolName)}
-                        <span class="tool-status tool-status-${status}">${status}</span>
+                        <span class="ww-tool-status status-${status}">${status}</span>
                     </div>
-                    <div class="conversation-tool-call-args">
+                    <div class="ww-tool-args">
                         ${this._escapeHtml(JSON.stringify(toolArgs, null, 2))}
                     </div>
                     ${toolMessage.success !== undefined ? this._renderToolResult(toolMessage) : ''}
@@ -269,8 +269,8 @@ export class ConversationModal extends EventBindableComponent {
         }).join('');
 
         return `
-            <div class="conversation-tool-calls">
-                <div class="conversation-tool-calls-header">
+            <div class="ww-message-tools">
+                <div class="ww-tool-header">
                     🛠️ Tool Calls
                 </div>
                 ${toolMessagesHtml}
@@ -287,9 +287,9 @@ export class ConversationModal extends EventBindableComponent {
     _renderToolResult(toolMessage) {
         if (toolMessage.error) {
             return `
-                <div class="conversation-tool-result tool-error">
-                    <div class="conversation-tool-result-header">Error:</div>
-                    <div class="conversation-tool-result-content">
+                <div class="ww-tool-result error">
+                    <div class="ww-tool-result-header">Error:</div>
+                    <div class="ww-tool-result-content">
                         ${this._escapeHtml(toolMessage.error)}
                     </div>
                 </div>
@@ -300,12 +300,12 @@ export class ConversationModal extends EventBindableComponent {
         const { callId, display, error, executionTime, name, parameters, success, function: func, ...resultData } = toolMessage;
         
         return `
-            <div class="conversation-tool-result tool-success">
-                <div class="conversation-tool-result-header">
+            <div class="ww-tool-result success">
+                <div class="ww-tool-result-header">
                     Result:
                     ${toolMessage.executionTime ? `<span class="execution-time">(${toolMessage.executionTime}ms)</span>` : ''}
                 </div>
-                <div class="conversation-tool-result-content">
+                <div class="ww-tool-result-content">
                     ${this._escapeHtml(JSON.stringify(resultData, null, 2))}
                 </div>
             </div>
@@ -320,10 +320,10 @@ export class ConversationModal extends EventBindableComponent {
      */
     _renderEmptyState(message) {
         return `
-            <div class="conversation-empty">
-                <div class="conversation-empty-icon">💬</div>
-                <div class="conversation-empty-text">No Messages</div>
-                <div class="conversation-empty-subtext">${this._escapeHtml(message)}</div>
+            <div class="ww-empty-state">
+                <div class="ww-empty-icon">💬</div>
+                <div class="ww-empty-text">No Messages</div>
+                <div class="ww-empty-subtext">${this._escapeHtml(message)}</div>
             </div>
         `;
     }
@@ -506,12 +506,12 @@ export class ConversationModal extends EventBindableComponent {
         const status = this._getConversationStatus(this.currentConversation.threadId);
         
         if (status === 'active') {
-            setActiveBtn.className = 'btn btn-complete';
+            setActiveBtn.className = 'ww-btn-complete';
             setActiveBtn.innerHTML = '✅ Complete';
             setActiveBtn.title = 'Complete this active conversation';
             setActiveBtn.disabled = false;
         } else {
-            setActiveBtn.className = 'btn btn-set-active';
+            setActiveBtn.className = 'ww-btn-set-active';
             setActiveBtn.innerHTML = '➕ Set Active';
             setActiveBtn.title = 'Set as Active Conversation';
             setActiveBtn.disabled = false;
@@ -553,7 +553,7 @@ export class ConversationModal extends EventBindableComponent {
         if (!this.modal) return;
         
         // Handle play button clicks
-        const playButtons = this.modal.querySelectorAll('.conversation-play-button');
+        const playButtons = this.modal.querySelectorAll('.ww-play-button');
         playButtons.forEach(button => {
             const handler = async (e) => {
                 e.stopPropagation();
@@ -564,7 +564,7 @@ export class ConversationModal extends EventBindableComponent {
         });
         
         // Handle copy button clicks
-        const copyButtons = this.modal.querySelectorAll('.conversation-copy-button');
+        const copyButtons = this.modal.querySelectorAll('.ww-copy-button');
         copyButtons.forEach(button => {
             const handler = async (e) => {
                 e.stopPropagation();

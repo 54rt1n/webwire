@@ -1,268 +1,401 @@
-/*
- * WebWire Options Panel Styles
- * Uses ww-options structure from global.scss and WebWire design system
- */
+@use '../shared/design-tokens' as tokens;
+@use '../shared/common' as common;
 
-@use '../../src/shared/common' as common;
-
-/* Options interface styling is applied via ww-options and nested selectors */
 .ww-options {
-  .status {
-    display: none;
-    margin-top: var(--space-4);
-    padding: var(--space-3) var(--space-6);
-    border-radius: var(--radius-md);
-    font-size: var(--font-size-base);
-    font-weight: var(--font-weight-medium);
-    text-align: center;
-    transition: opacity var(--transition-normal);
-    opacity: 0.95;
-    z-index: var(--z-dropdown);
-    
-    &.success {
-      @include common.ww-status-indicator(var(--color-success-50), var(--color-success-600));
-      border: 1.5px solid var(--color-success-500);
-    }
-    
-    &.error {
-      @include common.ww-status-indicator(var(--color-error-50), var(--color-error-600));
-      border: 1.5px solid var(--color-error-500);
-    }
-  }
+  --header-height: 60px;
   
-  /* Section styling with proper design system integration */
-  .section {
+  min-height: 100vh;
+  background: var(--color-background);
+  color: var(--color-text-primary);
+  font-family: var(--font-family-base);
+  font-size: var(--font-size-base);
+  line-height: var(--line-height-normal);
+
+  // Header matching chat panel style
+  .ww-options-header {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    height: var(--header-height);
     background: var(--color-surface);
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-xl);
-    padding: var(--space-6);
-    margin-bottom: var(--space-6);
+    border-bottom: 1px solid var(--color-border);
+    display: flex;
+    align-items: center;
+    padding: 0 var(--space-5);
     box-shadow: var(--shadow-sm);
-    
-    h2 {
-      color: var(--color-text-primary);
+
+    h1 {
+      flex: 1;
+      margin: 0;
       font-size: var(--font-size-xl);
-      font-weight: var(--font-weight-semibold);
-      margin: 0 0 var(--space-5) 0;
-      padding-bottom: var(--space-3);
-      border-bottom: 2px solid var(--color-primary-100);
-      
-      .provider-link {
-        @include common.ww-button-base;
-        padding: var(--space-1) var(--space-3);
-        font-size: var(--font-size-xs);
-        background: var(--color-primary-50);
-        color: var(--color-primary-600);
-        border-color: var(--color-primary-200);
-        margin-left: var(--space-3);
-        
-        &:hover {
-          background: var(--color-primary-100);
-          transform: translateY(-1px);
-        }
+      font-weight: var(--font-weight-bold);
+      color: var(--color-text-primary);
+      display: flex;
+      align-items: center;
+      gap: var(--space-3);
+
+      .ww-icon {
+        width: 24px;
+        height: 24px;
+        color: var(--color-primary-500);
       }
     }
-    
-    h3 {
-      color: var(--color-text-primary);
-      font-size: var(--font-size-lg);
-      font-weight: var(--font-weight-medium);
-      margin: var(--space-5) 0 var(--space-4) 0;
+
+    .ww-header-actions {
+      display: flex;
+      gap: var(--space-3);
       
-      &:first-of-type {
-        margin-top: 0;
-      }
-      
-      .provider-link {
+      .ww-btn-guide {
         @include common.ww-button-base;
-        padding: var(--space-1) var(--space-3);
-        font-size: var(--font-size-xs);
-        background: var(--color-primary-50);
-        color: var(--color-primary-600);
-        border-color: var(--color-primary-200);
-        margin-left: var(--space-3);
-        
-        &:hover {
-          background: var(--color-primary-100);
-          transform: translateY(-1px);
-        }
+        @include common.ww-button-variant-primary;
+        padding: var(--space-2) var(--space-4);
+        font-size: var(--font-size-sm);
       }
     }
   }
-  
-  /* Model configuration cards */
-  .model-config {
+
+  // Main container with proper spacing
+  .ww-options-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: var(--space-6) var(--space-5);
+  }
+
+  // Section styling
+  .ww-section {
+    margin-bottom: var(--space-8);
+
+    .ww-section-header {
+      margin-bottom: var(--space-5);
+      
+      h2 {
+        font-size: var(--font-size-lg);
+        font-weight: var(--font-weight-semibold);
+        color: var(--color-text-primary);
+        margin: 0;
+        padding-bottom: var(--space-3);
+        border-bottom: 2px solid var(--color-primary-100);
+      }
+
+      .ww-section-description {
+        margin-top: var(--space-3);
+        color: var(--color-text-secondary);
+        font-size: var(--font-size-sm);
+      }
+    }
+  }
+
+  // Model configuration cards
+  .ww-model-config {
+    @include common.ww-widget-base;
+    margin-bottom: var(--space-6);
+    
+    .ww-model-header {
+      display: flex;
+      align-items: center;
+      gap: var(--space-3);
+      margin-bottom: var(--space-5);
+      
+      h3 {
+        flex: 1;
+        color: var(--color-text-primary);
+        font-size: var(--font-size-base);
+        font-weight: var(--font-weight-semibold);
+        margin: 0;
+      }
+
+      .ww-model-badge {
+        padding: var(--space-1) var(--space-3);
+        background: var(--color-primary-50);
+        color: var(--color-primary-600);
+        border-radius: var(--radius-full);
+        font-size: var(--font-size-xs);
+        font-weight: var(--font-weight-medium);
+      }
+    }
+
+    .ww-model-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: var(--space-4);
+    }
+  }
+
+  // Provider sections with enhanced styling
+  .ww-provider-section {
     background: var(--color-gray-50);
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-lg);
+    border: 1px solid var(--color-gray-200);
+    border-radius: var(--radius-xl);
     padding: var(--space-5);
     margin-bottom: var(--space-5);
     transition: all var(--transition-normal);
-    
-    &.collapsible {
-      padding: 0;
+
+    &:hover {
+      border-color: var(--color-gray-300);
+      box-shadow: var(--shadow-md);
+    }
+
+    &.ww-provider-active {
+      background: var(--color-primary-50);
+      border-color: var(--color-primary-200);
+    }
+
+    .ww-provider-header {
+      display: flex;
+      align-items: center;
+      gap: var(--space-3);
+      margin-bottom: var(--space-4);
       
-      .model-header {
+      h3 {
+        flex: 1;
+        font-size: var(--font-size-base);
+        font-weight: var(--font-weight-semibold);
+        color: var(--color-text-primary);
+        margin: 0;
+      }
+
+      .ww-provider-status {
         display: flex;
-        justify-content: space-between;
         align-items: center;
-        padding: var(--space-5);
-        cursor: pointer;
-        user-select: none;
+        gap: var(--space-2);
+        font-size: var(--font-size-sm);
         
-        h3 {
-          margin: 0;
-          padding: 0;
-          border: none;
-          color: var(--color-text-primary);
-          font-size: var(--font-size-lg);
-          font-weight: var(--font-weight-semibold);
-        }
-        
-        .toggle-btn {
-          background: transparent;
-          border: none;
-          cursor: pointer;
-          padding: var(--space-2);
-          color: var(--color-text-secondary);
-          font-size: var(--font-size-base);
-          transition: all var(--transition-fast);
-          border-radius: var(--radius-sm);
+        &.status-connected {
+          color: var(--color-success);
           
-          &:hover {
-            background: var(--color-gray-100);
-            color: var(--color-text-primary);
-          }
-          
-          .toggle-icon {
-            display: inline-block;
-            transition: transform var(--transition-fast);
-            width: 1.2em;
-            text-align: center;
+          &::before {
+            content: '';
+            width: 8px;
+            height: 8px;
+            background: var(--color-success);
+            border-radius: 50%;
+            animation: pulse 2s infinite;
           }
         }
       }
-      
-      .model-summary {
-        padding: 0 var(--space-5) var(--space-4);
+
+      .ww-provider-link {
+        @include common.ww-button-base;
+        padding: var(--space-1) var(--space-3);
+        font-size: var(--font-size-xs);
+        background: var(--color-surface);
+        border-color: var(--color-border);
         
-        .summary-text {
-          display: inline-block;
-          padding: var(--space-2) var(--space-4);
-          border-radius: var(--radius-md);
-          font-size: var(--font-size-sm);
-          line-height: 1.5;
-          
-          &.summary-empty {
-            background: var(--color-gray-100);
-            color: var(--color-text-tertiary);
-            font-style: italic;
-          }
-          
-          &.summary-configured {
-            background: var(--color-primary-50);
-            color: var(--color-primary-700);
-            border: 1px solid var(--color-primary-200);
-            font-weight: var(--font-weight-medium);
-          }
-        }
-      }
-      
-      .model-content {
-        padding: 0 var(--space-5) var(--space-5);
-        
-        .grid {
-          display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-          gap: var(--space-4);
-          
-          @media (max-width: 768px) {
-            grid-template-columns: 1fr;
-          }
+        &:hover {
+          background: var(--color-gray-100);
         }
       }
     }
+
+    .ww-provider-content {
+      display: grid;
+      gap: var(--space-4);
+    }
   }
-  
-  /* Form groups with proper spacing and design system integration */
-  .form-group {
-    @extend %ww-form-group-base;
-    
-    label {
+
+  // Form groups with consistent styling
+  .ww-form-group {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+
+    .ww-form-label {
       display: flex;
       align-items: center;
       gap: var(--space-2);
       color: var(--color-text-primary);
       font-weight: var(--font-weight-medium);
       font-size: var(--font-size-sm);
-      margin-bottom: var(--space-2);
-      
-      .provider-link {
+
+      .ww-label-required {
+        color: var(--color-error);
+      }
+
+      .ww-label-help {
         color: var(--color-primary-500);
-        text-decoration: none;
+        cursor: help;
         font-size: var(--font-size-xs);
-        opacity: 0.8;
+        opacity: 0.7;
         transition: opacity var(--transition-fast);
-        padding: var(--space-1);
-        border-radius: var(--radius-sm);
         
         &:hover {
           opacity: 1;
-          background: var(--color-primary-50);
         }
       }
     }
-    
-    input[type="text"],
-    input[type="number"],
-    input[type="password"],
-    select,
-    textarea {
+
+    .ww-form-input {
       @include common.ww-form-input-base;
     }
-    
-    small {
-      display: block;
-      margin-top: var(--space-1);
+
+    .ww-form-select {
+      @include common.ww-form-input-base;
+      cursor: pointer;
+    }
+
+    .ww-form-textarea {
+      @include common.ww-form-input-base;
+      min-height: 100px;
+      resize: vertical;
+    }
+
+    .ww-form-help {
       color: var(--color-text-secondary);
       font-size: var(--font-size-xs);
-      line-height: var(--line-height-normal);
+      line-height: var(--line-height-relaxed);
     }
-    
-    &.checkbox-group {
-      @extend %ww-checkbox-group-base;
-    }
-  }
-  
-  /* Grid layouts */
-  .ww-grid-2 {
-    @extend %ww-grid-2;
-  }
-  
-  /* Button styling */
-  .btn {
-    @include common.ww-button-base;
-    
-    &.primary {
-      @include common.ww-button-variant-primary;
-    }
-    
-    &.lg {
-      padding: var(--space-4) var(--space-6);
-      font-size: var(--font-size-base);
+
+    .ww-form-error {
+      color: var(--color-error);
+      font-size: var(--font-size-xs);
+      display: flex;
+      align-items: center;
+      gap: var(--space-1);
     }
   }
-  
-  /* Utility classes for spacing */
-  .margin-bottom-8 {
-    margin-bottom: var(--space-8);
+
+  // Checkbox groups
+  .ww-checkbox-group {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+
+    .ww-checkbox-item {
+      display: flex;
+      align-items: flex-start;
+      gap: var(--space-2);
+
+      input[type="checkbox"] {
+        flex-shrink: 0;
+        margin-top: 2px;
+        width: 16px;
+        height: 16px;
+        cursor: pointer;
+      }
+
+      .ww-checkbox-label {
+        flex: 1;
+        cursor: pointer;
+        
+        .ww-checkbox-title {
+          color: var(--color-text-primary);
+          font-weight: var(--font-weight-medium);
+          margin-bottom: var(--space-1);
+        }
+
+        .ww-checkbox-description {
+          color: var(--color-text-secondary);
+          font-size: var(--font-size-sm);
+          line-height: var(--line-height-relaxed);
+        }
+      }
+    }
   }
-  
-  .margin-top-4 {
-    margin-top: var(--space-4);
-  }
-  
-  .margin-top-8 {
+
+  // Action buttons section
+  .ww-actions {
+    position: sticky;
+    bottom: 0;
+    background: var(--color-surface);
+    border-top: 1px solid var(--color-border);
+    padding: var(--space-4) var(--space-5);
     margin-top: var(--space-8);
+    display: flex;
+    justify-content: flex-end;
+    gap: var(--space-3);
+    box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.05);
+
+    .ww-btn-save {
+      @include common.ww-button-base;
+      @include common.ww-button-variant-success;
+      padding: var(--space-2) var(--space-5);
+    }
+
+    .ww-btn-reset {
+      @include common.ww-button-base;
+      @include common.ww-button-variant-secondary;
+      padding: var(--space-2) var(--space-5);
+    }
+  }
+
+  // Status messages
+  .ww-status-message {
+    position: fixed;
+    top: calc(var(--header-height) + var(--space-4));
+    right: var(--space-4);
+    padding: var(--space-3) var(--space-4);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-lg);
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    animation: slideIn 0.3s ease-out;
+    z-index: 200;
+
+    &.status-success {
+      background: var(--color-success);
+      color: white;
+    }
+
+    &.status-error {
+      background: var(--color-error);
+      color: white;
+    }
+
+    &.status-info {
+      background: var(--color-blue-500);
+      color: white;
+    }
+  }
+
+  // Animations
+  @keyframes pulse {
+    0% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.5;
+    }
+    100% {
+      opacity: 1;
+    }
+  }
+
+  @keyframes slideIn {
+    from {
+      transform: translateX(100%);
+      opacity: 0;
+    }
+    to {
+      transform: translateX(0);
+      opacity: 1;
+    }
+  }
+
+  // Responsive adjustments
+  @media (max-width: 768px) {
+    .ww-options-header {
+      padding: 0 var(--space-4);
+      
+      h1 {
+        font-size: var(--font-size-lg);
+      }
+    }
+
+    .ww-options-container {
+      padding: var(--space-5) var(--space-4);
+    }
+
+    .ww-model-grid {
+      grid-template-columns: 1fr !important;
+    }
+
+    .ww-actions {
+      flex-direction: column;
+      
+      button {
+        width: 100%;
+      }
+    }
   }
 }
