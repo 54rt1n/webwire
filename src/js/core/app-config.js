@@ -144,8 +144,8 @@ export class AppConfig {
                     }
                 },
                 sentry: {
-                    enabled: false,
-                    environment: 'production',
+                    enabled: true,
+                    environment: 'production-lite',
                     dsn: 'https://ccc4f91ba6a758cd37441c35fa311474@o4509755297169408.ingest.us.sentry.io/4509755303723008'
                 },
                 storage: {

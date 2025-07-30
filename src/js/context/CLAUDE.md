@@ -244,7 +244,7 @@ Lightweight variant for content scripts:
 ### In Content Script
 ```javascript
 // Initialize with state from background
-const context = await initializeContext(eventBus, EVENT_CONTEXT.CONTENT);
+const context = await initializeContext(eventBus, EVENT_CONTEXT.CONTENT, {config: this.config});
 const { stateService, mcpConnector, dispatcher } = context;
 
 // State is already loaded from background
@@ -254,7 +254,7 @@ const settings = stateService.state.settings;
 ### In Background Script
 ```javascript
 // Initialize with full storage access
-const context = await initializeContext(eventBus, EVENT_CONTEXT.BACKGROUND);
+const context = await initializeContext(eventBus, EVENT_CONTEXT.BACKGROUND, {config: this.config});
 const { stateService, storage } = context;
 
 // Load persisted data
@@ -264,7 +264,7 @@ await stateService.disk.loadFromStorage();
 ### In Panel/Options
 ```javascript
 // Initialize with all capabilities
-const context = await initializeContext(eventBus, EVENT_CONTEXT.PANEL);
+const context = await initializeContext(eventBus, EVENT_CONTEXT.PANEL, {config: this.config});
 const { stateService, storage, mcpConnector } = context;
 ```
 

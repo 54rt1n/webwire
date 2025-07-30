@@ -7,7 +7,7 @@ export async function initializeContext(eventBus, context = null, {initialState 
     context = detectContext();
   }
 
-  console.log('[ContextInit] Context:', context);
+  console.log('[ContextInit] Context:', context, config);
   
   // Context-specific setup
   let results = {};
@@ -59,7 +59,7 @@ export async function initializeContext(eventBus, context = null, {initialState 
       */
       const enableMcpPanel = config ? config.get('features.mcp.enabled', false) : false;
       results = await contextFactory(eventBus, context,
-        {storage: true, state: true, ai: true, mcp: enableMcpPanel},
+        {storage: true, state: true, ai: true, mcp: enableMcpPanel, sentry: true},
         {backgroundIsLocal: true, loadSettings: true, loadState: true, loadStash: true, modelType: 'chat', config});
       break;
     case EVENT_CONTEXT.SIMPLE:

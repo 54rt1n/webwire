@@ -38,6 +38,9 @@ export async function contextFactory(eventBus, context,
                     environment: config.get('sentry.environment', 'production')
                 });
             }
+        } else {
+            console.warn('[ContextFactory] No config found, skipping Sentry initialization');
+            throw new Error('No config found, skipping Sentry initialization');
         }
     }
 

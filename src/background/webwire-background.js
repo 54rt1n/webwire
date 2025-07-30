@@ -12,7 +12,8 @@ import { mergeState } from '../js/utils/deep-merge.js';
  */
 
 class WebWireBackground {
-    constructor() {
+    constructor(config) {
+        this.config = config;
         this.activeTabs = new Map();
         this.eventBus = new EventBus({domain: 'background'});
         this.extensionSettings = {};
@@ -24,7 +25,7 @@ class WebWireBackground {
     async initialize() {
         console.log('WebWire background script initializing...');
 
-        const { dispatcher, errorBoundary, stateService, storage, sentryService } = await initializeContext(this.eventBus, EVENT_CONTEXT.BACKGROUND);
+        const { dispatcher, errorBoundary, stateService, storage, sentryService } = await initializeContext(this.eventBus, EVENT_CONTEXT.BACKGROUND, {config: this.config});
         this.dispatcher = dispatcher;
         this.errorBoundary = errorBoundary;
         this.stateService = stateService;
@@ -942,7 +943,7 @@ WebWireBackground.factory = async function(config) {
         throw new Error('WebWire config not found');
     }
     
-    const webwireBackground = new WebWireBackground();
+    const webwireBackground = new WebWireBackground(config);
     await webwireBackground.initialize();
     
     return webwireBackground;

@@ -257,7 +257,7 @@ Dependency injection and application context:
 #### ContextInit (`context-init.js`)
 Application bootstrap and dependency setup:
 ```javascript
-const context = await initializeContext(eventBus, EVENT_CONTEXT.CONTENT);
+const context = await initializeContext(eventBus, EVENT_CONTEXT.CONTENT, {config: this.config});
 const { stateService, storage, aiClient, mcpConnector } = context;
 ```
 
@@ -347,7 +347,7 @@ Context system manages dependencies:
 
 ```javascript
 // Dependencies injected at context creation
-const context = await initializeContext(eventBus);
+const context = await initializeContext(eventBus, mycontext, {config: this.config});
 const { stateService, storage, aiClient } = context;
 
 // Components receive dependencies, not create them
