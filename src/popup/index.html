@@ -6,71 +6,71 @@
     <title>WebWire Popup</title>
 </head>
 <body class="ww-popup">
-    <div class="header">
-        <div class="logo">
+    <div class="ww-header">
+        <div class="ww-logo">
             <img src="icons/ww_poly.svg" alt="WebWire" width="48" height="48">
         </div>
-        <h1 class="title">WebWire</h1>
-        <p class="subtitle">AI-Powered Web Assistant</p>
+        <h1 class="ww-title">WebWire</h1>
+        <p class="ww-subtitle">AI-Powered Web Assistant</p>
     </div>
 
-    <div class="loading" id="loading">
-        <div class="spinner"></div>
+    <div class="ww-loading" id="loading">
+        <div class="ww-spinner"></div>
         <div>Loading...</div>
     </div>
 
     <div id="content" style="display: none;">
-        <div class="status">
-            <div class="status-row">
-                <span class="status-label">Configuration</span>
-                <div class="status-value">
+        <div class="ww-status">
+            <div class="ww-status-row">
+                <span class="ww-status-label">Configuration</span>
+                <div class="ww-status-value">
                     <span id="config-status">-</span>
-                    <div class="status-indicator disconnected" id="config-indicator"></div>
+                    <div class="ww-status-indicator ww-disconnected" id="config-indicator"></div>
                 </div>
             </div>
-            <div class="status-row">
-                <span class="status-label">Threads</span>
-                <div class="status-value">
+            <div class="ww-status-row">
+                <span class="ww-status-label">Threads</span>
+                <div class="ww-status-value">
                     <span id="conversation-count">-</span>
                 </div>
             </div>
-            <div class="status-row">
-                <span class="status-label">Messages</span>
-                <div class="status-value">
+            <div class="ww-status-row">
+                <span class="ww-status-label">Messages</span>
+                <div class="ww-status-value">
                     <span id="message-count">-</span>
                 </div>
             </div>
         </div>
 
-        <div class="config-message" id="config-message" style="display: none;">
+        <div class="ww-config-message" id="config-message" style="display: none;">
             <p>Please configure your AI client in settings to start chatting.</p>
         </div>
 
-        <div class="actions">
-            <button class="btn sm" id="conversations-btn">
-                <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <div class="ww-actions">
+            <button class="ww-btn ww-sm" id="conversations-btn">
+                <svg class="ww-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
                 </svg>
                 Conversations
             </button>
 
-            <button class="btn sm" id="prompts-btn">
-                <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <button class="ww-btn ww-sm" id="prompts-btn">
+                <svg class="ww-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <path d="M9 11h6m-3-3v6m5 5H7a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2z"/>
                 </svg>
                 Prompts
             </button>
 
-            <button class="btn sm" id="settings-btn">
-                <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <button class="ww-btn ww-sm" id="settings-btn">
+                <svg class="ww-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <circle cx="12" cy="12" r="3"/>
                     <path d="M12 1v6m0 6v6m11-7h-6m-6 0H1"/>
                 </svg>
                 Settings
             </button>
 
-            <button class="btn sm" id="help-btn">
-                <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <button class="ww-btn ww-sm" id="help-btn">
+                <svg class="ww-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <circle cx="12" cy="12" r="9"/>
                     <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/>
                     <path d="M12 17h.01"/>

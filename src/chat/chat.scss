@@ -57,7 +57,7 @@
     }
   }
   
-  .loading-indicator {
+  .ww-loading-indicator {
     position: absolute;
     top: 50%;
     left: 50%;
@@ -68,7 +68,7 @@
     box-shadow: var(--shadow-md);
     z-index: 10;
     
-    .content {
+    .ww-content {
       display: flex;
       align-items: center;
       gap: var(--space-3);
@@ -126,12 +126,12 @@
   }
   
   /* Keep play button visible when speaking */
-  .ww-play-button.speaking {
+  .ww-play-button.ww-speaking {
     opacity: 1 !important;
     color: var(--color-primary);
   }
   
-  .ww-play-button.speaking.paused {
+  .ww-play-button.ww-speaking.ww-paused {
     color: var(--color-warning);
   }
 

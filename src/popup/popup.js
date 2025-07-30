@@ -145,7 +145,7 @@ export class WebWirePopup {
      */
     showLoading(message = 'Loading...') {
         this.loadingElement.innerHTML = `
-            <div class="spinner"></div>
+            <div class="ww-spinner"></div>
             <div>${message}</div>
         `;
         this.loadingElement.style.display = 'block';

@@ -92,24 +92,24 @@
   margin: 0 auto;
   padding: var(--space-5);
   
-  .header {
+  .ww-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
     margin-bottom: var(--space-4);
   }
   
-  .content {
+  .ww-content {
     flex: 1;
   }
   
-  .footer {
+  .ww-footer {
     margin-top: var(--space-4);
     padding-top: var(--space-4);
     border-top: 1px solid var(--color-border);
   }
   
-  .section {
+  .ww-section {
     background: var(--color-surface);
     border: 1px solid var(--color-border);
     border-radius: var(--radius-lg);
@@ -118,37 +118,37 @@
     box-shadow: var(--shadow-sm);
   }
   
-  .grid-2 {
+  .ww-grid-2 {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: var(--space-4);
   }
   
-  .flex {
+  .ww-flex {
     display: flex;
   }
   
-  .flex-col {
+  .ww-flex-col {
     flex-direction: column;
   }
   
-  .items-center {
+  .ww-items-center {
     align-items: center;
   }
   
-  .justify-between {
+  .ww-justify-between {
     justify-content: space-between;
   }
   
-  .gap-2 { gap: var(--space-2); }
-  .gap-3 { gap: var(--space-3); }
-  .gap-4 { gap: var(--space-4); }
+  .ww-gap-2 { gap: var(--space-2); }
+  .ww-gap-3 { gap: var(--space-3); }
+  .ww-gap-4 { gap: var(--space-4); }
   
   /* Responsive */
   @media (max-width: 768px) {
     padding: var(--space-4);
     
-    .grid-2 {
+    .ww-grid-2 {
       grid-template-columns: 1fr;
     }
   }
@@ -765,7 +765,7 @@
   margin: var(--space-5) auto;
   padding: var(--space-5);
   
-  .widget {
+  .ww-widget {
     background: var(--color-surface);
     border: 1px solid var(--color-border);
     border-radius: var(--radius-xl);
@@ -774,7 +774,7 @@
     display: flex;
     flex-direction: column;
     
-    .header {
+    .ww-header {
       display: flex;
       justify-content: space-between;
       align-items: center;
@@ -789,19 +789,19 @@
       }
     }
     
-    .actions {
+    .ww-actions {
       display: flex;
       align-items: center;
       gap: var(--space-2);
     }
     
-    .content {
+    .ww-content {
       flex-grow: 1;
       overflow: auto;
     }
   }
   
-  .placeholder {
+  .ww-placeholder {
     color: var(--color-text-muted);
     text-align: center;
     padding: var(--space-8);
@@ -815,7 +815,7 @@
   color: var(--color-text-primary);
   background-color: var(--color-background);
   
-  .widget {
+  .ww-widget {
     background: var(--color-surface);
     border: 1px solid var(--color-border);
     border-radius: var(--radius-xl);
@@ -847,7 +847,7 @@
   justify-content: center;
   z-index: var(--z-modal);
   
-  .content {
+  .ww-content {
     background: var(--color-surface);
     border-radius: var(--radius-lg);
     max-width: 90vw;
@@ -857,25 +857,25 @@
     display: flex;
     flex-direction: column;
     
-    .header {
+    .ww-header {
       padding: var(--space-4);
       border-bottom: 1px solid var(--color-border);
       display: flex;
       justify-content: space-between;
       align-items: center;
       
-      .title {
+      .ww-title {
         font-size: var(--font-size-lg);
         font-weight: var(--font-weight-semibold);
         color: var(--color-text-primary);
       }
       
-      .actions {
+      .ww-actions {
         display: flex;
         gap: var(--space-2);
       }
       
-      .close {
+      .ww-close {
         background: none;
         border: none;
         font-size: var(--font-size-xl);
@@ -889,13 +889,13 @@
       }
     }
     
-    .body {
+    .ww-body {
       flex: 1;
       overflow: auto;
       padding: var(--space-4);
     }
     
-    .footer {
+    .ww-footer {
       padding: var(--space-4);
       border-top: 1px solid var(--color-border);
       display: flex;
@@ -927,79 +927,79 @@
   padding: var(--space-4);
   font-family: var(--font-family-base);
   
-  .header {
+  .ww-header {
     text-align: center;
     margin-bottom: var(--space-4);
     
-    .logo {
+    .ww-logo {
       font-size: 32px;
       margin-bottom: var(--space-2);
     }
     
-    .title {
+    .ww-title {
       font-size: var(--font-size-lg);
       font-weight: var(--font-weight-semibold);
       color: var(--color-text-primary);
       margin: 0 0 var(--space-1) 0;
     }
     
-    .subtitle {
+    .ww-subtitle {
       font-size: var(--font-size-sm);
       color: var(--color-text-secondary);
       margin: 0;
     }
   }
   
-  .status {
+  .ww-status {
     margin-bottom: var(--space-4);
     
-    .row {
+    .ww-row {
       display: flex;
       justify-content: space-between;
       align-items: center;
       margin-bottom: var(--space-2);
       font-size: var(--font-size-sm);
       
-      .label {
+      .ww-label {
         color: var(--color-text-secondary);
       }
       
-      .value {
+      .ww-value {
         color: var(--color-text-primary);
       }
       
-      .indicator {
+      .ww-indicator {
         width: var(--space-2);
         height: var(--space-2);
         border-radius: var(--radius-full);
         margin-left: var(--space-2);
         
-        &.connected {
+        &.ww-connected {
           background-color: var(--color-success-500);
         }
         
-        &.disconnected {
+        &.ww-disconnected {
           background-color: var(--color-error-500);
         }
         
-        &.warning {
+        &.ww-warning {
           background-color: var(--color-warning-500);
         }
       }
     }
   }
   
-  .actions {
+  .ww-actions {
     display: flex;
     flex-direction: column;
     gap: var(--space-2);
     margin-bottom: var(--space-4);
   }
   
-  .footer {
+  .ww-footer {
     text-align: center;
     
-    .link {
+    .ww-link {
       color: var(--color-primary-500);
       text-decoration: none;
       font-size: var(--font-size-xs);
@@ -1011,7 +1011,7 @@
     }
   }
   
-  .loading {
+  .ww-loading {
     text-align: center;
     padding: var(--space-4);
     color: var(--color-text-secondary);
@@ -1251,14 +1251,14 @@
    ======================================== */
 
 .ww-container, .ww-modal {
-  .form-group {
+  .ww-form-group {
     display: flex;
     flex-direction: column;
     gap: var(--space-2);
     margin-bottom: var(--space-4);
   }
   
-  .form-section {
+  .ww-form-section {
     background: var(--color-surface);
     border: 1px solid var(--color-border);
     border-radius: var(--radius-lg);
@@ -1344,7 +1344,7 @@
     min-width: 120px;
   }
   
-  .checkbox-group {
+  .ww-checkbox-group {
     display: flex;
     align-items: center;
     gap: var(--space-2);
@@ -1363,7 +1363,7 @@
     }
   }
   
-  .model-config {
+  .ww-model-config {
     background: var(--color-surface);
     border: 1px solid var(--color-border);
     border-radius: var(--radius-lg);
@@ -1380,7 +1380,7 @@
       font-weight: var(--font-weight-medium);
     }
     
-    .grid {
+    .ww-grid {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
       gap: var(--space-3);
@@ -1394,7 +1394,7 @@
 
 .ww-container, .ww-modal, .ww-panel, .ww-dashboard, .ww-popup {
   button,
-  .btn {
+  .ww-btn {
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -1428,7 +1428,7 @@
       transform: none;
     }
     
-    &.primary {
+    &.ww-primary {
       background-color: var(--color-primary-500);
       color: white;
       border-color: var(--color-primary-500);
@@ -1439,7 +1439,7 @@
       }
     }
     
-    &.success {
+    &.ww-success {
       background-color: var(--color-success-500);
       color: white;
       border-color: var(--color-success-500);
@@ -1450,7 +1450,7 @@
       }
     }
     
-    &.danger {
+    &.ww-danger {
       background-color: var(--color-error-500);
       color: white;
       border-color: var(--color-error-500);
@@ -1461,7 +1461,7 @@
       }
     }
     
-    &.secondary {
+    &.ww-secondary {
       background-color: var(--color-gray-600);
       color: white;
       border-color: var(--color-gray-600);
@@ -1472,7 +1472,7 @@
       }
     }
     
-    &.icon {
+    &.ww-icon {
       width: var(--space-8);
       height: var(--space-8);
       padding: 0;
@@ -1483,12 +1483,12 @@
       }
     }
     
-    &.sm {
+    &.ww-sm {
       padding: var(--space-2) var(--space-3);
       font-size: var(--font-size-xs);
     }
     
-    &.lg {
+    &.ww-lg {
       padding: var(--space-4) var(--space-6);
       font-size: var(--font-size-base);
     }
@@ -1500,7 +1500,7 @@
    ======================================== */
 
 .ww-container, .ww-modal, .ww-panel, .ww-dashboard, .ww-popup {
-  .status {
+  .ww-status {
     padding: var(--space-3) var(--space-4);
     border-radius: var(--radius-lg);
     font-size: var(--font-size-sm);
@@ -1509,51 +1509,51 @@
     margin-top: var(--space-4);
     display: none;
     
-    &.success {
+    &.ww-success {
       background-color: var(--color-success-50);
       color: var(--color-success-600);
       border-color: var(--color-success-500);
     }
     
-    &.error {
+    &.ww-error {
       background-color: var(--color-error-50);
       color: var(--color-error-600);
       border-color: var(--color-error-500);
     }
     
-    &.warning {
+    &.ww-warning {
       background-color: var(--color-warning-50);
       color: var(--color-warning-600);
       border-color: var(--color-warning-500);
     }
     
-    &.info {
+    &.ww-info {
       background-color: var(--color-primary-50);
       color: var(--color-primary-600);
       border-color: var(--color-primary-500);
     }
   }
   
-  .status-indicator {
+  .ww-status-indicator {
     width: var(--space-2);
     height: var(--space-2);
     border-radius: var(--radius-full);
     display: inline-block;
     
-    &.connected {
+    &.ww-connected {
       background-color: var(--color-success-500);
     }
     
-    &.disconnected {
+    &.ww-disconnected {
       background-color: var(--color-error-500);
     }
     
-    &.warning {
+    &.ww-warning {
       background-color: var(--color-warning-500);
     }
   }
   
-  .field-tooltip {
+  .ww-field-tooltip {
     position: absolute;
     background: var(--color-error-500);
     color: white;
@@ -1571,7 +1571,7 @@
    ======================================== */
 
 .ww-container, .ww-modal, .ww-panel, .ww-dashboard, .ww-popup {
-  .spinner {
+  .ww-spinner {
     width: var(--space-5);
     height: var(--space-5);
     border: 2px solid var(--color-border);
@@ -1581,7 +1581,7 @@
     display: inline-block;
   }
   
-  .loading-overlay {
+  .ww-loading-overlay {
     position: fixed;
     top: 0;
     left: 0;
@@ -1593,7 +1593,7 @@
     justify-content: center;
     z-index: var(--z-modal);
     
-    .content {
+    .ww-content {
       display: flex;
       align-items: center;
       gap: var(--space-3);

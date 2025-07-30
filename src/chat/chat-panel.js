@@ -1000,8 +1000,8 @@ export class WebChatPanel {
         // Determine action based on button state
         let action = 'play';
         
-        if (button.classList.contains('speaking')) {
-            if (button.classList.contains('paused')) {
+        if (button.classList.contains('ww-speaking')) {
+            if (button.classList.contains('ww-paused')) {
                 action = 'resume';
             } else {
                 action = 'pause';
@@ -1071,21 +1071,21 @@ export class WebChatPanel {
         
         switch (state) {
             case 'playing':
-                button.classList.add('speaking');
-                button.classList.remove('paused');
+                button.classList.add('ww-speaking');
+                button.classList.remove('ww-paused');
                 button.innerHTML = this.renderer.templates.icons.pause;
                 button.setAttribute('title', 'Pause message');
                 break;
                 
             case 'paused':
-                button.classList.add('speaking', 'paused');
+                button.classList.add('ww-speaking', 'ww-paused');
                 button.innerHTML = this.renderer.templates.icons.play;
                 button.setAttribute('title', 'Resume message');
                 break;
                 
             case 'stopped':
             default:
-                button.classList.remove('speaking', 'paused');
+                button.classList.remove('ww-speaking', 'ww-paused');
                 button.innerHTML = this.renderer.templates.icons.play;
                 button.setAttribute('title', 'Play message');
                 break;
