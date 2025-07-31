@@ -134,6 +134,7 @@ export class ConversationStatePlugin {
                 personaName: personaName || 'Default',
                 mood: mood,
                 location: location,
+                title: userMessage.title, // Include title from user message
                 startTime: timestamp,
                 endTime: undefined,
                 duration: undefined,
@@ -142,6 +143,16 @@ export class ConversationStatePlugin {
                 errorCode: undefined,
                 errorType: undefined,
             };
+        } else {
+            // Update existing metadata
+            const currentLocation = state.metadata[threadId].location;
+            if (location && currentLocation !== location) {
+                state.metadata[threadId].location = location;
+            }
+            const currentTitle = state.metadata[threadId].title;
+            if (userMessage.title && currentTitle !== userMessage.title) {
+                state.metadata[threadId].title = userMessage.title;
+            }
         }
 
         console.log(`Stored partial user message in conversation ${threadId}.`);
@@ -186,6 +197,12 @@ export class ConversationStatePlugin {
         if (state.metadata[threadId]) {
             state.metadata[threadId].endTime = timestamp;
             state.metadata[threadId].duration = timestamp - state.metadata[threadId].startTime;
+            
+            // Update title/location from assistant message if provided
+            const currentTitle = state.metadata[threadId].title;
+            if (assistantMessage.title && currentTitle !== assistantMessage.title) {
+                state.metadata[threadId].title = assistantMessage.title;
+            }
         }
 
         console.log(`Stored assistant message in conversation ${threadId}.`);
@@ -238,6 +255,7 @@ export class ConversationStatePlugin {
         
         // Update metadata if it doesn't exist
         if (!state.metadata[threadId]) {
+            const initialTitle = userMessage.title || assistantMessage?.title;
             state.metadata[threadId] = {
                 threadId: threadId,
                 tabId: this.stateService.ui.getTabId(),  // Associate with current tab
@@ -245,6 +263,7 @@ export class ConversationStatePlugin {
                 personaName: personaName || 'Default',
                 mood: mood,
                 location: location,
+                title: initialTitle, // Include title from either message
                 startTime: timestamp,
                 endTime: undefined,
                 duration: undefined,
@@ -259,6 +278,9 @@ export class ConversationStatePlugin {
             if (location && currentLocation !== location) {
                 state.metadata[threadId].location = location;
             }
+            // Title can come from userMessage or assistantMessage
+            const title = userMessage.title || assistantMessage?.title;
+            const currentTitle = state.metadata[threadId].title;
             if (title && currentTitle !== title) {
                 state.metadata[threadId].title = title;
             }

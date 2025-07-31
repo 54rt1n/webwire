@@ -177,7 +177,7 @@ export class StashStatePlugin {
      */
     filter(pattern) {
         this._ensureStashExists();
-        const allKeys = this.getAll();
+        const allKeys = this.getAllKeys();
         const regex = pattern instanceof RegExp ? pattern : new RegExp(pattern);
         const matching = allKeys.filter(key => regex.test(key));
         console.log(`[StateService::StashState] Filtered keys by pattern '${pattern}': ${matching.length} matches`);

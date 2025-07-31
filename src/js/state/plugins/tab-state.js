@@ -1,4 +1,4 @@
-import { createInitialUiState } from '../state-container.js';
+import { createInitialUiState, createInitialTabState } from '../state-container.js';
 
 /**
  * Plugin for handling tab state
@@ -16,6 +16,11 @@ export class TabStatePlugin {
      * @param {Object} tabState 
      */
     setTabState(tabId, tabState, { setDefault = false } = {}) {
+        // Ensure tabs object exists
+        if (!this.stateService.state.tabs) {
+            this.stateService.state.tabs = {};
+        }
+        
         if (setDefault) {
             this.stateService.state.tabs[tabId] = this.stateService.state.tabs.default;
         } else {
@@ -60,6 +65,10 @@ export class TabStatePlugin {
      * @returns {Object}
      */
     getTabState(tabId) {
+        // Ensure tabs object exists
+        if (!this.stateService.state.tabs) {
+            return undefined;
+        }
         return this.stateService.state.tabs[tabId];
     }
 } 

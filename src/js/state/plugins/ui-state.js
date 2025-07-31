@@ -25,6 +25,9 @@ export class UiStatePlugin {
      * @param {boolean} autoInject 
      */
     setAutoInject(autoInject) {
+        if (!this.stateService.state.settings.ui) {
+            return; // Defensive: don't create structure if it's missing
+        }
         this.stateService.state.settings.ui.autoInject = autoInject;
     }
 
@@ -32,7 +35,7 @@ export class UiStatePlugin {
      * Get auto-inject settings
      */
     getAutoInject() {
-        return this.stateService.state.settings.ui.autoInject;
+        return this.stateService.state.settings.ui?.autoInject;
     }
 
     /**
@@ -52,8 +55,7 @@ export class UiStatePlugin {
     _currentTab() {
         const tabId = this.getTabId();
         if (!tabId) return null;
-        if (!this.stateService.state.tabs[tabId]) return null;
-        return this.stateService.state.tabs[tabId];
+        return this.stateService.state.tabs?.[tabId] || null;
     }
 
     /**
