@@ -27,21 +27,13 @@ export async function contextFactory(eventBus, context,
     results.errorBoundary = new EventErrorBoundary(results.dispatcher);
     
     // Sentry for background context only
-    if (sentry) {
-        results.sentryService = new SentryService();
-        if (config) {
-            const sentryDsn = config.get('sentry.dsn');
-            if (sentryDsn) {
-                await results.sentryService.initialize({
-                    dsn: sentryDsn,
-                    context: context,
-                    environment: config.get('sentry.environment', 'production')
-                });
-            }
-        } else {
-            console.warn('[ContextFactory] No config found, skipping Sentry initialization');
-            throw new Error('No config found, skipping Sentry initialization');
-        }
+    if (sentry && config) {
+        const sentryConfig = {
+            dsn: config.get('sentry.dsn'),
+            context: context,
+            environment: config.get('sentry.environment', 'production')
+        };
+        results.sentryService = new SentryService(sentryConfig);
     }
 
     if (readInitialState) {
@@ -68,6 +60,11 @@ export async function contextFactory(eventBus, context,
         results.stateService = new StateService(results.eventBus, results.storage.storage);
         if (loadSettings) {
             await results.stateService.settings.loadFromStorage();
+            // Initialize Sentry after settings are loaded
+            if (results.sentryService) {
+                const crashReportingEnabled = results.stateService.settings.getCrashReportingEnabled();
+                await results.sentryService.initialize(crashReportingEnabled);
+            }
         }
         if (loadState) {
             await results.stateService.disk.loadFromStorage();
@@ -110,6 +107,7 @@ export async function contextFactory(eventBus, context,
                 console.error('[ContextFactory] Failed to initialize prompts:', error);
             }
         }
+        
     } else if (contentState) {
         if (!initialState) {
             throw new Error('Initial state is required for content state');

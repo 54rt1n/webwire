@@ -7,21 +7,27 @@ import {
 } from "@sentry/browser";
 
 export class SentryService {
-  constructor() {
+  constructor(config = {}) {
     this.initialized = false;
-    this.context = null;
+    this.context = config.context || null;
+    this.config = config;
     this.client = null;
     this.scope = null;
   }
 
-  async initialize(config = {}) {
+  async initialize(crashReportingEnabled = true) {
+    if (!crashReportingEnabled) {
+      console.log('[SentryService] Crash reporting disabled');
+      return;
+    }
+
     try {
       const { 
         dsn, 
         environment = 'production',
         context = 'unknown',
         beforeSend
-      } = config;
+      } = this.config;
 
       this.context = context;
 

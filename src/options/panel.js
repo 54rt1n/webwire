@@ -19,6 +19,7 @@ export class OptionsPanel {
             userNameInput: document.getElementById('userName'),
             personaNameInput: document.getElementById('personaName'),
             autoInjectCheckbox: document.getElementById('autoInject'),
+            crashReportingCheckbox: document.getElementById('crashReportingEnabled'),
             voiceSettings: {
                 rate: document.getElementById('voiceRate'),
                 pitch: document.getElementById('voicePitch'),
@@ -241,6 +242,7 @@ export class OptionsPanel {
 
         // UI settings
         this.elements.autoInjectCheckbox.checked = settings.ui?.autoInject || false;
+        this.elements.crashReportingCheckbox.checked = settings.crashReportingEnabled || false;
         
         // Voice settings
         if (settings.ui?.voice) {
@@ -328,7 +330,8 @@ export class OptionsPanel {
                     lang: this.elements.voiceSettings.lang.value || 'en-US',
                     voice: this.elements.voiceSettings.voice.value || undefined
                 }
-            }
+            },
+            crashReportingEnabled: this.elements.crashReportingCheckbox.checked
         };
 
         // Get provider settings

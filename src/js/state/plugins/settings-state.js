@@ -203,4 +203,20 @@ export class SettingsStatePlugin {
         
         return true;
     }
+
+    /**
+     * Get crash reporting enabled
+     * @returns {boolean}
+     */
+    getCrashReportingEnabled() {
+        return this.stateService.state.settings.reporting.crashReportingEnabled;
+    }
+
+    /**
+     * Set crash reporting enabled
+     * @param {boolean} enabled
+     */
+    setCrashReportingEnabled(enabled) {
+        this.stateService.state.settings.reporting.crashReportingEnabled = enabled;
+    }
 } 

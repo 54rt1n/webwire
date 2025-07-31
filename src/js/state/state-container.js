@@ -203,6 +203,9 @@ export function createInitialSettingsState() {
             autoConnect: false,
             systemMessage: undefined,
         },
+        reporting: {
+            crashReportingEnabled: false,
+        },
         ui: {
             autoInject: false,
             voice: {
