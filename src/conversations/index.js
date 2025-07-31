@@ -1,10 +1,6 @@
-import { EVENTS, EVENT_CONTEXT } from '../js/core/events.js';
-import { EventBindableComponent } from '../js/core/event-bindable-panel.js';
+import { EVENTS } from '../js/core/events.js';
+import { BasePanelApp } from '../core/base-panel-app.js';
 import { ConversationsPanel } from './panel.js';
-import { WebWireClientCore } from '../js/client/webwire-client-core.js';
-import { PanelEventHandlers } from '../js/client/panel-event-handlers.js';
-import { BrowserEventHandlers } from '../js/client/browser-event-handlers.js';
-import { EventBus } from '../js/core/event-bus.js';
 import { ConversationModal } from './components/conversation-modal.js';
 import { AppConfig } from '../js/core/app-config.js';
 
@@ -13,44 +9,33 @@ import { AppConfig } from '../js/core/app-config.js';
  * The main controller for the Conversations Panel. This class wires together the
  * state management (data/business logic) and the ConversationsPanel (UI/view logic).
  */
-class ConversationsPanelApp extends EventBindableComponent {
+class ConversationsPanelApp extends BasePanelApp {
     constructor(config) {
-        const eventBus = new EventBus({domain: 'conversations', debug: true});
-        super(eventBus);
-        this.config = config;
-        this.core = new WebWireClientCore(this.eventBus, config);
-        this.panelEventHandlers = null;
-        this.panel = new ConversationsPanel(this.eventBus);
+        super(config, 'conversations');
         this.conversationModal = null;
-        
-        this.setupEventListeners();
     }
 
-    /**
-     * Initializes the entire application.
-     */
-    async initialize() {
-        console.log('[ConversationsApp] Initializing Conversations Panel...');
+    // --- HOOK METHODS: Implementation for BasePanelApp ---
 
-        await this.core.initialize();
-        this.panelEventHandlers = new PanelEventHandlers(this.core);
-        this.panelEventHandlers.setupEventListeners();
-        
-        // Initialize browser event handlers for play/copy functionality
-        this.browserEventHandlers = new BrowserEventHandlers(this.eventBus, this.core.stateService);
+    _getPanelComponent() {
+        return ConversationsPanel;
+    }
 
+    _initializeDependencies() {
         // Create conversation modal after core is initialized
         this.conversationModal = new ConversationModal(this.core.stateService, this.eventBus);
+    }
 
-        // Set up state service for conversations management
+    _wireUpDependencies() {
+        // Wire up the conversation modal with state service and event bus
         if (this.core.stateService) {
-            this.panel.setStateService(this.core.stateService);
             this.conversationModal.setStateService(this.core.stateService);
             this.conversationModal.setEventBus(this.eventBus);
         }
+    }
 
-        // Setup UI event handlers
-        const handlers = {
+    _getUIHandlers() {
+        return {
             onDeleteConversation: this.deleteConversation.bind(this),
             onViewConversation: this.viewConversation.bind(this),
             onSetActiveConversation: this.setActiveConversation.bind(this),
@@ -58,12 +43,11 @@ class ConversationsPanelApp extends EventBindableComponent {
             onCreateNewConversation: this.createNewConversation.bind(this),
             onSearchConversations: this.searchConversations.bind(this),
         };
-        this.panel.initialize(handlers);
+    }
 
+    async _loadData() {
         // Load initial conversations
         await this.loadConversations();
-        
-        console.log('[ConversationsApp] Initialization complete');
     }
 
     /**
@@ -285,8 +269,6 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Clean up on page unload
     window.addEventListener('beforeunload', () => {
-        if (app.browserEventHandlers) {
-            app.browserEventHandlers.cleanup();
-        }
+        app.cleanup();
     });
 });

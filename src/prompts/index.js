@@ -1,9 +1,6 @@
-import { EVENTS, EVENT_CONTEXT } from '../js/core/events.js';
-import { EventBindableComponent } from '../js/core/event-bindable-panel.js';
+import { EVENTS } from '../js/core/events.js';
+import { BasePanelApp } from '../core/base-panel-app.js';
 import { PromptsPanel } from './panel.js';
-import { WebWireClientCore } from '../js/client/webwire-client-core.js';
-import { PanelEventHandlers } from '../js/client/panel-event-handlers.js';
-import { EventBus } from '../js/core/event-bus.js';
 import { AppConfig } from '../js/core/app-config.js';
 import { PromptLoader } from '../js/utils/prompt-loader.js';
 
@@ -12,35 +9,30 @@ import { PromptLoader } from '../js/utils/prompt-loader.js';
  * The main controller for the Prompts Panel. This class wires together the
  * state management (data/business logic) and the PromptsPanel (UI/view logic).
  */
-class PromptsPanelApp extends EventBindableComponent {
+class PromptsPanelApp extends BasePanelApp {
     constructor(config) {
-        const eventBus = new EventBus({domain: 'prompts', debug: true});
-        super(eventBus);
-        this.config = config;
-        this.core = new WebWireClientCore(this.eventBus, config);
-        this.panelEventHandlers = null;
-        this.panel = new PromptsPanel(this.eventBus);
-        
-        this.setupEventListeners();
+        super(config, 'prompts');
     }
 
-    /**
-     * Initializes the entire application.
-     */
-    async initialize() {
-        console.log('[PromptsPanelApp] Initializing Prompts Panel...');
+    // --- HOOK METHODS: Implementation for BasePanelApp ---
 
-        await this.core.initialize();
-        this.panelEventHandlers = new PanelEventHandlers(this.core);
-        this.panelEventHandlers.setupEventListeners();
+    _getPanelComponent() {
+        return PromptsPanel;
+    }
 
-        // Set up state service for prompts management
+    _initializeDependencies() {
+        // Prompts panel doesn't need additional dependencies
+    }
+
+    _wireUpDependencies() {
+        // Wire up the panel with state service
         if (this.core.stateService) {
             this.panel.setStateService(this.core.stateService);
         }
+    }
 
-        // Setup UI event handlers
-        const handlers = {
+    _getUIHandlers() {
+        return {
             onEditPrompt: this.editPrompt.bind(this),
             onTogglePrompt: this.togglePrompt.bind(this),
             onDeletePrompt: this.deletePrompt.bind(this),
@@ -51,12 +43,11 @@ class PromptsPanelApp extends EventBindableComponent {
             onRefreshPrompts: this.refreshPrompts.bind(this),
             onSearchPrompts: this.searchPrompts.bind(this)
         };
-        this.panel.initialize(handlers);
+    }
 
+    async _loadData() {
         // Load initial prompts
         await this.loadPrompts();
-        
-        console.log('[PromptsPanelApp] Initialization complete');
     }
 
     /**
@@ -342,4 +333,9 @@ document.addEventListener('DOMContentLoaded', () => {
     
     const app = new PromptsPanelApp(config);
     app.initialize();
+    
+    // Clean up on page unload
+    window.addEventListener('beforeunload', () => {
+        app.cleanup();
+    });
 });

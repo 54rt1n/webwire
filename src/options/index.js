@@ -1,32 +1,41 @@
-import { initializeContext } from '../js/context/context-init.js';
+import { BaseSimpleApp } from '../core/base-simple-app.js';
 import { OptionsPanel } from './panel.js';
-import { BACKGROUND_ACTIONS } from '../js/core/cc-actions.js';
 import { createInitialState, createInitialSettingsState } from '../js/state/state-container.js';
-import { EventBus } from '../js/core/event-bus.js';
-import { EVENT_CONTEXT } from '../js/core/events.js';
 import { deepMerge } from '../js/utils/deep-merge.js';
+import { AppConfig } from '../js/core/app-config.js';
 
 /**
  * Options Page Script
  * 
  * Handles options page UI and interactions for configuring the extension.
  */
-class OptionsApp {
-    constructor() {
-        this.eventBus = new EventBus({domain: 'options', debug: true});
-        this.panel = new OptionsPanel(this.eventBus);
-        this.storage = null;
-        this.stateService = null;
-        this.dispatcher = null;
+class OptionsApp extends BaseSimpleApp {
+    constructor(config) {
+        super(config, 'options');
         this.initialState = createInitialState();
     }
 
-    async initialize() {
-        const { dispatcher, stateService, storage } = await initializeContext(this.eventBus, EVENT_CONTEXT.SIMPLE);
-        this.dispatcher = dispatcher;
-        this.stateService = stateService;
-        this.storage = storage;
+    // --- HOOK METHODS: Implementation for BaseSimpleApp ---
 
+    _getPanelComponent() {
+        return OptionsPanel;
+    }
+
+    _initializeDependencies() {
+        // Options panel doesn't need additional dependencies
+    }
+
+    _wireUpDependencies() {
+        // No additional wiring needed for options
+    }
+
+    _getUIHandlers() {
+        return {
+            // Options panel handles its own events via direct DOM listeners
+        };
+    }
+
+    async _loadData() {
         await this.loadSettings();
         this.setupEventListeners();
     }
@@ -307,6 +316,12 @@ class OptionsApp {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-    const app = new OptionsApp();
+    const config = AppConfig.pageFactory('lite');
+    const app = new OptionsApp(config);
     app.initialize();
+    
+    // Clean up on page unload
+    window.addEventListener('beforeunload', () => {
+        app.cleanup();
+    });
 });
