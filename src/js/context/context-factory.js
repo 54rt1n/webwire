@@ -48,6 +48,13 @@ export async function contextFactory(eventBus, context,
             ...createInitialState(tabId),
             ...(state || {})
         };
+        
+        // Ensure the tab ID is preserved in the UI state
+        if (tabId && initialState.ui) {
+            initialState.ui.tabId = tabId;
+        }
+        
+        console.log('[ContextFactory] Final initial state with tab ID:', tabId, 'UI state:', initialState.ui);
     }
 
     if (storage) {

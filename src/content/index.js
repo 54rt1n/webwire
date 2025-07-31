@@ -290,6 +290,9 @@ class WebWireContentHost {
             // Initialize the panel without showing it
             await this.chatService.ensurePanelInitialized();
             
+            // Send initial state to the panel now that it's ready
+            await this.sendInitialStateToPanel();
+            
             console.log('[WebWireContentHost] Panel injected successfully');
         } catch (error) {
             console.error('[WebWireContentHost] Failed to inject panel:', error);
