@@ -465,6 +465,13 @@ export class ConversationStatePlugin {
     getMessageById(messageId) {
         const state = this._safeConversationState();
         const threadId = this.getThreadForMessage(messageId);
+        
+        // Check if message was found in any thread
+        if (!threadId) {
+            console.warn('[ConversationState] Message not found in any conversation:', messageId);
+            return null;
+        }
+        
         if (!state.history[threadId]) {
             console.error('[ConversationState] Conversation not found:', threadId, state);
             throw new Error(`Conversation ${threadId} not found`);

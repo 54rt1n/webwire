@@ -979,8 +979,23 @@ export class WebChatPanel {
 
         console.log('[WebChatPanel] Copy message request for ID:', messageId);
         
-        // Emit event to chat service to handle the actual copying
-        await this.eventBus.emitAsync(EVENTS.CHAT.COPY_MESSAGE, { messageId });
+        // Extract content directly from the message element
+        const messageEl = button.closest('.ww-message');
+        let content = '';
+        
+        if (messageEl) {
+            const contentEl = messageEl.querySelector('.ww-content');
+            if (contentEl) {
+                // Get text content, removing any HTML tags but preserving line breaks
+                content = contentEl.innerText || contentEl.textContent || '';
+            }
+        }
+        
+        // Emit event with both messageId and content as fallback
+        await this.eventBus.emitAsync(EVENTS.CHAT.COPY_MESSAGE, { 
+            messageId,
+            content 
+        });
         
         // Show visual feedback on button
         this.showCopyFeedback(button);
