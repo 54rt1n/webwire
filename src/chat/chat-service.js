@@ -585,6 +585,16 @@ export class ChatService extends EventBindableComponent {
                 this.aiClient = null;
             }
         }
+
+        if ('panelVisible' in data) {
+            this.stateService.ui.setPanelVisible(data.panelVisible);
+            // Show or hide the panel based on the setting
+            if (data.panelVisible) {
+                this.panel.show();
+            } else {
+                this.panel.hide();
+            }
+        }
         
         // Send UI settings update to background for persistence
         // Note: We send the specific UI settings that were toggled, not the entire settings object
@@ -1051,9 +1061,9 @@ export class ChatService extends EventBindableComponent {
     }
 
     /**
-     * Show the panel
+     * Ensure panel is initialized without showing it
      */
-    async showPanel() {
+    async ensurePanelInitialized() {
         if (!this.panel.isReady()) {
             await this.panel.initialize();
             this.updateConnectionStatus();
@@ -1063,6 +1073,13 @@ export class ChatService extends EventBindableComponent {
             }
             await this.loadCurrentConversation();
         }
+    }
+
+    /**
+     * Show the panel
+     */
+    async showPanel() {
+        await this.ensurePanelInitialized();
         
         this.panel.show();
         

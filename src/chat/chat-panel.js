@@ -138,19 +138,17 @@ export class WebChatPanel {
      */
     setupVisibilityListeners() {
         this.elements.fab?.addEventListener('click', () => {
-            if (window.webwire?.showPanel) {
-                window.webwire.showPanel();
-            } else {
-                this.show();
-            }
+            // Request ChatService to show panel (which will handle both UI and persistence)
+            this.eventBus.emit(EVENTS.CHAT.TOGGLE_UI_SETTING, {
+                panelVisible: true
+            });
         });
 
         this.elements.closeBtn?.addEventListener('click', () => {
-            if (window.webwire?.hidePanel) {
-                window.webwire.hidePanel();
-            } else {
-                this.hide();
-            }
+            // Request ChatService to hide panel (which will handle both UI and persistence)
+            this.eventBus.emit(EVENTS.CHAT.TOGGLE_UI_SETTING, {
+                panelVisible: false
+            });
         });
     }
 

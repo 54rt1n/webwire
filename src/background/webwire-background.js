@@ -230,7 +230,8 @@ class WebWireBackground {
         });
 
         this.eventBus.onAsync(BACKGROUND_ACTIONS.SAVE_PANEL_VISIBILITY, async (data, options) => {
-            await this.savePanelVisibilityState(data.visible);
+            const tabId = options.tabId || options.sender?.tab?.id;
+            await this.savePanelVisibilityState(data.visible, tabId);
             return { success: true };
         });
 
@@ -400,22 +401,27 @@ class WebWireBackground {
     /**
      * Save panel visibility state
      * @param {boolean} visible - Whether the panel should be visible
+     * @param {string} tabId - The tab ID for per-tab visibility state
      */
-    async savePanelVisibilityState(visible) {
+    async savePanelVisibilityState(visible, tabId) {
         try {
-            console.log(`[WebWireBackground] Saving panel visibility state: ${visible}`);
+            console.log(`[WebWireBackground] Saving panel visibility state: ${visible} for tab: ${tabId}`);
 
-            if (!this.stateService.state.ui) {
-                this.stateService.state.ui = {};
+            if (!tabId) {
+                console.warn('[WebWireBackground] No tabId provided for panel visibility state');
+                return false;
             }
+
+            // Set the current tab context for UI state operations
+            this.stateService.ui.setTabId(tabId);
             
-            // Update UI state with panel visibility
-            this.stateService.state.ui.panelVisible = visible;
+            // Use UI state plugin to set panel visibility (now per-tab)
+            this.stateService.ui.setPanelVisible(visible);
             
-            // Save UI state
-            await this.stateService.ui.saveToStorage();
+            // Save tab state (this will persist the per-tab visibility)
+            await this.stateService.tab.saveToStorage();
             
-            console.log(`[WebWireBackground] Panel visibility state saved successfully: ${visible}`);
+            console.log(`[WebWireBackground] Panel visibility state saved successfully: ${visible} for tab: ${tabId}`);
             return true;
         } catch (error) {
             console.error('[WebWireBackground] Failed to save panel visibility state:', error);

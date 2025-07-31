@@ -287,8 +287,8 @@ class WebWireContentHost {
         console.log('[WebWireContentHost] Injecting panel...');
         
         try {
-            // Just show the panel - showPanel will initialize if needed
-            await this.chatService.showPanel();
+            // Initialize the panel without showing it
+            await this.chatService.ensurePanelInitialized();
             
             console.log('[WebWireContentHost] Panel injected successfully');
         } catch (error) {

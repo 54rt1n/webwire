@@ -42,6 +42,8 @@ export const EVENTS = {
         SAVE_MESSAGE: 'chat:save-message',
         UPDATE_MESSAGE: 'chat:update-message',
         SAVE_PANEL_VISIBILITY: 'chat:save-panel-visibility',
+        SHOW_PANEL: 'chat:show-panel',
+        HIDE_PANEL: 'chat:hide-panel',
         SEND_MESSAGE: 'chat:send-message',
         START_NEW_CONVERSATION: 'chat:start-new-conversation',
         UPDATE_SETTINGS: 'chat:update-settings',

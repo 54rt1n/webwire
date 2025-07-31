@@ -222,7 +222,6 @@ export function createInitialSettingsState() {
 export function createInitialUiState(tabId = undefined) {
     return {
         tabId: tabId,
-        panelVisible: false,
     };
 }
 
@@ -234,6 +233,7 @@ export function createInitialTabState() {
         useMCP: false,
         useBrowserTools: false,
         autoExecuteTools: false,
+        panelVisible: false,
     };
 }
 

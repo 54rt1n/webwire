@@ -203,7 +203,9 @@ export class UiStatePlugin {
      * @returns {boolean}
      */
     isPanelVisible() {
-        return this.stateService.state.ui.panelVisible ?? false;
+        const tab = this._currentTab();
+        if (!tab) return false;
+        return tab.panelVisible ?? false;
     }
 
     /**
@@ -211,6 +213,8 @@ export class UiStatePlugin {
      * @param {boolean} visible
      */
     setPanelVisible(visible) {
-        this.stateService.state.ui.panelVisible = visible;
+        const tab = this._currentTab();
+        if (!tab) return;
+        tab.panelVisible = visible;
     }
 } 
