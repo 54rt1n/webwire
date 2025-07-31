@@ -10,6 +10,7 @@ import { MessageBuilder } from './message-builder.js';
 import { ToolExecutor } from './tool-executor.js';
 import { AIResponseHandler } from './ai-response-handler.js';
 import { AIClientFactory } from '../js/ai/ai-client-factory.js';
+import { chatSelectModal } from './components/chat-select.js';
 
 /**
  * WebWire Chat Service - Platform-Agnostic Core
@@ -124,6 +125,7 @@ export class ChatService extends EventBindableComponent {
         this.on(EVENTS.CHAT.CONVERSATION_LOADED, this.handleConversationLoaded);
         this.on(EVENTS.CHAT.CONVERSATION_UPDATED, this.handleConversationUpdated);
         this.on(EVENTS.CHAT.START_NEW_CONVERSATION, this.handleNewConversationRequest);
+        this.on(EVENTS.CHAT.SWAP_CONVERSATION, this.handleSwapConversation);
         this.on(EVENTS.CHAT.REPLAY_LAST_TURN, this.handleReplayLastTurn);
         this.on(EVENTS.CHAT.BACK_BUTTON, this.handleBackButton);
         this.on(EVENTS.CHAT.REPARSE_MESSAGE, this.handleReparseMessage);
@@ -280,6 +282,10 @@ export class ChatService extends EventBindableComponent {
         const location = typeof window !== 'undefined' ? window.location.href : undefined;
         const persona = this.stateService.aim.getAimMessageOptions();
 
+        // Declare these outside try block so they're accessible in finally
+        let userMsg = null;
+        let assistantMsg = null;
+
         try {
 
             if (!threadId) {
@@ -342,6 +348,15 @@ export class ChatService extends EventBindableComponent {
                 ...persona
             });
 
+            // Prepare user message for storage (we have all info at this point)
+            userMsg = { 
+                role: MESSAGE_ROLES.USER, 
+                content: message,
+                timestamp: userMessage.timestamp,
+                url: location,
+                title: document.title
+            };
+
             // Display user message in panel
             if (!silent) {
                 this.panel.displayMessage(userMessage, { autoScroll: true, ...persona });
@@ -362,17 +377,8 @@ export class ChatService extends EventBindableComponent {
             const { toolCalls, parseErrors } = await this.toolExecutor.parseToolsFromResponse(response, tools);
             const toolResults = await this.toolExecutor.executeTools(toolCalls, autoExecuteTools);
             
-            // Prepare messages for storage (original unenhanced content)
-            const userMsg = { 
-                role: MESSAGE_ROLES.USER, 
-                content: message,
-                timestamp: userMessage.timestamp,
-                url: location,
-                title: document.title
-            };
-            
             // TODO separate out think xml tags
-            const assistantMsg = { 
+            assistantMsg = { 
                 role: MESSAGE_ROLES.ASSISTANT, 
                 content: response,
                 timestamp: userMessage.timestamp + 1,
@@ -390,22 +396,7 @@ export class ChatService extends EventBindableComponent {
                 title: document.title,
             });
 
-            console.log('[ChatService] Saving message:', userMsg, assistantMsg);
-
-            // Request host to save conversation
-            this.eventBus.emit(EVENTS.CHAT.SAVE_MESSAGE, {
-                threadId: threadId,
-                userMessage: userMsg,
-                assistantMessage: assistantMsg,
-                options: {
-                    ...persona,
-                    url: location,
-                    title: document.title,
-                    isRetry: isRetry,
-                }}, { target: EVENT_CONTEXT.BACKGROUND }
-            );
-
-            console.log('[ChatService] Message saved');
+            console.log('[ChatService] Message processing complete');
 
             this.panel.updateReparseButton(true);
 
@@ -430,7 +421,7 @@ export class ChatService extends EventBindableComponent {
                     );
                     
                     // Store the cancelled message in conversation state
-                    const assistantMsg = { 
+                    assistantMsg = { 
                         role: MESSAGE_ROLES.ASSISTANT, 
                         content: cancelledContent,
                         timestamp: Date.now(),
@@ -457,8 +448,8 @@ export class ChatService extends EventBindableComponent {
                 this.panel.displayError(error.message, streamingState.currentMessage?.messageId);
             }
 
-            // Store the cancelled message in conversation state
-            const assistantMsg = { 
+            // Store the error message in conversation state
+            assistantMsg = { 
                 role: MESSAGE_ROLES.ASSISTANT, 
                 content: error.message,
                 timestamp: Date.now(),
@@ -473,6 +464,26 @@ export class ChatService extends EventBindableComponent {
             
             // Re-enable retry button after error
             this.panel.updateRetryButton(true);
+        } finally {
+            // Always save the conversation to persistent storage
+            // This ensures error/cancelled messages are persisted
+            if (userMsg && assistantMsg) {
+                console.log('[ChatService] Persisting conversation (including errors/cancellations)');
+                
+                this.eventBus.emit(EVENTS.CHAT.SAVE_MESSAGE, {
+                    threadId: threadId,
+                    userMessage: userMsg,
+                    assistantMessage: assistantMsg,
+                    options: {
+                        ...persona,
+                        url: location,
+                        title: document.title,
+                        isRetry: isRetry,
+                        error: assistantMsg.error,
+                        cancelled: assistantMsg.cancelled
+                    }
+                }, { target: EVENT_CONTEXT.BACKGROUND });
+            }
         }
     }
 
@@ -645,6 +656,60 @@ export class ChatService extends EventBindableComponent {
         } catch (error) {
             console.error('[ChatService] Error creating new conversation:', error);
             this.panel.displayError(`Failed to create new conversation: ${error.message}`);
+        }
+    }
+
+    /**
+     * Handle swap conversation request event
+     */
+    async handleSwapConversation(payload) {
+        console.log('[ChatService] Handling swap conversation request');
+        
+        try {
+            // Open the modal and wait for user selection
+            const selectedThreadId = await chatSelectModal.open(this.stateService);
+            
+            console.log('[ChatService] User selected conversation:', selectedThreadId);
+            
+            // Check if user selected a different conversation
+            const currentActiveThreadId = this.stateService.conversation.getActiveThreadId();
+            if (selectedThreadId === currentActiveThreadId) {
+                console.log('[ChatService] Same conversation selected, no swap needed');
+                return;
+            }
+            
+            // Mark current conversation as completed (if it exists)
+            if (currentActiveThreadId) {
+                this.stateService.conversation.updateConversationStatus(currentActiveThreadId, 'completed');
+                console.log('[ChatService] Marked current conversation as completed:', currentActiveThreadId);
+            }
+            
+            // Set the selected conversation as active
+            this.stateService.conversation.setActiveConversation(selectedThreadId);
+            console.log('[ChatService] Set conversation as active:', selectedThreadId);
+            
+            // Load the selected conversation
+            const selectedConversation = this.stateService.conversation.getConversation(selectedThreadId);
+            if (selectedConversation) {
+                // Update conversation status to active
+                this.stateService.conversation.updateConversationStatus(selectedThreadId, 'active');
+                
+                // Load the conversation in the panel
+                await this.handleConversationLoaded({ conversation: selectedConversation });
+                console.log('[ChatService] Successfully swapped to conversation:', selectedThreadId);
+            } else {
+                console.error('[ChatService] Selected conversation not found:', selectedThreadId);
+                this.panel.displayError('Selected conversation could not be loaded');
+            }
+            
+        } catch (error) {
+            // User might have cancelled the modal or there was an error
+            if (error.message.includes('closed without selection')) {
+                console.log('[ChatService] User cancelled conversation swap');
+            } else {
+                console.error('[ChatService] Error swapping conversation:', error);
+                this.panel.displayError(`Failed to swap conversation: ${error.message}`);
+            }
         }
     }
 
@@ -1030,6 +1095,37 @@ export class ChatService extends EventBindableComponent {
             } else {
                 this.showPanel();
             }
+        }
+    }
+
+    /**
+     * Load the current conversation when the panel is shown
+     */
+    async loadCurrentConversation() {
+        console.log('[ChatService] Loading current conversation...');
+        
+        try {
+            // Check if we already have an active thread
+            const activeThreadId = this.stateService.conversation.getActiveThreadId();
+            
+            if (activeThreadId) {
+                // Load the existing conversation into the panel
+                const conversation = this.stateService.conversation.getConversation(activeThreadId);
+                if (conversation && conversation.messages && conversation.messages.length > 0) {
+                    console.log('[ChatService] Loading existing conversation:', activeThreadId);
+                    await this.handleConversationLoaded({ conversation });
+                    return;
+                }
+            }
+            
+            // No active thread or empty conversation, get or create one
+            console.log('[ChatService] No active conversation found, requesting from background...');
+            await this.sendGetOrCreateThread();
+            
+        } catch (error) {
+            console.error('[ChatService] Error loading current conversation:', error);
+            // Don't show error to user, just create a new conversation silently
+            await this.sendGetOrCreateThread({ createOnly: true });
         }
     }
 

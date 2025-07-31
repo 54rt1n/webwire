@@ -420,11 +420,25 @@ export class ConversationStatePlugin {
             }
         }
 
-        // Just update the UI state for this tab
+        // Mark any other active conversations for this tab as completed
+        const currentTabId = tabId || this.stateService.ui.getTabId();
+        const state = this._safeConversationState();
+        
+        Object.entries(state.metadata).forEach(([convThreadId, metadata]) => {
+            // Mark other active conversations for this tab as completed
+            if (metadata.tabId === currentTabId && 
+                metadata.status === 'active' && 
+                convThreadId !== threadId) {
+                console.log(`[StateService::ConversationState] Auto-completing previous active conversation: ${convThreadId}`);
+                this.updateConversationStatus(convThreadId, 'completed');
+            }
+        });
+
+        // Update the UI state for this tab
         this.stateService.ui.setTrackedThreadId(threadId);
         
-        console.log(`[StateService::ConversationState] Set active conversation to ${threadId} (tab: ${tabId || this.stateService.ui.getTabId()})`);
-        this.eventBus.emit(EVENTS.CONVERSATION.ACTIVATED, { threadId, tabId: tabId || this.stateService.ui.getTabId() });
+        console.log(`[StateService::ConversationState] Set active conversation to ${threadId} (tab: ${currentTabId})`);
+        this.eventBus.emit(EVENTS.CONVERSATION.ACTIVATED, { threadId, tabId: currentTabId });
     }
 
     /**

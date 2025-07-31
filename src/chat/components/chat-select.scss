@@ -1,0 +1,228 @@
+@use '../../shared/common';
+
+/* Chat Select Modal - uses standard .ww-modal pattern from global.scss */
+.ww-modal.ww-chat-select-modal {
+  /* Override z-index to be above chat panel */
+  z-index: var(--z-modal-overlay);
+  
+  .ww-content {
+    width: 400px;
+    max-width: 400px;
+    max-height: 80vh;
+    height: 80vh;
+  }
+
+  .ww-header {
+    .ww-title {
+      margin: 0;
+      font-size: var(--font-size-xl);
+      font-weight: var(--font-weight-semibold);
+      color: var(--color-text-primary);
+    }
+    
+    .ww-close {
+      .ww-icon {
+        width: 20px;
+        height: 20px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 20px;
+        line-height: 1;
+      }
+    }
+  }
+
+  .ww-body {
+    padding: var(--space-4);
+  }
+}
+
+/* Tree container */
+.ww-chat-select-tree {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+}
+
+/* Empty state */
+.ww-chat-select-empty {
+    text-align: center;
+    padding: var(--space-8);
+    color: var(--color-text-secondary);
+    font-size: var(--font-size-sm);
+}
+
+/* Tab group */
+.ww-chat-select-tab-group {
+    margin-bottom: var(--space-4);
+
+    &:last-child {
+        margin-bottom: 0;
+    }
+}
+
+/* Tab header */
+.ww-chat-select-tab-header {
+    .ww-chat-select-tab-toggle {
+        @include common.ww-button-base;
+        width: 100%;
+        background: var(--color-gray-50);
+        gap: var(--space-2);
+        display: flex;
+        align-items: center;
+        padding: var(--space-3);
+
+        &:hover {
+            background: var(--color-gray-100);
+            border-color: var(--color-gray-300);
+        }
+
+        .ww-chat-select-tab-arrow {
+            transition: transform 0.2s ease;
+            color: var(--color-text-secondary);
+            font-size: var(--font-size-xs);
+
+            &.expanded {
+                transform: rotate(90deg);
+            }
+        }
+
+        .ww-chat-select-tab-title {
+            color: var(--color-text-primary);
+            flex: 1;
+            text-align: left;
+        }
+
+        .ww-chat-select-tab-count {
+            color: var(--color-text-secondary);
+            font-size: var(--font-size-xs);
+        }
+    }
+}
+
+/* Tab content */
+.ww-chat-select-tab-content {
+    margin-top: var(--space-2);
+    border-left: 2px solid var(--color-gray-200);
+    margin-left: var(--space-4);
+    padding-left: var(--space-4);
+}
+
+/* Conversation item */
+.ww-chat-select-item {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    margin-bottom: var(--space-2);
+    cursor: pointer;
+    transition: all 0.2s ease;
+
+    &:hover {
+        background: var(--color-gray-50);
+        border-color: var(--color-primary-300);
+        transform: translateY(-1px);
+        box-shadow: var(--shadow-sm);
+    }
+
+    &:active {
+        transform: translateY(0px);
+        box-shadow: none;
+    }
+
+    &:last-child {
+        margin-bottom: 0;
+    }
+}
+
+/* Conversation content */
+.ww-chat-select-conversation {
+    padding: var(--space-3) var(--space-4);
+}
+
+.ww-chat-select-conversation-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: var(--space-2);
+    margin-bottom: var(--space-2);
+
+    .ww-chat-select-status-badge {
+        font-size: var(--font-size-xs);
+        font-weight: var(--font-weight-medium);
+        padding: var(--space-1) var(--space-2);
+        border-radius: var(--radius-sm);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        border: 1px solid;
+
+        &.ww-chat-select-status-active {
+            @include common.ww-status-indicator(var(--color-success-50), var(--color-success-700), var(--color-success-200));
+        }
+
+        &.ww-chat-select-status-completed {
+            @include common.ww-status-indicator(var(--color-gray-50), var(--color-gray-600), var(--color-gray-200));
+        }
+
+        &.ww-chat-select-status-saved {
+            @include common.ww-status-indicator(var(--color-primary-50), var(--color-primary-700), var(--color-primary-200));
+        }
+
+        &.ww-chat-select-status-error {
+            @include common.ww-status-indicator(var(--color-error-50), var(--color-error-700), var(--color-error-200));
+        }
+
+        &.ww-chat-select-status-deleted {
+            @include common.ww-status-indicator(var(--color-warning-50), var(--color-warning-700), var(--color-warning-200));
+        }
+    }
+
+    .ww-chat-select-thread-id {
+        font-family: var(--font-family-mono);
+        font-size: var(--font-size-xs);
+        color: var(--color-text-secondary);
+        background: var(--color-gray-100);
+        padding: var(--space-1) var(--space-2);
+        border-radius: var(--radius-sm);
+    }
+}
+
+.ww-chat-select-conversation-details {
+    .ww-chat-select-timestamp {
+        font-size: var(--font-size-xs);
+        color: var(--color-text-secondary);
+        margin-bottom: var(--space-1);
+    }
+
+    .ww-chat-select-title {
+        font-size: var(--font-size-sm);
+        color: var(--color-text-primary);
+        font-weight: var(--font-weight-medium);
+        line-height: 1.4;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+}
+
+// Responsive design
+@media (max-width: 768px) {
+    .ww-chat-select-content {
+        width: 95%;
+        max-height: 90vh;
+    }
+
+    .ww-chat-select-header {
+        padding: var(--space-4);
+    }
+
+    .ww-chat-select-tree {
+        padding: var(--space-3);
+    }
+
+    .ww-chat-select-tab-content {
+        margin-left: var(--space-3);
+        padding-left: var(--space-3);
+    }
+}

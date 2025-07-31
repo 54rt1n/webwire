@@ -86,6 +86,13 @@ export class ChatUIRenderer {
                 pause: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <rect x="6" y="3" width="4" height="18"/>
                     <rect x="14" y="3" width="4" height="18"/>
+                </svg>`,
+                
+                swap: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M8 3L4 7l4 4"/>
+                    <path d="M4 7h11a4 4 0 0 1 0 8h-1"/>
+                    <path d="M16 21l4-4-4-4"/>
+                    <path d="M20 17H9a4 4 0 0 1 0-8h1"/>
                 </svg>`
             }
         };
@@ -138,6 +145,9 @@ export class ChatUIRenderer {
                         <span class="ww-conversation-id">Ready for conversation</span>
                         <button class="ww-thread-action" id="resync" title="Resync">
                             ${this.templates.icons.replay}
+                        </button>
+                        <button class="ww-thread-action" id="swap-conversation" title="Swap Conversation">
+                            ${this.templates.icons.swap}
                         </button>
                         <button class="ww-thread-action" id="new-conversation" title="New Conversation">
                             ${this.templates.icons.plus}

@@ -79,6 +79,7 @@ export class WebChatPanel {
             fab: this.container.querySelector('.ww-fab'),
             closeBtn: this.container.querySelector('#close-panel'),
             resyncBtn: this.container.querySelector('#resync'),
+            swapConversationBtn: this.container.querySelector('#swap-conversation'),
             newConversationBtn: this.container.querySelector('#new-conversation'),
             chatContent: this.container.querySelector('.ww-content'),
             chatInput: this.container.querySelector('.ww-input'),
@@ -184,6 +185,10 @@ export class WebChatPanel {
 
         this.elements.resyncBtn?.addEventListener('click', () => {
             this.handleResync();
+        });
+
+        this.elements.swapConversationBtn?.addEventListener('click', () => {
+            this.handleSwapConversation();
         });
         
         this.elements.saveIndicator?.addEventListener('click', () => {
@@ -1156,6 +1161,11 @@ export class WebChatPanel {
     handleResync() {
         console.log('[WebChatPanel] Resync requested');
         this.eventBus.emit(EVENTS.CHAT.RESYNC, {});
+    }
+
+    handleSwapConversation() {
+        console.log('[WebChatPanel] Swap conversation requested');
+        this.eventBus.emit(EVENTS.CHAT.SWAP_CONVERSATION, {});
     }
     
     /**
