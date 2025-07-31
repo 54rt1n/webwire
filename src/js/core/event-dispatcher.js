@@ -104,12 +104,21 @@ export class EventDispatcher {
     }
 
     if (this.context === EVENT_CONTEXT.POPUP) {
-      // Route through background to content
-      return this.sendToBackground('ROUTE_TO_CONTENT', {
+      // Send directly to content script using chrome.tabs.sendMessage
+      if (!tabId) {
+        const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+        if (tab) {
+          tabId = tab.id;
+        }
+      }
+      
+      return this.sendChromeMessage({
+        type: 'CROSS_CONTEXT_EVENT',
         event,
         data,
-        tabId
-      }, timeout);
+        source: this.context,
+        target: 'content'
+      }, timeout, tabId);
     }
 
     if (this.context === EVENT_CONTEXT.PANEL) {
@@ -170,7 +179,7 @@ export class EventDispatcher {
 
   // ── Chrome Extension Messaging ───────────────────────────────────
 
-  async sendChromeMessage(message, timeout = this.defaultTimeout, retryCount = 0) {
+  async sendChromeMessage(message, timeout = this.defaultTimeout, tabId = undefined, retryCount = 0) {
     return new Promise((resolve, reject) => {
       const requestId = ++this.requestId;
       
@@ -199,8 +208,12 @@ export class EventDispatcher {
       // Add tab context when available and relevant
       this.addTabContextToMessage(enhancedMessage);
 
-      // Send message
-      chrome.runtime.sendMessage(enhancedMessage, (response) => {
+      // Send message - use chrome.tabs.sendMessage if tabId provided, otherwise chrome.runtime.sendMessage
+      const sendMessage = tabId ? 
+        (msg, callback) => chrome.tabs.sendMessage(tabId, msg, callback) :
+        (msg, callback) => chrome.runtime.sendMessage(msg, callback);
+        
+      sendMessage(enhancedMessage, (response) => {
         const pending = this.pendingRequests.get(requestId);
         if (!pending) return; // Already timed out
 

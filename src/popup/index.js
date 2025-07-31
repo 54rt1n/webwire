@@ -51,8 +51,28 @@ class WebWirePopupApp {
             onConversations: (e) => this.openConversations(e),
             onPrompts: (e) => this.openPrompts(e),
             onSettings: () => this.openSettings(),
-            onHelp: (e) => this.openHelp(e)
+            onHelp: (e) => this.openHelp(e),
+            onToggleAssistant: (e) => this.toggleAssistant(e)
         });
+    }
+
+    /**
+     * Toggle assistant visibility
+     * @param {Event} e - Click event
+     */
+    async toggleAssistant(e) {
+        try {
+            console.log('[WebWirePopupApp] Toggling assistant...');
+            const result = await this.popup.toggleAssistant();
+            console.log('[WebWirePopupApp] Assistant toggled:', result);
+            
+            // Update the UI to reflect the new state
+            await this.popup.updateAssistantUI(result.visible);
+            
+        } catch (error) {
+            console.error('[WebWirePopupApp] Failed to toggle assistant:', error);
+            this.popup.showError(`Failed to toggle assistant: ${error.message}`);
+        }
     }
 
 

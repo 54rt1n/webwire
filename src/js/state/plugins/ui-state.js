@@ -35,7 +35,8 @@ export class UiStatePlugin {
      * Get auto-inject settings
      */
     getAutoInject() {
-        return this.stateService.state.settings.ui?.autoInject;
+        return this.getAssistantEnabled() && 
+               (this.stateService.state.settings.ui?.autoInject ?? false);
     }
 
     /**
@@ -179,5 +180,37 @@ export class UiStatePlugin {
      */
     setVoiceSettings(voiceSettings) {
         this.stateService.state.ui.voice = voiceSettings;
+    }
+
+    /**
+     * Get assistant enabled state
+     * @returns {boolean}
+     */
+    getAssistantEnabled() {
+        return this.stateService.state.ui.assistantEnabled ?? true;
+    }
+
+    /**
+     * Set assistant enabled state
+     * @param {boolean} enabled
+     */
+    setAssistantEnabled(enabled) {
+        this.stateService.state.ui.assistantEnabled = enabled;
+    }
+
+    /**
+     * Check if panel is visible
+     * @returns {boolean}
+     */
+    isPanelVisible() {
+        return this.stateService.state.ui.panelVisible ?? false;
+    }
+
+    /**
+     * Set panel visibility
+     * @param {boolean} visible
+     */
+    setPanelVisible(visible) {
+        this.stateService.state.ui.panelVisible = visible;
     }
 } 

@@ -237,12 +237,29 @@ class WebWireBackground {
         this.eventBus.onAsync(BACKGROUND_ACTIONS.GET_EXTENSION_STATS, (data, options) => {
             const conversationStats = this.stateService?.conversation?.getStats() || { conversationCount: 0, totalMessages: 0 };
             const configurationValid = this.stateService?.settings?.isValid() || false;
+            const assistantEnabled = this.stateService?.ui?.getAssistantEnabled() ?? true;
             
             return {
                 conversationCount: conversationStats.conversationCount,
                 totalMessages: conversationStats.totalMessages,
-                configurationValid: configurationValid
+                configurationValid: configurationValid,
+                assistantEnabled: assistantEnabled
             };
+        });
+
+        // Assistant state management
+        this.eventBus.onAsync(BACKGROUND_ACTIONS.GET_ASSISTANT_STATE, async (data, options) => {
+            const assistantEnabled = this.stateService?.ui?.getAssistantEnabled() ?? true;
+            return { assistantEnabled };
+        });
+
+        this.eventBus.onAsync(BACKGROUND_ACTIONS.UPDATE_ASSISTANT_VISIBILITY, async (data, options) => {
+            if (this.stateService?.ui) {
+                this.stateService.ui.setAssistantEnabled(data.visible);
+                await this.stateService.disk.saveToStorage();
+                return { success: true, visible: data.visible };
+            }
+            throw new Error('State service not initialized');
         });
 
         this.eventBus.onAsync(BACKGROUND_ACTIONS.PING, (data, options) => {

@@ -1,7 +1,7 @@
 import '../../src/shared/global.scss';
 import './style.scss';
 import { EventDispatcher } from '../js/core/event-dispatcher.js';
-import { BACKGROUND_ACTIONS } from '../js/core/cc-actions.js';
+import { BACKGROUND_ACTIONS, CONTENT_ACTIONS } from '../js/core/cc-actions.js';
 
 /**
  * UI management for the WebWire popup providing status display and user interaction controls.
@@ -48,6 +48,10 @@ export class WebWirePopup {
         this.conversationsBtn = document.getElementById('conversations-btn');
         this.promptsBtn = document.getElementById('prompts-btn');
         this.settingsBtn = document.getElementById('settings-btn');
+        
+        // Assistant toggle elements
+        this.toggleAssistantBtn = document.getElementById('toggle-assistant-btn');
+        this.toggleAssistantText = document.getElementById('toggle-assistant-text');
         this.helpBtn = document.getElementById('help-btn');
     }
 
@@ -62,6 +66,9 @@ export class WebWirePopup {
 
             // Load initial status
             await this.loadStatus();
+
+            // Initialize assistant UI
+            await this.initializeAssistantUI();
 
             // Show content
             this.showContent();
@@ -81,6 +88,7 @@ export class WebWirePopup {
         this.promptsBtn.addEventListener('click', handlers.onPrompts);
         this.settingsBtn.addEventListener('click', handlers.onSettings);
         this.helpBtn.addEventListener('click', handlers.onHelp);
+        this.toggleAssistantBtn.addEventListener('click', handlers.onToggleAssistant);
     }
 
     /**
@@ -183,6 +191,152 @@ export class WebWirePopup {
      */
     getCurrentTab() {
         return this.currentTab;
+    }
+
+    /**
+     * Toggle assistant visibility
+     */
+    async toggleAssistant() {
+        const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+        
+        let currentlyVisible = false;
+        
+        try {
+            // First check if content script exists via EventDispatcher
+            const pingResponse = await this.dispatcher.dispatch(
+                CONTENT_ACTIONS.PING,
+                {},
+                { target: 'content', tabId: tab.id }
+            );
+            
+            if (!pingResponse?.success) {
+                // Content script not present, request background to inject it
+                await this.dispatcher.dispatch(
+                    BACKGROUND_ACTIONS.INJECT_CONTENT_SCRIPT,
+                    { tabId: tab.id },
+                    { target: 'background' }
+                );
+                
+                // Give it a moment to initialize
+                await new Promise(resolve => setTimeout(resolve, 100));
+            }
+            
+            // Get current panel state from content script
+            try {
+                const { success, result } = await this.dispatcher.dispatch(
+                    CONTENT_ACTIONS.GET_PANEL_STATE,
+                    {},
+                    { target: 'content', tabId: tab.id }
+                );
+                
+                if (success && result) {
+                    currentlyVisible = result.isInjected || false;
+                }
+            } catch (error) {
+                console.log('[WebWirePopup] Could not get panel state:', error);
+                // Fallback to background state
+                const stateResponse = await this.dispatcher.dispatch(
+                    BACKGROUND_ACTIONS.GET_ASSISTANT_STATE,
+                    {},
+                    { target: 'background' }
+                );
+                currentlyVisible = stateResponse.result?.assistantEnabled ?? false;
+            }
+            
+            // Toggle visibility via EventDispatcher
+            const response = await this.dispatcher.dispatch(
+                currentlyVisible ? CONTENT_ACTIONS.HIDE_ASSISTANT : CONTENT_ACTIONS.SHOW_ASSISTANT,
+                {},
+                { target: 'content', tabId: tab.id }
+            );
+            
+            if (response?.success) {
+                // Update state in background
+                await this.updateAssistantVisibility(!currentlyVisible);
+                return { success: true, visible: !currentlyVisible };
+            }
+            
+        } catch (error) {
+            console.error('Failed to toggle assistant:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Update visibility state via background
+     */
+    async updateAssistantVisibility(visible) {
+        return await this.dispatcher.dispatch(
+            BACKGROUND_ACTIONS.UPDATE_ASSISTANT_VISIBILITY,
+            { visible },
+            { target: 'background' }
+        );
+    }
+
+
+    /**
+     * Update assistant UI elements
+     */
+    async updateAssistantUI(visible, enabled = true) {
+        if (this.toggleAssistantBtn) {
+            this.toggleAssistantBtn.checked = visible;
+            this.toggleAssistantBtn.disabled = !enabled;
+        }
+        if (this.toggleAssistantText) {
+            if (!enabled) {
+                this.toggleAssistantText.textContent = 'Assistant (unavailable)';
+            } else {
+                this.toggleAssistantText.textContent = 'Assistant';
+            }
+        }
+    }
+
+    /**
+     * Initialize assistant UI state
+     */
+    async initializeAssistantUI() {
+        try {
+            const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+            
+            // First try to get panel state from content script
+            try {
+                const { success, result } = await this.dispatcher.dispatch(
+                    CONTENT_ACTIONS.GET_PANEL_STATE,
+                    {},
+                    { target: 'content', tabId: tab.id }
+                );
+                
+                if (success && result) {
+                    const { isInjected = false } = result;
+                    await this.updateAssistantUI(isInjected);
+                    // Enable the toggle since we can communicate
+                    if (this.toggleAssistantBtn) {
+                        this.toggleAssistantBtn.disabled = false;
+                    }
+                    return;
+                }
+            } catch (contentError) {
+                // Content script might not be injected yet
+                console.log('[WebWirePopup] Could not get panel state from content script:', contentError);
+            }
+            
+            // If we can't get panel state, disable the toggle
+            if (this.toggleAssistantBtn) {
+                this.toggleAssistantBtn.disabled = true;
+                this.toggleAssistantBtn.checked = false;
+            }
+            if (this.toggleAssistantText) {
+                this.toggleAssistantText.textContent = 'Assistant (unavailable)';
+            }
+            
+        } catch (error) {
+            console.error('[WebWirePopup] Failed to initialize assistant UI:', error);
+            // Disable toggle on error
+            if (this.toggleAssistantBtn) {
+                this.toggleAssistantBtn.disabled = true;
+                this.toggleAssistantBtn.checked = false;
+            }
+        }
     }
 
     /**

@@ -83,6 +83,11 @@ export const EVENTS = {
         INJECT_PANEL: 'ui:inject-panel',
         THREAD_SAVED: 'ui:thread-saved',
     },
+    ASSISTANT: {
+        SHOWN: 'assistant:shown',
+        HIDDEN: 'assistant:hidden',
+        STATE_CHANGED: 'assistant:state-changed'
+    },
     TAB: {
         CHANGED: 'tab:changed',
         CLEARED: 'tab:cleared'

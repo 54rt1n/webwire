@@ -35,7 +35,12 @@ export const BACKGROUND_ACTIONS = {
     PING: 'PING',
     
     // Error reporting
-    REPORT_ERROR: 'REPORT_ERROR'
+    REPORT_ERROR: 'REPORT_ERROR',
+    
+    // Assistant state management
+    GET_ASSISTANT_STATE: 'GET_ASSISTANT_STATE',
+    UPDATE_ASSISTANT_VISIBILITY: 'UPDATE_ASSISTANT_VISIBILITY',
+    INJECT_CONTENT_SCRIPT: 'INJECT_CONTENT_SCRIPT'
 };
 
 /**
@@ -55,7 +60,12 @@ export const CONTENT_ACTIONS = {
     CONVERSATION_UPDATED: 'CONVERSATION_UPDATED',
     
     // Health check
-    PING: 'PING'
+    PING: 'PING',
+    
+    // Assistant visibility control
+    HIDE_ASSISTANT: 'HIDE_ASSISTANT',
+    SHOW_ASSISTANT: 'SHOW_ASSISTANT',
+    GET_PANEL_STATE: 'GET_PANEL_STATE'
 };
 
 

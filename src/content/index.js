@@ -86,6 +86,10 @@ class WebWireContentHost {
         this.setupUIListeners();
         console.log('[WebWireContentHost] UI listeners set up');
 
+        // Set up content action listeners
+        this.setupContentActions();
+        console.log('[WebWireContentHost] Content actions set up');
+
         // Initialize ChatService with the core services
         await this.chatService.initialize(this.core.mcpConnector, this.core.stateService);
         console.log('[WebWireContentHost] ChatService initialized');
@@ -143,6 +147,89 @@ class WebWireContentHost {
         // Clean up on page unload
         window.addEventListener('beforeunload', () => {
             this.cleanup();
+        });
+    }
+
+    /**
+     * Setup content action listeners for cross-context events
+     */
+    setupContentActions() {
+        // Handle assistant visibility commands via EventBus
+        this.eventBus.onAsync(CONTENT_ACTIONS.HIDE_ASSISTANT, async () => {
+            console.log('[WebWireContentHost] Destroying assistant UI...');
+            
+            try {
+                if (this.chatService && this.chatService.panel) {
+                    // Actually destroy the panel DOM elements
+                    this.chatService.panel.destroy();
+                    
+                    // Emit event for any components that need to know
+                    this.eventBus.emit(EVENTS.ASSISTANT.HIDDEN);
+                    
+                    return { success: true, timestamp: Date.now() };
+                }
+                
+                return { success: false, error: 'Chat service not initialized' };
+            } catch (error) {
+                console.error('[WebWireContentHost] Error destroying assistant:', error);
+                return { success: false, error: error.message };
+            }
+        });
+
+        this.eventBus.onAsync(CONTENT_ACTIONS.SHOW_ASSISTANT, async () => {
+            console.log('[WebWireContentHost] Re-injecting assistant UI...');
+            
+            try {
+                if (this.chatService) {
+                    // Re-inject the panel if it's not ready
+                    if (!this.chatService.panel.isReady()) {
+                        // Re-initialize just the panel, not the entire ChatService
+                        await this.chatService.panel.initialize();
+                        
+                        // Send current state to the newly injected panel
+                        await this.sendInitialStateToPanel();
+                    }
+                    
+                    // Show the panel
+                    this.chatService.showPanel();
+                    
+                    // Emit event for any components that need to know
+                    this.eventBus.emit(EVENTS.ASSISTANT.SHOWN);
+                    
+                    return { success: true, timestamp: Date.now() };
+                }
+                
+                return { success: false, error: 'Chat service not initialized' };
+            } catch (error) {
+                console.error('[WebWireContentHost] Error re-injecting assistant:', error);
+                return { success: false, error: error.message };
+            }
+        });
+
+        this.eventBus.onAsync(CONTENT_ACTIONS.PING, async () => {
+            return { success: true, alive: true };
+        });
+
+        this.eventBus.onAsync(CONTENT_ACTIONS.GET_PANEL_STATE, async () => {
+            console.log('[WebWireContentHost] Getting panel state...', {
+                hasChatService: !!this.chatService,
+                hasPanel: !!this.chatService?.panel,
+                isInjected: this.chatService?.panel?.isInjected,
+                isVisible: this.chatService?.panel?.isVisible
+            });
+            
+            try {
+                const panelState = {
+                    isInjected: this.chatService?.panel?.isInjected || false,
+                    isVisible: this.chatService?.panel?.isVisible || false
+                };
+                
+                console.log('[WebWireContentHost] Returning panel state:', panelState);
+                return { success: true, ...panelState };
+            } catch (error) {
+                console.error('[WebWireContentHost] Error getting panel state:', error);
+                return { success: false, error: error.message };
+            }
         });
     }
 
