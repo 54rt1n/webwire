@@ -71,7 +71,12 @@ class WebWirePopupApp {
             
         } catch (error) {
             console.error('[WebWirePopupApp] Failed to toggle assistant:', error);
-            this.popup.showError(`Failed to toggle assistant: ${error.message}`);
+            if (error.autoInjectDisabled) {
+                // Show a more user-friendly message for auto-inject disabled
+                this.popup.showError('Auto-inject is disabled. Click the WebWire icon in the toolbar while on a webpage to activate the assistant.');
+            } else {
+                this.popup.showError(`Failed to toggle assistant: ${error.message}`);
+            }
         }
     }
 

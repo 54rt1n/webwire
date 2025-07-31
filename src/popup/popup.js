@@ -243,10 +243,13 @@ export class WebWirePopup {
                 currentlyVisible = stateResponse.result?.assistantEnabled ?? false;
             }
             
-            // Toggle visibility via EventDispatcher
+            // Toggle panel via EventDispatcher
             const response = await this.dispatcher.dispatch(
-                currentlyVisible ? CONTENT_ACTIONS.HIDE_ASSISTANT : CONTENT_ACTIONS.SHOW_ASSISTANT,
-                {},
+                CONTENT_ACTIONS.UPDATE_PANEL,
+                { 
+                    action: currentlyVisible ? 'hide' : 'show',
+                    forceInject: true  // User explicitly clicked toggle, always inject
+                },
                 { target: 'content', tabId: tab.id }
             );
             
@@ -254,6 +257,16 @@ export class WebWirePopup {
                 // Update state in background
                 await this.updateAssistantVisibility(!currentlyVisible);
                 return { success: true, visible: !currentlyVisible };
+            } else if (response?.autoInjectDisabled) {
+                // Auto-inject is disabled, show appropriate message
+                console.log('[WebWirePopup] Auto-inject is disabled');
+                return { 
+                    success: false, 
+                    error: 'Auto-inject is disabled. Click the extension icon on the page to manually inject the assistant.',
+                    autoInjectDisabled: true 
+                };
+            } else {
+                throw new Error(response?.error || 'Failed to update panel');
             }
             
         } catch (error) {

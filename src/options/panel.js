@@ -8,6 +8,7 @@ export class OptionsPanel {
         this.renderDynamicSections();
         this.elements = this._DOMElements();
         this.populateTokenizerDropdowns();
+        this.populateVoiceDropdown();
     }
 
     /**
@@ -17,6 +18,14 @@ export class OptionsPanel {
         const elements = {
             userNameInput: document.getElementById('userName'),
             personaNameInput: document.getElementById('personaName'),
+            autoInjectCheckbox: document.getElementById('autoInject'),
+            voiceSettings: {
+                rate: document.getElementById('voiceRate'),
+                pitch: document.getElementById('voicePitch'),
+                volume: document.getElementById('voiceVolume'),
+                lang: document.getElementById('voiceLang'),
+                voice: document.getElementById('voiceSelect')
+            },
             providerInputs: {
                 featherless: { apiKey: document.getElementById('featherlessApiKey') },
                 openai: { apiKey: document.getElementById('openaiApiKey') },
@@ -126,6 +135,101 @@ export class OptionsPanel {
     }
 
     /**
+     * Populate voice dropdown with available speech synthesis voices
+     */
+    populateVoiceDropdown() {
+        if (!('speechSynthesis' in window)) return;
+        
+        const voiceSelect = this.elements.voiceSettings?.voice;
+        const langSelect = this.elements.voiceSettings?.lang;
+        if (!voiceSelect || !langSelect) return;
+        
+        const loadVoices = () => {
+            const voices = speechSynthesis.getVoices();
+            const selectedLang = langSelect.value;
+            const previousSelection = voiceSelect.value;
+            
+            // Clear existing options except the default
+            while (voiceSelect.options.length > 1) {
+                voiceSelect.remove(1);
+            }
+            
+            // Filter voices by selected language
+            const matchingVoices = voices.filter(voice => 
+                voice.lang.startsWith(selectedLang.split('-')[0])
+            );
+            
+            // If we have matching voices for the selected language, show only those
+            if (matchingVoices.length > 0) {
+                // Group by exact language variant
+                const voicesByLang = {};
+                matchingVoices.forEach(voice => {
+                    const lang = voice.lang;
+                    if (!voicesByLang[lang]) {
+                        voicesByLang[lang] = [];
+                    }
+                    voicesByLang[lang].push(voice);
+                });
+                
+                // Add voices grouped by language variant
+                Object.keys(voicesByLang).sort().forEach(lang => {
+                    const optgroup = document.createElement('optgroup');
+                    optgroup.label = lang;
+                    
+                    voicesByLang[lang].forEach(voice => {
+                        const option = document.createElement('option');
+                        option.value = voice.name;
+                        option.textContent = `${voice.name} ${voice.localService ? '(Local)' : '(Remote)'}`;
+                        optgroup.appendChild(option);
+                    });
+                    
+                    voiceSelect.appendChild(optgroup);
+                });
+            } else {
+                // No matching voices, show all voices grouped by language
+                const voicesByLang = {};
+                voices.forEach(voice => {
+                    const lang = voice.lang;
+                    if (!voicesByLang[lang]) {
+                        voicesByLang[lang] = [];
+                    }
+                    voicesByLang[lang].push(voice);
+                });
+                
+                Object.keys(voicesByLang).sort().forEach(lang => {
+                    const optgroup = document.createElement('optgroup');
+                    optgroup.label = lang;
+                    
+                    voicesByLang[lang].forEach(voice => {
+                        const option = document.createElement('option');
+                        option.value = voice.name;
+                        option.textContent = `${voice.name} ${voice.localService ? '(Local)' : '(Remote)'}`;
+                        optgroup.appendChild(option);
+                    });
+                    
+                    voiceSelect.appendChild(optgroup);
+                });
+            }
+            
+            // Try to restore previous selection if it still exists
+            if (previousSelection) {
+                voiceSelect.value = previousSelection;
+            }
+        };
+        
+        // Load voices immediately if available
+        loadVoices();
+        
+        // Chrome loads voices asynchronously
+        if (speechSynthesis.onvoiceschanged !== undefined) {
+            speechSynthesis.onvoiceschanged = loadVoices;
+        }
+        
+        // Update voice list when language changes
+        langSelect.addEventListener('change', loadVoices);
+    }
+
+    /**
      * Set all settings fields from a settings object
      */
     setAllSettings(settings) {
@@ -134,6 +238,18 @@ export class OptionsPanel {
         // General settings
         this.elements.userNameInput.value = settings.aim?.userName || '';
         this.elements.personaNameInput.value = settings.aim?.personaName || '';
+
+        // UI settings
+        this.elements.autoInjectCheckbox.checked = settings.ui?.autoInject || false;
+        
+        // Voice settings
+        if (settings.ui?.voice) {
+            this.elements.voiceSettings.rate.value = settings.ui.voice.rate || '';
+            this.elements.voiceSettings.pitch.value = settings.ui.voice.pitch || '';
+            this.elements.voiceSettings.volume.value = settings.ui.voice.volume || '';
+            this.elements.voiceSettings.lang.value = settings.ui.voice.lang || 'en-US';
+            this.elements.voiceSettings.voice.value = settings.ui.voice.voice || '';
+        }
 
         // System prompt settings
         this.elements.systemMessage.value = settings.aim?.systemMessage || '';
@@ -202,6 +318,16 @@ export class OptionsPanel {
             ai: {
                 providers: {},
                 models: {}
+            },
+            ui: {
+                autoInject: this.elements.autoInjectCheckbox.checked,
+                voice: {
+                    rate: parseFloat(this.elements.voiceSettings.rate.value) || 1.0,
+                    pitch: parseFloat(this.elements.voiceSettings.pitch.value) || 1.0,
+                    volume: parseFloat(this.elements.voiceSettings.volume.value) || 1.0,
+                    lang: this.elements.voiceSettings.lang.value || 'en-US',
+                    voice: this.elements.voiceSettings.voice.value || undefined
+                }
             }
         };
 

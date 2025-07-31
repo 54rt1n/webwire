@@ -62,9 +62,8 @@ export const CONTENT_ACTIONS = {
     // Health check
     PING: 'PING',
     
-    // Assistant visibility control
-    HIDE_ASSISTANT: 'HIDE_ASSISTANT',
-    SHOW_ASSISTANT: 'SHOW_ASSISTANT',
+    // Panel control
+    UPDATE_PANEL: 'UPDATE_PANEL',
     GET_PANEL_STATE: 'GET_PANEL_STATE'
 };
 

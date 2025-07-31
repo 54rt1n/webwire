@@ -101,24 +101,31 @@ class WebWireContentHost {
         await this.core.connect();
         
         
-        // Handle auto-inject and panel restoration
+        // Handle auto-inject - only inject if autoInject setting is true
         try {
             const shouldInject = await this.shouldAutoInject();
-            const shouldShowPanel = this.core.stateService.ui?.panelVisible || false;
             
-            if (shouldInject || shouldShowPanel) {
-                console.log(shouldInject ? 'Auto-inject enabled, injecting panel...' : 'Panel was previously visible, restoring...');
+            console.log('[WebWireContentHost] Auto-inject check:', {
+                shouldInject,
+                autoInjectSetting: this.core.stateService.settings?.getSettings()?.ui?.autoInject,
+                assistantEnabled: this.core.stateService.ui?.getAssistantEnabled()
+            });
+            
+            if (shouldInject) {
+                console.log('[WebWireContentHost] Auto-inject enabled, injecting panel...');
                 await this.injectPanel();
                 
+                // After injecting, check if we should also show it
+                const shouldShowPanel = this.core.stateService.ui?.isPanelVisible() || false;
                 if (shouldShowPanel) {
-                    console.log('Showing panel based on background state');
-                    setTimeout(() => {
-                        this.chatService.showPanel();
-                    }, 100);
+                    console.log('[WebWireContentHost] Panel was previously visible, showing it...');
+                    await this.chatService.showPanel();
                 }
+            } else {
+                console.log('[WebWireContentHost] Auto-inject disabled, not injecting panel');
             }
         } catch (error) {
-            console.error('[WebWireContentHost] Auto-inject/restore failed:', error);
+            console.error('[WebWireContentHost] Auto-inject failed:', error);
         }
         
         console.log('[WebWireContentHost] Initialization complete');
@@ -154,54 +161,79 @@ class WebWireContentHost {
      * Setup content action listeners for cross-context events
      */
     setupContentActions() {
-        // Handle assistant visibility commands via EventBus
-        this.eventBus.onAsync(CONTENT_ACTIONS.HIDE_ASSISTANT, async () => {
-            console.log('[WebWireContentHost] Destroying assistant UI...');
+        // Handle panel update commands via EventBus
+        this.eventBus.onAsync(CONTENT_ACTIONS.UPDATE_PANEL, async (data) => {
+            console.log('[WebWireContentHost] UPDATE_PANEL request:', data);
             
             try {
-                if (this.chatService && this.chatService.panel) {
-                    // Actually destroy the panel DOM elements
-                    this.chatService.panel.destroy();
-                    
-                    // Emit event for any components that need to know
-                    this.eventBus.emit(EVENTS.ASSISTANT.HIDDEN);
-                    
-                    return { success: true, timestamp: Date.now() };
+                const { action, forceInject = false } = data;
+                
+                if (!this.chatService) {
+                    return { success: false, error: 'Chat service not initialized' };
                 }
                 
-                return { success: false, error: 'Chat service not initialized' };
-            } catch (error) {
-                console.error('[WebWireContentHost] Error destroying assistant:', error);
-                return { success: false, error: error.message };
-            }
-        });
-
-        this.eventBus.onAsync(CONTENT_ACTIONS.SHOW_ASSISTANT, async () => {
-            console.log('[WebWireContentHost] Re-injecting assistant UI...');
-            
-            try {
-                if (this.chatService) {
-                    // Re-inject the panel if it's not ready
-                    if (!this.chatService.panel.isReady()) {
-                        // Re-initialize just the panel, not the entire ChatService
-                        await this.chatService.panel.initialize();
+                switch (action) {
+                    case 'hide':
+                        // Hide and destroy the panel
+                        if (this.chatService.panel) {
+                            this.chatService.panel.destroy();
+                            this.eventBus.emit(EVENTS.ASSISTANT.HIDDEN);
+                            return { success: true, action: 'hidden', timestamp: Date.now() };
+                        }
+                        return { success: true, action: 'already_hidden' };
                         
-                        // Send current state to the newly injected panel
-                        await this.sendInitialStateToPanel();
-                    }
-                    
-                    // Show the panel
-                    this.chatService.showPanel();
-                    
-                    // Emit event for any components that need to know
-                    this.eventBus.emit(EVENTS.ASSISTANT.SHOWN);
-                    
-                    return { success: true, timestamp: Date.now() };
+                    case 'show':
+                        // Check autoInject setting first (unless forceInject is true)
+                        if (!forceInject) {
+                            const autoInject = this.core.stateService?.ui?.getAutoInject() || false;
+                            if (!autoInject && !this.chatService.panel.isReady()) {
+                                console.log('[WebWireContentHost] Auto-inject disabled, not injecting panel');
+                                return { 
+                                    success: false, 
+                                    error: 'Auto-inject is disabled', 
+                                    autoInjectDisabled: true 
+                                };
+                            }
+                        }
+                        
+                        // Show the panel (ChatService will handle initialization and state)
+                        await this.chatService.showPanel();
+                        this.eventBus.emit(EVENTS.ASSISTANT.SHOWN);
+                        return { success: true, action: 'shown', timestamp: Date.now() };
+                        
+                    case 'toggle':
+                        // Toggle between show/hide
+                        if (this.chatService.panel.isVisible) {
+                            // Hide it
+                            this.chatService.hidePanel();
+                            return { success: true, action: 'hidden', visible: false };
+                        } else if (this.chatService.panel.isReady()) {
+                            // Show it if already injected
+                            this.chatService.showPanel();
+                            return { success: true, action: 'shown', visible: true };
+                        } else {
+                            // Not injected - check autoInject
+                            if (!forceInject) {
+                                const autoInject = this.core.stateService?.ui?.getAutoInject() || false;
+                                if (!autoInject) {
+                                    return { 
+                                        success: false, 
+                                        error: 'Auto-inject is disabled', 
+                                        autoInjectDisabled: true 
+                                    };
+                                }
+                            }
+                            // Show the panel (showPanel will initialize if needed)
+                            await this.chatService.showPanel();
+                            this.eventBus.emit(EVENTS.ASSISTANT.SHOWN);
+                            return { success: true, action: 'shown', visible: true };
+                        }
+                        
+                    default:
+                        return { success: false, error: `Unknown action: ${action}` };
                 }
-                
-                return { success: false, error: 'Chat service not initialized' };
             } catch (error) {
-                console.error('[WebWireContentHost] Error re-injecting assistant:', error);
+                console.error('[WebWireContentHost] Error updating panel:', error);
                 return { success: false, error: error.message };
             }
         });
@@ -238,7 +270,10 @@ class WebWireContentHost {
      */
     async shouldAutoInject() {
         try {
-            return this.core.stateService?.ui?.getAutoInject() || false;
+            // Use the accessor method which checks both assistantEnabled and autoInject
+            const autoInject = this.core.stateService?.ui?.getAutoInject();
+            console.log('[WebWireContentHost] shouldAutoInject:', autoInject);
+            return autoInject || false;
         } catch (error) {
             console.warn('[WebWireContentHost] Could not check auto-inject setting:', error);
             return false;
@@ -252,13 +287,8 @@ class WebWireContentHost {
         console.log('[WebWireContentHost] Injecting panel...');
         
         try {
-            // The ChatService handles its own panel initialization
-            if (!this.chatService.isReady()) {
-                console.log('[WebWireContentHost] ChatService not ready, initializing...');
-                await this.chatService.initialize();
-            }
-            
-            await this.sendInitialStateToPanel();
+            // Just show the panel - showPanel will initialize if needed
+            await this.chatService.showPanel();
             
             console.log('[WebWireContentHost] Panel injected successfully');
         } catch (error) {

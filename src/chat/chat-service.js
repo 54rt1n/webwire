@@ -179,20 +179,8 @@ export class ChatService extends EventBindableComponent {
         console.log('[ChatService] Event listeners set up');
         
         try {
-            // Initialize the panel
-            await this.panel.initialize();
-            console.log('[ChatService] Panel initialized');
-            
-            // Update initial connection status
-            this.updateConnectionStatus();
-            console.log('[ChatService] Connection status updated');
-            
-            // Set active prompts for dynamic buttons
-            if (this.stateService.prompts) {
-                const activePrompts = this.stateService.prompts.getActivePrompts();
-                this.panel.setActivePrompts(activePrompts);
-                console.log('[ChatService] Active prompts set:', Object.keys(activePrompts));
-            }
+            // DO NOT initialize panel here - it injects DOM
+            console.log('[ChatService] Skipping panel initialization');
             
             // Load current conversation on startup
             console.log('[ChatService] Loading current conversation on startup...');
@@ -1000,13 +988,21 @@ export class ChatService extends EventBindableComponent {
     /**
      * Show the panel
      */
-    showPanel() {
-        if (this.panel.isReady()) {
-            this.panel.show();
-            
-            // Request host to persist visibility state
-            this.eventBus.emit(EVENTS.CHAT.SAVE_PANEL_VISIBILITY, { visible: true }, { target: EVENT_CONTEXT.BACKGROUND });
+    async showPanel() {
+        if (!this.panel.isReady()) {
+            await this.panel.initialize();
+            this.updateConnectionStatus();
+            if (this.stateService.prompts) {
+                const activePrompts = this.stateService.prompts.getActivePrompts();
+                this.panel.setActivePrompts(activePrompts);
+            }
+            await this.loadCurrentConversation();
         }
+        
+        this.panel.show();
+        
+        // Request host to persist visibility state
+        this.eventBus.emit(EVENTS.CHAT.SAVE_PANEL_VISIBILITY, { visible: true }, { target: EVENT_CONTEXT.BACKGROUND });
     }
 
     /**
