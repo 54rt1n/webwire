@@ -107,25 +107,49 @@
   .ww-actions {
     @extend %ww-flex-column;
     gap: var(--space-2);
+    margin: 0 var(--space-3);
     
     .ww-btn {
       @include common.ww-button-base;
       text-decoration: none;
       font-weight: var(--font-weight-medium);
+      padding: var(--space-2) var(--space-4);
+      font-size: var(--font-size-sm);
+      gap: var(--space-2);
       
-      &.ww-primary {
+      &#conversations-btn {
         @include common.ww-button-variant-primary;
       }
       
-      &.ww-sm {
-        padding: var(--space-1) var(--space-2);
-        font-size: var(--font-size-xs);
-        gap: var(--space-1);
+      &#prompts-btn {
+        @include common.ww-button-variant-success;
+      }
+      
+      &#settings-btn {
+        background-color: var(--color-gray-450);
+        color: white;
+        border-color: var(--color-gray-500);
+        
+        &:hover:not(:disabled) {
+          background-color: var(--color-gray-500);
+          border-color: var(--color-gray-600);
+        }
+      }
+      
+      &#help-btn {
+        background-color: var(--color-gray-450);
+        color: white;
+        border-color: var(--color-gray-500);
+        
+        &:hover:not(:disabled) {
+          background-color: var(--color-gray-500);
+          border-color: var(--color-gray-600);
+        }
       }
       
       .ww-btn-icon {
-        width: var(--space-3);
-        height: var(--space-3);
+        width: var(--space-4);
+        height: var(--space-4);
       }
     }
   }

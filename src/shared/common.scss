@@ -56,18 +56,18 @@
 @mixin ww-button-variant-primary {
   background-color: var(--color-primary-500);
   color: white;
-  border-color: var(--color-primary-500);
+  border-color: var(--color-primary-600);
   
   &:hover:not(:disabled) {
     background-color: var(--color-primary-600);
-    border-color: var(--color-primary-600);
+    border-color: var(--color-primary-700);
   }
 }
 
 @mixin ww-button-variant-success {
   background-color: var(--color-success-500);
   color: white;
-  border-color: var(--color-success-500);
+  border-color: var(--color-success-600);
   
   &:hover:not(:disabled) {
     background-color: var(--color-success-600);
@@ -78,7 +78,7 @@
 @mixin ww-button-variant-danger {
   background-color: var(--color-error-500);
   color: white;
-  border-color: var(--color-error-500);
+  border-color: var(--color-error-600);
   
   &:hover:not(:disabled) {
     background-color: var(--color-error-600);
@@ -89,7 +89,7 @@
 @mixin ww-button-variant-warning {
   background-color: var(--color-warning-500);
   color: white;
-  border-color: var(--color-warning-500);
+  border-color: var(--color-warning-600);
   
   &:hover:not(:disabled) {
     background-color: var(--color-warning-600);
@@ -100,11 +100,11 @@
 @mixin ww-button-variant-secondary {
   background-color: var(--color-gray-500);
   color: white;
-  border-color: var(--color-gray-500);
+  border-color: var(--color-gray-600);
   
   &:hover:not(:disabled) {
     background-color: var(--color-gray-600);
-    border-color: var(--color-gray-600);
+    border-color: var(--color-gray-700);
   }
 }
 

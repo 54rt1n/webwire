@@ -45,9 +45,23 @@
       display: flex;
       gap: var(--space-3);
       
-      .ww-btn-close {
+      .ww-btn-options {
         @include common.ww-button-base;
         @include common.ww-button-variant-secondary;
+        padding: var(--space-2) var(--space-4);
+        font-size: var(--font-size-sm);
+      }
+
+      .ww-btn-export {
+        @include common.ww-button-base;
+        @include common.ww-button-variant-success;
+        padding: var(--space-2) var(--space-4);
+        font-size: var(--font-size-sm);
+      }
+
+      .ww-btn-primary {
+        @include common.ww-button-base;
+        @include common.ww-button-variant-primary;
         padding: var(--space-2) var(--space-4);
         font-size: var(--font-size-sm);
       }

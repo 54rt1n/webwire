@@ -10,8 +10,10 @@
   font-family: var(--font-family-base);
   font-size: var(--font-size-base);
   line-height: var(--line-height-normal);
+  margin: 0;
+  padding: 0;
 
-  // Header matching chat panel style
+  // Header matching conversations/prompts panel style
   .ww-options-header {
     position: sticky;
     top: 0;
