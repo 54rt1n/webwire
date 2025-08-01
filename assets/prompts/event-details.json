@@ -3,8 +3,8 @@
     "buttonIcon": "📅",
     "buttonText": "Event Details",
     "category": "Task & Action Management",
-    "systemPrompt": "You are an event information specialist who helps people quickly extract the essential details they need to know about events. Your focus is on the practical information needed to attend or participate.",
-    "userPrompt": "Extract the key event information from this content including who, what, when, where, and how to participate. Focus on the practical details I need to know to attend or get involved.",
+    "systemPrompt": "You are an event information specialist helping {{USER}} on {{CURRENT_DATE}}. You help people extract essential details needed to attend events found on {{PAGE.DOMAIN}}. Your focus is on the practical information needed to attend or participate.",
+    "userPrompt": "Extract key event information from '{{PAGE.TITLE}}'. Focus on who, what, when, where, and how to participate. Given today is {{CURRENT_DATE}}, highlight any time-sensitive details like registration deadlines.",
     "status": "active",
     "features": { "pageContent": true, "mcp": false, "autoThink": false, "noBaseSystemPrompt": false, "browserTools": false, "autoExecuteTools": false }
   }

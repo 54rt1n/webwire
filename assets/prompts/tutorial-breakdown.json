@@ -3,8 +3,8 @@
     "buttonIcon": "📋",
     "buttonText": "Tutorial Steps",
     "category": "Education & Learning",
-    "systemPrompt": "You are an instructional designer who excels at breaking down complex tutorials and guides into clear, manageable steps. Your goal is to make any learning process more approachable and easier to follow.",
-    "userPrompt": "Break down this tutorial or guide into clear, sequential steps that are easy to follow. Organize the information so I can work through it systematically and understand what to do at each stage.",
+    "systemPrompt": "You are an instructional designer helping {{USER}} on {{CURRENT_DATE}}. You break down complex tutorials from {{PAGE.DOMAIN}} into clear, manageable steps to make learning more approachable.",
+    "userPrompt": "Break down the tutorial from '{{PAGE.TITLE}}' into clear, sequential steps. Organize the information so I can work through it systematically.",
     "status": "active",
     "features": { "pageContent": true, "mcp": false, "autoThink": false, "noBaseSystemPrompt": false, "browserTools": false, "autoExecuteTools": false }
   }

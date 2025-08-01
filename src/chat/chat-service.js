@@ -11,6 +11,7 @@ import { ToolExecutor } from './tool-executor.js';
 import { AIResponseHandler } from './ai-response-handler.js';
 import { AIClientFactory } from '../js/ai/ai-client-factory.js';
 import { chatSelectModal } from './components/chat-select.js';
+import { PromptVariables } from '../js/utils/prompt-variables.js';
 import { logger } from '../js/core/logging.js';
 
 /**
@@ -291,25 +292,30 @@ export class ChatService extends EventBindableComponent {
             }
 
             // Prepare messages for API with conversation history
+            // Get page data for variable processing  
+            const conversationMessages = this.stateService.conversation.getConversationMessages(threadId);
+            const wrapperTokens = 7;
+            
+            // Get page data directly for variable replacement
+            const pageData = this.messageBuilder.pageUtils.getCurrentPageContent({ includePageNavigation: false });
+            
+            // Process variables in the original user message content
+            const processedUserContent = PromptVariables.processPromptText(message, this.stateService, pageData);
+            
             let userMessage = {
                 messageId: generateMessageId(),
                 role: MESSAGE_ROLES.USER,
-                content: message,
+                content: processedUserContent,
                 timestamp: Date.now()
             };
 
             // Get available tools and build system prompt
             const tools = this.toolExecutor.getAvailableTools();
             const systemMessage = await this.stateService.aim.getSystemMessage();
-            const systemPrompts = this.buildSystemPrompts(tools, systemMessage, customSystemPrompt);
+            const rawSystemPrompts = this.buildSystemPrompts(tools, systemMessage, customSystemPrompt);
 
-            // Build page context and prepare m
-            const conversationMessages = this.stateService.conversation.getConversationMessages(threadId);
-
-            const wrapperTokens = 7;
-
-            // Calculate tokens: subtract AI response tokens and existing conversation tokens
-            const systemPromptTokens = await this.messageBuilder.countTokens(systemPrompts) + wrapperTokens;
+            // Calculate tokens with processed content
+            const systemPromptTokens = await this.messageBuilder.countTokens(rawSystemPrompts) + wrapperTokens;
             const aiResponseTokens = this.aiClient.samplerConfig?.maxTokens ?? 2048;
             const conversationTokens = (await Promise.all(conversationMessages.map(async (msg) => {
                 return await this.messageBuilder.countTokens(msg.content || '') + wrapperTokens;
@@ -319,11 +325,13 @@ export class ChatService extends EventBindableComponent {
             const paddingTokens = 256;
             const maxTextTokens = maxContentTokens - aiResponseTokens - conversationTokens - systemPromptTokens - userMessageTokens - paddingTokens;
             logger.log(this, 'Max text tokens:', maxTextTokens, 'aiResponseTokens:', aiResponseTokens, 'conversationTokens:', conversationTokens, 'systemPromptTokens:', systemPromptTokens, 'userMessageTokens:', userMessageTokens);
-            const pageContext = await this.messageBuilder.buildPageContext(this.stateService, { forcePageContent, include: { navigation: false, links: true }, maxTextTokens });
+            
+            // Build final page context for API call (may be different from variable processing context)
+            const finalPageContext = await this.messageBuilder.buildPageContext(this.stateService, { forcePageContent, include: { navigation: false, links: true }, maxTextTokens });
             let { messagesForAPI, enhancedUserMessage } = this.messageBuilder.prepareMessagesForAPI(
                 userMessage.content,
                 conversationMessages,
-                pageContext,
+                finalPageContext,
             );
 
             const userHeader = this.stateService.aim.getUserHeader();
@@ -334,6 +342,10 @@ export class ChatService extends EventBindableComponent {
             if (userFooter) {
                 enhancedUserMessage = enhancedUserMessage + '\n\n' + userFooter;
             }
+
+            // Apply variable replacement to system prompts and enhanced user message (for AI call)
+            const systemPrompts = PromptVariables.processPromptText(rawSystemPrompts, this.stateService, pageData);
+            enhancedUserMessage = PromptVariables.processPromptText(enhancedUserMessage, this.stateService, pageData);
 
             // Store user message immediately in conversation state (part 1 of 2-part creation)
             this.stateService.conversation.storePartialUserMessage(threadId, {

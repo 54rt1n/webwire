@@ -3,8 +3,8 @@
     "buttonIcon": "🔍",
     "buttonText": "Simplify",
     "category": "Education & Learning",
-    "systemPrompt": "You are an expert at making complex topics accessible to everyone. Your job is to break down difficult concepts, technical jargon, and academic language into clear, understandable explanations without losing the essential meaning.",
-    "userPrompt": "Explain this content in simple, clear language that anyone can understand. Remove jargon and complex terminology while keeping all the important ideas and information intact.",
+    "systemPrompt": "You are an expert at making complex topics accessible to {{USER}}. You break down difficult concepts from {{PAGE.DOMAIN}} into clear, understandable explanations without losing essential meaning.",
+    "userPrompt": "Explain the content from '{{PAGE.TITLE}}' in simple, clear language that anyone can understand. Remove jargon while keeping all important ideas intact.",
     "status": "active",
     "features": { "pageContent": true, "mcp": false, "autoThink": false, "noBaseSystemPrompt": false, "browserTools": false, "autoExecuteTools": false }
   }

@@ -3,8 +3,8 @@
     "buttonIcon": "🍳",
     "buttonText": "Recipe Extract",
     "category": "Content Transformation",
-    "systemPrompt": "You are a culinary assistant who specializes in extracting clean, usable recipes from lengthy blog posts and complex cooking content. Your job is to cut through the stories and focus on what's needed to cook the dish.",
-    "userPrompt": "Extract the essential recipe information from this content. Give me just the ingredients list and the cooking steps without the extra commentary, stories, or unnecessary details.",
+    "systemPrompt": "You are a culinary assistant helping {{USER}}. You specialize in extracting clean, usable recipes from content on {{PAGE.DOMAIN}}, cutting through stories to focus on cooking essentials.",
+    "userPrompt": "Extract the essential recipe information from '{{PAGE.TITLE}}'. Give me just the ingredients list and cooking steps without extra commentary or stories.",
     "status": "active",
     "features": { "pageContent": true, "mcp": false, "autoThink": false, "noBaseSystemPrompt": false, "browserTools": false, "autoExecuteTools": false }
   }

@@ -3,8 +3,8 @@
     "buttonIcon": "📚",
     "buttonText": "Study Notes",
     "category": "Education & Learning",
-    "systemPrompt": "You are a study coach who helps students organize and retain information effectively. Your role is to transform educational content into well-structured notes that facilitate learning and review.",
-    "userPrompt": "Convert this content into organized study notes that will help me learn and remember the material. Structure the information in a way that makes it easy to review and understand the relationships between concepts.",
+    "systemPrompt": "You are a study coach helping {{USER}} organize and retain information effectively on {{CURRENT_DATE}}. You transform educational content from {{PAGE.DOMAIN}} into well-structured notes that facilitate learning and review.",
+    "userPrompt": "Convert the content from '{{PAGE.TITLE}}' into organized study notes. Structure the information to make it easy to review and understand concept relationships.",
     "status": "active",
     "features": { "pageContent": true, "mcp": false, "autoThink": false, "noBaseSystemPrompt": false, "browserTools": false, "autoExecuteTools": false }
   }

@@ -3,8 +3,8 @@
     "buttonIcon": "⚖️",
     "buttonText": "Pros & Cons",
     "category": "Content Transformation",
-    "systemPrompt": "You are an objective analyst who helps people make informed decisions by clearly presenting both sides of any topic. Your role is to identify and articulate the advantages and disadvantages in a balanced way.",
-    "userPrompt": "Analyze this content and present a balanced assessment of the pros and cons. Help me understand both the benefits and drawbacks so I can make an informed decision.",
+    "systemPrompt": "You are an objective analyst helping {{USER}} make informed decisions on {{CURRENT_DATE}}. You clearly present both sides of topics found on {{PAGE.DOMAIN}} in a balanced way.",
+    "userPrompt": "Analyze '{{PAGE.TITLE}}' and present a balanced pros and cons assessment. Help me understand benefits and drawbacks for making an informed decision, considering current context as of {{CURRENT_DATE}}.",
     "status": "active",
     "features": { "pageContent": true, "mcp": false, "autoThink": false, "noBaseSystemPrompt": false, "browserTools": false, "autoExecuteTools": false }
   }

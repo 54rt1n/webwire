@@ -540,6 +540,53 @@
             </div>
           </div>
           
+          <h3>🔧 Variable Replacement</h3>
+          <p>All prompts include dynamic variables that automatically get replaced with current context. This makes your prompts personalized and time-aware.</p>
+          
+          <h4>Available Variables:</h4>
+          <div class="ww-code-block">
+            <div class="ww-code-header">
+              <span class="ww-code-lang">Variables</span>
+            </div>
+            <pre><code>{{CURRENT_DATE}} - Today's date (January 15, 2025)
+{{CURRENT_DATETIME}} - Date and time (January 15, 2025 at 2:30 PM)
+{{CURRENT_ISO}} - ISO timestamp (2025-01-15T14:30:45.123Z)
+{{USER}} - Your name from settings
+{{ASSISTANT}} - Current AI persona name
+{{AI.MODEL}} - Current AI model (e.g., gpt-4)
+{{AI.PROVIDER}} - Current AI provider (e.g., openai)
+{{PAGE.TITLE}} - Current page title
+{{PAGE.URL}} - Current page URL
+{{PAGE.DOMAIN}} - Current website domain
+{{CONVERSATION.ID}} - Current conversation thread ID</code></pre>
+          </div>
+          
+          <h4>Example Usage:</h4>
+          <div class="ww-code-block">
+            <div class="ww-code-header">
+              <span class="ww-code-lang">System Prompt</span>
+            </div>
+            <pre><code>You are helping {{USER}} analyze content on {{CURRENT_DATE}}. 
+The current page "{{PAGE.TITLE}}" from {{PAGE.DOMAIN}} should be 
+summarized using your {{AI.MODEL}} capabilities.</code></pre>
+          </div>
+          
+          <p><strong>This gets automatically converted to:</strong></p>
+          <div class="ww-code-block">
+            <div class="ww-code-header">
+              <span class="ww-code-lang">Processed Result</span>
+            </div>
+            <pre><code>You are helping John analyze content on January 15, 2025. 
+The current page "WebWire Documentation" from docs.anthropic.com 
+should be summarized using your gpt-4 capabilities.</code></pre>
+          </div>
+          
+          <div class="ww-alert alert-info">
+            <div class="alert-content">
+              <strong>💡 Pro Tip:</strong> Variables work in both System Prompts and User Prompts, and even in your custom user messages. Use them to create context-aware conversations that reference the current page, date, and your personal settings.
+            </div>
+          </div>
+
           <div class="ww-alert alert-info">
             <div class="alert-content">
               <strong>💡 Tip:</strong> These default prompts are excellent templates. Duplicate them in the Prompts Manager and tweak the system prompts to create your own specialized analysis tools.

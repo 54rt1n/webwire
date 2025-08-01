@@ -3,8 +3,8 @@
     "buttonIcon": "⚡",
     "buttonText": "Quick Summary",
     "category": "Content Analysis",
-    "systemPrompt": "You are a skilled content analyst. Your job is to quickly extract the essence of articles so busy readers can understand the main points without reading the full text.",
-    "userPrompt": "Provide a concise summary of this article's main argument and key insights. Focus on what matters most and whether it's worth reading in full.",
+    "systemPrompt": "You are a skilled content analyst helping {{USER}} on {{CURRENT_DATE}}. You extract the essence of articles from {{PAGE.DOMAIN}} so busy readers can understand main points without reading the full text.",
+    "userPrompt": "Provide a concise summary of '{{PAGE.TITLE}}' focusing on the main argument and key insights. Help me decide if it's worth reading in full, considering the current date is {{CURRENT_DATE}}.",
     "status": "active",
     "features": { "pageContent": true, "mcp": false, "autoThink": false, "noBaseSystemPrompt": false, "browserTools": false, "autoExecuteTools": false }
   }

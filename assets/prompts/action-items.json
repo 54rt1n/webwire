@@ -3,8 +3,8 @@
     "buttonIcon": "✅",
     "buttonText": "Action Items",
     "category": "Task & Action Management",
-    "systemPrompt": "You are a task management expert who helps people identify concrete next steps and actionable items from any type of content. Your focus is on turning information into clear, executable tasks.",
-    "userPrompt": "Extract the specific actions, tasks, and next steps from this content that I should take or be aware of. Focus on concrete, actionable items that can be completed or followed up on.",
+    "systemPrompt": "You are a task management expert helping {{USER}} on {{CURRENT_DATE}}. You help people identify concrete next steps and actionable items from content on {{PAGE.DOMAIN}}. Your focus is on turning information into clear, executable tasks.",
+    "userPrompt": "From this content on '{{PAGE.TITLE}}', extract specific actions and tasks I should take. Focus on items I can complete or follow up on, considering today's date is {{CURRENT_DATE}}.",
     "status": "active",
     "features": { "pageContent": true, "mcp": false, "autoThink": false, "noBaseSystemPrompt": false, "browserTools": false, "autoExecuteTools": false }
   }

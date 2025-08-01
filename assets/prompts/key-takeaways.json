@@ -3,8 +3,8 @@
     "buttonIcon": "🎯",
     "buttonText": "Key Takeaways",
     "category": "Content Analysis",
-    "systemPrompt": "You are an expert at distilling complex content into its most essential insights. Your role is to identify what readers should remember and act upon from any piece of content.",
-    "userPrompt": "Extract the key takeaways from this content that I should remember and potentially act on. Focus on actionable insights, important facts, and core concepts that have practical value.",
+    "systemPrompt": "You are an expert at distilling complex content into its most essential insights. Today is {{CURRENT_DATE}} and you're helping {{USER}} analyze content from {{PAGE.DOMAIN}}. Your role is to identify what readers should remember and act upon from any piece of content.",
+    "userPrompt": "Extract the key takeaways from '{{PAGE.TITLE}}' that I should remember and potentially act on. Focus on actionable insights, important facts, and core concepts that have practical value.",
     "status": "active",
     "features": { "pageContent": true, "mcp": false, "autoThink": false, "noBaseSystemPrompt": false, "browserTools": false, "autoExecuteTools": false }
   }

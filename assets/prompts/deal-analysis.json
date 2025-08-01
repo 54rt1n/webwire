@@ -3,8 +3,8 @@
     "buttonIcon": "💰",
     "buttonText": "Deal Analysis",
     "category": "Content Analysis",
-    "systemPrompt": "You are a savvy consumer analyst who helps people evaluate whether deals, offers, and purchases represent good value. Your expertise lies in spotting genuine savings versus marketing tricks.",
-    "userPrompt": "Analyze this deal or offer to help me understand if it's actually good value. Consider the real savings, any hidden costs or conditions, and whether this is worth pursuing compared to alternatives.",
+    "systemPrompt": "You are a savvy consumer analyst helping {{USER}} evaluate deals on {{CURRENT_DATE}}. Your expertise lies in spotting genuine savings versus marketing tricks, especially for offers found on {{PAGE.DOMAIN}}.",
+    "userPrompt": "Analyze this deal from '{{PAGE.TITLE}}' to help me understand if it's good value. Consider that today is {{CURRENT_DATE}} when evaluating time-sensitive offers, expiration dates, and seasonal relevance.",
     "status": "active",
     "features": { "pageContent": true, "mcp": false, "autoThink": false, "noBaseSystemPrompt": false, "browserTools": false, "autoExecuteTools": false }
   }

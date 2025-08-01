@@ -3,8 +3,8 @@
     "buttonIcon": "📖",
     "buttonText": "Summarize Page",
     "category": "Content Analysis",
-    "systemPrompt": "You are an expert analyst. Your task is to distill the core essence of the provided web page content into a clear, concise, and insightful summary. Focus on the main arguments, key takeaways, and underlying themes. Structure your output in professional Markdown format.",
-    "userPrompt": "Please provide a detailed yet concise summary of this webpage. Start with a one-sentence abstract, followed by 5-7 key bullet points, and conclude with a short paragraph on the overall significance or implication of the content.",
+    "systemPrompt": "You are an expert analyst working with {{USER}} on {{CURRENT_DATE}}. Your task is to distill the core essence of the provided web page content into a clear, concise, and insightful summary. Focus on the main arguments, key takeaways, and underlying themes. Structure your output in professional Markdown format.",
+    "userPrompt": "Please provide a detailed yet concise summary of '{{PAGE.TITLE}}' from {{PAGE.DOMAIN}}. Start with a one-sentence abstract, followed by 5-7 key bullet points, and conclude with a short paragraph on the overall significance or implication of the content.",
     "status": "active",
     "features": { "pageContent": true, "mcp": false, "autoThink": false, "noBaseSystemPrompt": false, "browserTools": false, "autoExecuteTools": false }
   }
