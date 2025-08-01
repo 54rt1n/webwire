@@ -41,16 +41,23 @@ export class PromptStatePlugin {
     }
 
     /**
-     * Set all prompts, replacing existing prompts
-     * @param {Object} prompts - Prompt configurations keyed by prompt ID
+     * Get the next available display order
+     * @returns {number} Next display order number
      */
-    setPrompts(prompts) {
-        this.stateService.state.prompts = { ...prompts };
-        this.eventBus.emit(EVENTS.PROMPT.UPDATED, { prompts });
+    getNextDisplayOrder() {
+        const prompts = this.getAllPrompts();
+        if (!prompts || Object.keys(prompts).length === 0) return 1;
+        
+        const orders = Object.values(prompts)
+            .map(p => p.displayOrder || 0)
+            .filter(order => Number.isInteger(order));
+        
+        return orders.length > 0 ? Math.max(...orders) + 1 : 1;
     }
 
+
     /**
-     * Set or update a single prompt
+     * Add a new prompt or update existing one
      * @param {string} promptId - The prompt identifier
      * @param {Object} promptData - The prompt configuration
      */
@@ -59,8 +66,19 @@ export class PromptStatePlugin {
             this.stateService.state.prompts = {};
         }
         
-        this.stateService.state.prompts[promptId] = { ...promptData };
-        this.eventBus.emit(EVENTS.PROMPT.CREATED, { promptId, prompt: promptData });
+        const existingPrompt = this.getPrompt(promptId);
+        const prompt = { ...promptData };
+        
+        // If new prompt, assign display order
+        if (!existingPrompt && prompt.displayOrder === undefined) {
+            prompt.displayOrder = this.getNextDisplayOrder();
+        } else if (existingPrompt && existingPrompt.displayOrder !== undefined) {
+            // Preserve existing display order if not provided
+            prompt.displayOrder = promptData.displayOrder !== undefined ? promptData.displayOrder : existingPrompt.displayOrder;
+        }
+        
+        this.stateService.state.prompts[promptId] = prompt;
+        this.eventBus.emit(existingPrompt ? EVENTS.PROMPT.UPDATED : EVENTS.PROMPT.CREATED, { promptId, prompt });
     }
 
     /**
@@ -90,6 +108,7 @@ export class PromptStatePlugin {
             .filter(([_, prompt]) => prompt.status === 'active')
             .reduce((acc, [id, prompt]) => ({ ...acc, [id]: prompt }), {});
     }
+
 
     /**
      * Get only inactive prompts
@@ -299,6 +318,86 @@ export class PromptStatePlugin {
     }
 
     /**
+     * Set all prompts at once (used for initial loading)
+     * @param {Object} prompts - Prompt configurations keyed by prompt ID
+     */
+    setPrompts(prompts) {
+        // Assign display order to each prompt if not present
+        let maxOrder = 0;
+        Object.values(prompts).forEach(prompt => {
+            if (prompt.displayOrder && prompt.displayOrder > maxOrder) {
+                maxOrder = prompt.displayOrder;
+            }
+        });
+        
+        Object.entries(prompts).forEach(([id, prompt]) => {
+            if (!prompt.displayOrder) {
+                prompt.displayOrder = ++maxOrder;
+            }
+        });
+        
+        this.stateService.state.prompts = prompts;
+        this.eventBus.emit(EVENTS.PROMPT.UPDATED, { prompts });
+    }
+
+    /**
+     * Reorder a prompt to a new position
+     * @param {string} promptId - The prompt ID to move
+     * @param {number} newPosition - The new position (1-based)
+     */
+    reorderPrompt(promptId, newPosition) {
+        const prompt = this.getPrompt(promptId);
+        if (!prompt || !prompt.displayOrder) {
+            return false;
+        }
+
+        const oldPosition = prompt.displayOrder;
+        if (oldPosition === newPosition) {
+            return true;
+        }
+
+        const allPrompts = this.getAllPrompts();
+        
+        // Update the moved prompt
+        prompt.displayOrder = newPosition;
+        
+        // Shift prompts that are between the new and old positions
+        Object.values(allPrompts).forEach(p => {
+            if (p !== prompt && p.displayOrder) {
+                if (oldPosition < newPosition) {
+                    // Moving forward: shift items between old and new positions backward
+                    if (p.displayOrder > oldPosition && p.displayOrder <= newPosition) {
+                        p.displayOrder -= 1;
+                    }
+                } else {
+                    // Moving backward: shift items between new and old positions forward
+                    if (p.displayOrder >= newPosition && p.displayOrder < oldPosition) {
+                        p.displayOrder += 1;
+                    }
+                }
+            }
+        });
+
+        this.eventBus.emit(EVENTS.PROMPT.REORDERED, { 
+            promptId, 
+            oldPosition, 
+            newPosition 
+        });
+
+        return true;
+    }
+
+    /**
+     * Get prompts ordered by display order
+     * @returns {Array} Array of [promptId, prompt] pairs ordered by display order
+     */
+    getPromptsOrderedByDisplayOrder() {
+        const allPrompts = this.getAllPrompts();
+        return Object.entries(allPrompts)
+            .sort(([, a], [, b]) => (a.displayOrder || 0) - (b.displayOrder || 0));
+    }
+
+    /**
      * Validate a prompt configuration
      * @param {Object} promptData - The prompt data to validate
      * @returns {Object} Validation result with isValid boolean and errors array
@@ -323,6 +422,7 @@ export class PromptStatePlugin {
         if (promptData.status && !['active', 'inactive'].includes(promptData.status)) {
             errors.push('Status must be "active" or "inactive"');
         }
+
 
         // Validate features if present
         if (promptData.features) {

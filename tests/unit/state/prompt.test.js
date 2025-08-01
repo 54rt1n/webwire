@@ -121,9 +121,12 @@ describe('PromptStatePlugin', () => {
 
             plugin.setPrompt(promptId, promptData);
 
-            expect(stateService.state.prompts[promptId]).toEqual(promptData);
+            expect(stateService.state.prompts[promptId]).toEqual({
+                ...promptData,
+                displayOrder: 1
+            });
             StateAssertions.assertEventEmitted(stateService.eventBus, EVENTS.PROMPT.CREATED,
-                data => data.promptId === promptId && data.prompt === promptData);
+                data => data.promptId === promptId);
         });
 
         it('should initialize prompts object if undefined', () => {
@@ -132,7 +135,7 @@ describe('PromptStatePlugin', () => {
             plugin.setPrompt('test', { buttonText: 'Test' });
             
             expect(stateService.state.prompts).toEqual({
-                'test': { buttonText: 'Test' }
+                'test': { buttonText: 'Test', displayOrder: 1 }
             });
         });
 
@@ -213,6 +216,72 @@ describe('PromptStatePlugin', () => {
             expect(plugin.getActivePrompts()).toEqual({});
             expect(plugin.getInactivePrompts()).toEqual({});
         });
+
+    });
+
+    describe('Prompt Reordering', () => {
+        beforeEach(() => {
+            stateService.state.prompts = {
+                'prompt1': { buttonText: 'Prompt 1', status: 'active', displayOrder: 1 },
+                'prompt2': { buttonText: 'Prompt 2', status: 'active', displayOrder: 2 },
+                'prompt3': { buttonText: 'Prompt 3', status: 'active', displayOrder: 3 },
+                'prompt4': { buttonText: 'Prompt 4', status: 'active', displayOrder: 4 }
+            };
+        });
+
+        it('should reorder prompt moving forward (to later position)', () => {
+            // Move prompt1 (position 1) to position 3
+            const result = plugin.reorderPrompt('prompt1', 3);
+            
+            expect(result).toBe(true);
+            expect(stateService.state.prompts.prompt1.displayOrder).toBe(3);
+            expect(stateService.state.prompts.prompt2.displayOrder).toBe(1); // shifted back
+            expect(stateService.state.prompts.prompt3.displayOrder).toBe(2); // shifted back
+            expect(stateService.state.prompts.prompt4.displayOrder).toBe(4); // unchanged
+        });
+
+        it('should reorder prompt moving backward (to earlier position)', () => {
+            // Move prompt4 (position 4) to position 2
+            const result = plugin.reorderPrompt('prompt4', 2);
+            
+            expect(result).toBe(true);
+            expect(stateService.state.prompts.prompt1.displayOrder).toBe(1); // unchanged
+            expect(stateService.state.prompts.prompt2.displayOrder).toBe(3); // shifted forward
+            expect(stateService.state.prompts.prompt3.displayOrder).toBe(4); // shifted forward
+            expect(stateService.state.prompts.prompt4.displayOrder).toBe(2);
+        });
+
+        it('should handle reordering to same position', () => {
+            const result = plugin.reorderPrompt('prompt2', 2);
+            
+            expect(result).toBe(true);
+            // All positions should remain unchanged
+            expect(stateService.state.prompts.prompt1.displayOrder).toBe(1);
+            expect(stateService.state.prompts.prompt2.displayOrder).toBe(2);
+            expect(stateService.state.prompts.prompt3.displayOrder).toBe(3);
+            expect(stateService.state.prompts.prompt4.displayOrder).toBe(4);
+        });
+
+        it('should return false for non-existent prompt', () => {
+            const result = plugin.reorderPrompt('non-existent', 2);
+            expect(result).toBe(false);
+        });
+
+        it('should return false for prompt without display order', () => {
+            stateService.state.prompts.noOrder = { buttonText: 'No Order', status: 'active' };
+            const result = plugin.reorderPrompt('noOrder', 2);
+            expect(result).toBe(false);
+        });
+
+        it('should emit reorder event', () => {
+            plugin.reorderPrompt('prompt1', 3);
+            
+            StateAssertions.assertEventEmitted(stateService.eventBus, EVENTS.PROMPT.REORDERED,
+                data => data.promptId === 'prompt1' && 
+                       data.oldPosition === 1 && 
+                       data.newPosition === 3);
+        });
+
     });
 
     describe('Status Management', () => {
@@ -357,8 +426,8 @@ describe('PromptStatePlugin', () => {
             plugin.importPrompts(importedPrompts, false);
             
             expect(stateService.state.prompts['existing'].buttonText).toBe('Existing');
-            expect(stateService.state.prompts['new1']).toEqual(importedPrompts['new1']);
-            expect(stateService.state.prompts['new2']).toEqual(importedPrompts['new2']);
+            expect(stateService.state.prompts['new1']).toMatchObject(importedPrompts['new1']);
+            expect(stateService.state.prompts['new2']).toMatchObject(importedPrompts['new2']);
             
             StateAssertions.assertEventEmitted(stateService.eventBus, EVENTS.PROMPT.IMPORTED,
                 data => data.importedCount === 2 && data.skippedCount === 1);
@@ -377,7 +446,7 @@ describe('PromptStatePlugin', () => {
             plugin.importPrompts(importedPrompts, true);
             
             expect(stateService.state.prompts['existing'].buttonText).toBe('Overwritten');
-            expect(stateService.state.prompts['new1']).toEqual(importedPrompts['new1']);
+            expect(stateService.state.prompts['new1']).toMatchObject(importedPrompts['new1']);
             
             StateAssertions.assertEventEmitted(stateService.eventBus, EVENTS.PROMPT.IMPORTED,
                 data => data.importedCount === 2 && data.skippedCount === 0);
@@ -695,7 +764,7 @@ describe('PromptStatePlugin', () => {
             
             // Create prompt
             plugin.setPrompt(promptId, promptData);
-            expect(plugin.getPrompt(promptId)).toEqual(promptData);
+            expect(plugin.getPrompt(promptId)).toMatchObject(promptData);
             
             // Update prompt
             plugin.updatePrompt(promptId, { buttonText: 'Updated Test' });

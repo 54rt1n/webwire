@@ -95,7 +95,11 @@ export async function contextFactory(eventBus, context,
                     
                     if (Object.keys(defaultPrompts).length > 0) {
                         console.log('[ContextFactory] Loaded default prompts:', Object.keys(defaultPrompts));
-                        results.stateService.prompts.setPrompts(defaultPrompts);
+                        
+                        // Add prompts one by one to get proper display order
+                        for (const [promptId, promptData] of Object.entries(defaultPrompts)) {
+                            results.stateService.prompts.setPrompt(promptId, promptData);
+                        }
                         
                         // Save to storage for next time
                         await results.stateService.prompts.saveToStorage();

@@ -606,40 +606,16 @@ this.eventBus.on(EVENTS.EXTERNAL.SOME_EVENT, (payload) => {
 
 ## Testing State Management
 
-### Unit Testing State Plugins
+The state management system has **comprehensive unit test coverage** with 250+ tests covering all plugins and edge cases.
 
-```javascript
-// Mock state service
-const mockStateService = {
-    state: createInitialState(),
-    eventBus: new EventBus(),
-    storage: mockStorage
-};
+### Test Documentation
+For complete testing information including:
+- Test architecture and coverage details
+- How to run tests (`npm test tests/unit/state/`)  
+- Test patterns and utilities
+- Mock infrastructure and assertions
 
-// Test plugin
-const plugin = new SettingsStatePlugin(mockStateService);
-await plugin.loadFromStorage();
-
-// Verify state
-expect(plugin.getSettings()).toEqual(expectedSettings);
-```
-
-### Integration Testing State Flow
-
-```javascript
-// Test full state lifecycle
-const stateService = new StateService(eventBus, storage);
-await stateService.initialize();
-
-// Modify state
-stateService.state.settings.ai.temperature = 0.9;
-await stateService.settings.saveToStorage();
-
-// Verify persistence
-const newStateService = new StateService(eventBus, storage);
-await newStateService.initialize();
-expect(newStateService.state.settings.ai.temperature).toBe(0.9);
-```
+**See: `tests/unit/state/CLAUDE.md`** for detailed testing documentation.
 
 ## Performance Considerations
 

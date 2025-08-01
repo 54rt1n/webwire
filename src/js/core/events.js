@@ -126,7 +126,8 @@ export const EVENTS = {
         DELETED: 'prompt:deleted',
         STATUS_CHANGED: 'prompt:status_changed',
         IMPORTED: 'prompt:imported',
-        EXPORTED: 'prompt:exported'
+        EXPORTED: 'prompt:exported',
+        REORDERED: 'prompt:reordered'
     }
 }; 
 

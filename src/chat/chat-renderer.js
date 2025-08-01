@@ -215,10 +215,10 @@ export class ChatUIRenderer {
 
     /**
      * Create welcome message HTML
-     * @param {Object} activePrompts - Active prompts from state service (promptId -> promptData)
+     * @param {Array} activePrompts - Array of [promptId, promptData] entries, sorted by display order
      */
-    createWelcomeHTML(activePrompts = {}) {
-        const promptButtons = Object.entries(activePrompts).map(([promptId, prompt]) => {
+    createWelcomeHTML(activePrompts = []) {
+        const promptButtons = activePrompts.map(([promptId, prompt]) => {
             // Use emoji directly from buttonIcon
             const icon = prompt.buttonIcon || '📖';
             

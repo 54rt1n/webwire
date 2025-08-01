@@ -237,8 +237,15 @@ export class PromptsPanel {
         this.elements.promptsContainer.style.display = 'block';
         this.elements.emptyState.style.display = 'none';
 
+        // Sort prompts by displayOrder
+        const sortedPrompts = promptEntries.sort(([, a], [, b]) => {
+            const orderA = a.displayOrder || 0;
+            const orderB = b.displayOrder || 0;
+            return orderA - orderB;
+        });
+
         // Create prompt items
-        promptEntries.forEach(([promptId, prompt]) => {
+        sortedPrompts.forEach(([promptId, prompt]) => {
             const promptEl = this._createPromptElement(promptId, prompt);
             this.elements.promptsContainer.appendChild(promptEl);
         });
@@ -263,43 +270,54 @@ export class PromptsPanel {
             .map(([feature, _]) => this._getFeatureLabel(feature));
 
         promptEl.innerHTML = `
-            <div class="ww-prompt-header">
-                <div class="ww-prompt-info">
-                    <h3 class="ww-prompt-title">
-                        <span class="ww-prompt-icon">${prompt.buttonIcon || '📖'}</span>
-                        ${this._escapeHtml(prompt.buttonText)}
-                    </h3>
-                    <span class="ww-status-badge status-${prompt.status}">
-                        ${prompt.status === 'active' ? 'Active' : 'Inactive'}
-                    </span>
-                </div>
-                <div class="ww-prompt-actions">
-                    <button class="ww-action-btn btn-edit" title="Edit prompt" data-prompt-id="${promptId}">
-                        ✏️
-                    </button>
-                    <button class="ww-action-btn btn-toggle" title="Toggle status" data-prompt-id="${promptId}">
-                        ${prompt.status === 'active' ? '⏸️' : '▶️'}
-                    </button>
-                    <button class="ww-action-btn btn-delete" title="Delete prompt" data-prompt-id="${promptId}">
-                        🗑️
-                    </button>
-                </div>
+            <div class="ww-prompt-drag-handle" title="Drag to reorder">
+                <span class="ww-drag-icon">☰</span>
             </div>
-            <div class="ww-prompt-description">
-                ${this._escapeHtml(prompt.userPrompt.substring(0, 150))}${prompt.userPrompt.length > 150 ? '...' : ''}
-            </div>
-            <div class="ww-prompt-footer">
-                <div class="ww-prompt-tags">
-                    ${activeFeatures.length > 0 ? 
-                        activeFeatures.map(f => `<span class="ww-tag">${f}</span>`).join('') :
-                        '<span class="ww-no-features">No special features</span>'
-                    }
+            <div class="ww-prompt-content-area">
+                <div class="ww-prompt-header">
+                    <div class="ww-prompt-info">
+                        <h3 class="ww-prompt-title">
+                            <span class="ww-prompt-icon">${prompt.buttonIcon || '📖'}</span>
+                            ${this._escapeHtml(prompt.buttonText)}
+                        </h3>
+                    </div>
+                    <div class="ww-prompt-actions">
+                        <button class="ww-action-btn btn-edit" title="Edit prompt" data-prompt-id="${promptId}">
+                            ✏️
+                        </button>
+                        <button class="ww-action-btn btn-toggle" title="Toggle status" data-prompt-id="${promptId}">
+                            ${prompt.status === 'active' ? '⏸️' : '▶️'}
+                        </button>
+                        <button class="ww-action-btn btn-delete" title="Delete prompt" data-prompt-id="${promptId}">
+                            🗑️
+                        </button>
+                    </div>
+                </div>
+                <div class="ww-prompt-description">
+                    ${this._escapeHtml(prompt.userPrompt.substring(0, 150))}${prompt.userPrompt.length > 150 ? '...' : ''}
+                </div>
+                <div class="ww-prompt-footer">
+                    <div class="ww-prompt-badges">
+                        ${prompt.category ? `<span class="ww-category-badge">${this._escapeHtml(prompt.category)}</span>` : ''}
+                        <span class="ww-status-badge status-${prompt.status}">
+                            ${prompt.status === 'active' ? 'Active' : 'Inactive'}
+                        </span>
+                    </div>
+                    <div class="ww-prompt-tags">
+                        ${activeFeatures.length > 0 ? 
+                            activeFeatures.map(f => `<span class="ww-tag">${f}</span>`).join('') :
+                            '<span class="ww-no-features">No special features</span>'
+                        }
+                    </div>
                 </div>
             </div>
         `;
 
         // Add event listeners
         this._setupPromptEventListeners(promptEl, promptId, prompt);
+        
+        // Make draggable
+        this._setupDragAndDrop(promptEl, promptId);
 
         return promptEl;
     }
@@ -337,8 +355,14 @@ export class PromptsPanel {
             this._showDeleteConfirmation(promptId, prompt);
         });
 
-        // Click prompt to edit
-        promptEl.addEventListener('click', () => {
+        // Click prompt to edit (but not on action buttons or drag handle)
+        promptEl.addEventListener('click', (e) => {
+            // Don't trigger edit if clicking on buttons or drag handle
+            if (e.target.closest('.ww-prompt-actions') || 
+                e.target.closest('.ww-prompt-drag-handle')) {
+                return;
+            }
+            
             if (this.handlers.onEditPrompt) {
                 this.handlers.onEditPrompt(promptId);
             }
@@ -675,6 +699,196 @@ export class PromptsPanel {
         const el = document.createElement(tag);
         Object.assign(el, props);
         return el;
+    }
+
+    /**
+     * Sets up drag and drop for a prompt element
+     * @param {HTMLElement} promptEl - The prompt element
+     * @param {string} promptId - The prompt ID
+     * @private
+     */
+    _setupDragAndDrop(promptEl, promptId) {
+        const dragHandle = promptEl.querySelector('.ww-prompt-drag-handle');
+        
+        // Make the entire card draggable when grabbing the handle
+        dragHandle.addEventListener('mousedown', (e) => {
+            promptEl.setAttribute('draggable', 'true');
+            promptEl.classList.add('dragging');
+        });
+        
+        // Remove draggable when mouse up
+        document.addEventListener('mouseup', () => {
+            promptEl.setAttribute('draggable', 'false');
+            promptEl.classList.remove('dragging');
+        });
+        
+        // Drag start
+        promptEl.addEventListener('dragstart', (e) => {
+            e.dataTransfer.effectAllowed = 'move';
+            e.dataTransfer.setData('text/plain', promptId);
+            promptEl.classList.add('dragging');
+            
+            // Store the dragging element
+            this._draggedElement = promptEl;
+            this._draggedPromptId = promptId;
+            
+            // Enable mousewheel scrolling during drag
+            this._enableMousewheelScrolling();
+        });
+        
+        // Drag over
+        promptEl.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+            
+            if (this._draggedElement && this._draggedElement !== promptEl) {
+                const rect = promptEl.getBoundingClientRect();
+                const midpoint = rect.top + rect.height / 2;
+                
+                if (e.clientY < midpoint) {
+                    promptEl.classList.add('drag-over-top');
+                    promptEl.classList.remove('drag-over-bottom');
+                } else {
+                    promptEl.classList.add('drag-over-bottom');
+                    promptEl.classList.remove('drag-over-top');
+                }
+                
+                // Auto-scroll when dragging near edges
+                this._handleAutoScroll(e);
+            }
+        });
+        
+        // Drag leave
+        promptEl.addEventListener('dragleave', () => {
+            promptEl.classList.remove('drag-over-top', 'drag-over-bottom');
+        });
+        
+        // Drop
+        promptEl.addEventListener('drop', async (e) => {
+            e.preventDefault();
+            promptEl.classList.remove('drag-over-top', 'drag-over-bottom');
+            
+            if (!this._draggedPromptId || this._draggedPromptId === promptId) {
+                return;
+            }
+            
+            // Get all prompt elements in their current order
+            const allPromptEls = Array.from(this.elements.promptsContainer.querySelectorAll('.ww-prompt-card'));
+            const draggedIndex = allPromptEls.findIndex(el => el.querySelector('[data-prompt-id]')?.dataset.promptId === this._draggedPromptId);
+            const targetIndex = allPromptEls.findIndex(el => el === promptEl);
+            
+            if (draggedIndex === -1 || targetIndex === -1) return;
+            
+            // Determine if we're inserting before or after based on mouse position
+            const rect = promptEl.getBoundingClientRect();
+            const midpoint = rect.top + rect.height / 2;
+            const insertBefore = e.clientY < midpoint;
+            
+            // Calculate new position (1-based for state method)
+            // targetIndex is 0-based, state method expects 1-based positions
+            const newPosition = insertBefore ? targetIndex + 1 : targetIndex + 2;
+            
+            // Update the prompt order
+            if (this.handlers.onReorderPrompt) {
+                await this.handlers.onReorderPrompt(this._draggedPromptId, newPosition);
+            }
+        });
+        
+        // Drag end
+        promptEl.addEventListener('dragend', () => {
+            promptEl.classList.remove('dragging');
+            promptEl.setAttribute('draggable', 'false');
+            this._draggedElement = null;
+            this._draggedPromptId = null;
+            
+            // Clean up any remaining drag-over classes
+            document.querySelectorAll('.drag-over-top, .drag-over-bottom').forEach(el => {
+                el.classList.remove('drag-over-top', 'drag-over-bottom');
+            });
+            
+            // Stop auto-scroll animation
+            if (this._scrollAnimationId) {
+                cancelAnimationFrame(this._scrollAnimationId);
+                this._scrollAnimationId = null;
+            }
+            
+            // Disable mousewheel scrolling
+            this._disableMousewheelScrolling();
+        });
+    }
+
+    /**
+     * Enable mousewheel scrolling during drag operations
+     * @private
+     */
+    _enableMousewheelScrolling() {
+        if (this._mousewheelHandler) return; // Already enabled
+        
+        this._mousewheelHandler = (e) => {
+            // Allow normal mousewheel scrolling during drag
+            // The deltaY value is positive for scrolling down, negative for up
+            const scrollAmount = e.deltaY;
+            window.scrollBy(0, scrollAmount);
+            
+            // Don't prevent default - let normal scrolling work
+        };
+        
+        // Use passive listener for better performance
+        document.addEventListener('wheel', this._mousewheelHandler, { passive: true });
+    }
+    
+    /**
+     * Disable mousewheel scrolling (cleanup)
+     * @private
+     */
+    _disableMousewheelScrolling() {
+        if (this._mousewheelHandler) {
+            document.removeEventListener('wheel', this._mousewheelHandler);
+            this._mousewheelHandler = null;
+        }
+    }
+
+    /**
+     * Handle auto-scrolling during drag operations
+     * @param {DragEvent} e - The drag event
+     * @private
+     */
+    _handleAutoScroll(e) {        
+        const viewportHeight = window.innerHeight;
+        const scrollThreshold = 200; // Distance from edge to start scrolling
+        const maxScrollSpeed = 8;
+        
+        // Clear any existing scroll animation
+        if (this._scrollAnimationId) {
+            cancelAnimationFrame(this._scrollAnimationId);
+            this._scrollAnimationId = null;
+        }
+        
+        let scrollDirection = 0;
+        let scrollSpeed = 0;
+        
+        // Check if we're near the top edge of the viewport
+        if (e.clientY < scrollThreshold) {
+            scrollDirection = -1; // Scroll up
+            const intensity = 1 - (e.clientY / scrollThreshold);
+            scrollSpeed = Math.max(1, maxScrollSpeed * intensity);
+        }
+        // Check if we're near the bottom edge of the viewport
+        else if (e.clientY > viewportHeight - scrollThreshold) {
+            scrollDirection = 1; // Scroll down
+            const distanceFromBottom = viewportHeight - e.clientY;
+            const intensity = 1 - (distanceFromBottom / scrollThreshold);
+            scrollSpeed = Math.max(1, maxScrollSpeed * intensity);
+        }
+        
+        // Start continuous scrolling if needed
+        if (scrollDirection !== 0) {
+            const doScroll = () => {
+                window.scrollBy(0, scrollDirection * scrollSpeed);
+                this._scrollAnimationId = requestAnimationFrame(doScroll);
+            };
+            this._scrollAnimationId = requestAnimationFrame(doScroll);
+        }
     }
 
     /**

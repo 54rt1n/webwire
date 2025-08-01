@@ -1078,7 +1078,10 @@ export class ChatService extends EventBindableComponent {
             this.updateConnectionStatus();
             if (this.stateService.prompts) {
                 const activePrompts = this.stateService.prompts.getActivePrompts();
-                this.panel.setActivePrompts(activePrompts);
+                // Sort by display order in the client
+                const sortedPromptEntries = Object.entries(activePrompts)
+                    .sort(([, a], [, b]) => (a.displayOrder || 0) - (b.displayOrder || 0));
+                this.panel.setActivePrompts(sortedPromptEntries);
             }
             await this.loadCurrentConversation();
         }

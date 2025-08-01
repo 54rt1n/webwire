@@ -41,7 +41,8 @@ class PromptsPanelApp extends BasePanelApp {
             onImportPrompts: this.importPrompts.bind(this),
             onExportPrompts: this.exportPrompts.bind(this),
             onRefreshPrompts: this.refreshPrompts.bind(this),
-            onSearchPrompts: this.searchPrompts.bind(this)
+            onSearchPrompts: this.searchPrompts.bind(this),
+            onReorderPrompt: this.reorderPrompt.bind(this)
         };
     }
 
@@ -323,6 +324,21 @@ class PromptsPanelApp extends BasePanelApp {
         } catch (error) {
             console.error('[PromptsPanelApp] Failed to export prompts:', error);
             alert('Failed to export prompts. Please try again.');
+        }
+    }
+    
+    /**
+     * Reorder a prompt to a new position
+     * @param {string} promptId - The prompt ID to move
+     * @param {number} newPosition - The new position index
+     */
+    async reorderPrompt(promptId, newPosition) {
+        try {
+            this.core.stateService.prompts.reorderPrompt(promptId, newPosition);
+            await this.core.stateService.prompts.saveToStorage();
+            await this.refreshPrompts();
+        } catch (error) {
+            console.error(`Failed to reorder prompt ${promptId}:`, error);
         }
     }
 }

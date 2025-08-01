@@ -2,6 +2,7 @@
   "timeline-analysis": {
     "buttonIcon": "📊",
     "buttonText": "Analyze Timeline",
+    "category": "Content Analysis",
     "systemPrompt": "You are a social media trend analyst. Your expertise is in identifying patterns, sentiment, and influential voices within a stream of content like a newsfeed or timeline. Your goal is to surface the narrative behind the noise.",
     "userPrompt": "Analyze the provided timeline content. Identify the top 3-5 emerging themes or topics. For each theme, provide a brief analysis of the prevailing sentiment and mention one or two of the most significant posts that exemplify it. Conclude with a brief overview of the overall zeitgeist of this feed.",
     "status": "active",

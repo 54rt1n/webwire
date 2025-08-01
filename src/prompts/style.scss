@@ -219,11 +219,13 @@
 
     .ww-prompt-card {
       @include common.ww-widget-base;
-      padding: var(--space-5);
+      padding: 0;
       transition: all var(--transition-normal);
       cursor: pointer;
       position: relative;
       margin-bottom: var(--space-4);
+      display: flex;
+      flex-direction: row;
       
       &:hover {
         box-shadow: var(--shadow-lg);
@@ -248,11 +250,55 @@
           background: var(--color-primary-500);
         }
       }
+      
+      &.dragging {
+        opacity: 0.5;
+        cursor: grabbing;
+      }
+      
+      &.drag-over-top {
+        border-top: 3px solid var(--color-primary-500);
+      }
+      
+      &.drag-over-bottom {
+        border-bottom: 3px solid var(--color-primary-500);
+      }
+
+      .ww-prompt-drag-handle {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 32px;
+        cursor: grab;
+        background: var(--color-gray-50);
+        border-right: 1px solid var(--color-gray-200);
+        transition: all var(--transition-fast);
+        flex-shrink: 0;
+        
+        &:hover {
+          background: var(--color-gray-100);
+        }
+        
+        &:active {
+          cursor: grabbing;
+          background: var(--color-gray-200);
+        }
+        
+        .ww-drag-icon {
+          font-size: var(--font-size-sm);
+          color: var(--color-text-secondary);
+          user-select: none;
+        }
+      }
+
+      .ww-prompt-content-area {
+        flex: 1;
+        padding: var(--space-5);
+      }
 
       .ww-prompt-header {
         display: flex;
         align-items: flex-start;
-        gap: var(--space-4);
         margin-bottom: var(--space-3);
 
         .ww-prompt-info {
@@ -263,7 +309,7 @@
             font-size: var(--font-size-base);
             font-weight: var(--font-weight-semibold);
             color: var(--color-text-primary);
-            margin: 0 0 var(--space-1);
+            margin: 0 0 var(--space-2);
             display: flex;
             align-items: center;
             gap: var(--space-2);
@@ -274,15 +320,6 @@
             }
           }
 
-          .ww-prompt-category {
-            display: inline-block;
-            font-size: var(--font-size-xs);
-            color: var(--color-primary-600);
-            background: var(--color-primary-100);
-            padding: var(--space-1) var(--space-2);
-            border-radius: var(--radius-full);
-            font-weight: var(--font-weight-medium);
-          }
         }
 
         .ww-prompt-actions {
@@ -380,6 +417,13 @@
         padding-top: var(--space-3);
         border-top: 1px solid var(--color-border);
 
+        .ww-prompt-badges {
+          display: flex;
+          align-items: center;
+          gap: var(--space-2);
+          flex-wrap: wrap;
+        }
+
         .ww-prompt-meta {
           display: flex;
           gap: var(--space-3);
@@ -412,9 +456,27 @@
             border-radius: var(--radius-sm);
             border: 1px solid var(--color-gray-200);
           }
+
+          .ww-no-features {
+            font-size: var(--font-size-xs);
+            color: var(--color-text-secondary);
+            font-style: italic;
+          }
         }
       }
     }
+  }
+
+  // Badge styles
+  .ww-category-badge {
+    display: inline-block;
+    font-size: var(--font-size-xs);
+    color: var(--color-primary-700);
+    background: var(--color-primary-100);
+    padding: var(--space-1) var(--space-2);
+    border-radius: var(--radius-xl);
+    font-weight: var(--font-weight-medium);
+    border: 1px solid var(--color-primary-200);
   }
 
   // Empty state
@@ -712,7 +774,7 @@
     display: inline-block;
     font-size: var(--font-size-xs);
     padding: var(--space-1) var(--space-2);
-    border-radius: var(--radius-full);
+    border-radius: var(--radius-xl);
     font-weight: var(--font-weight-medium);
     
     &.status-active {
