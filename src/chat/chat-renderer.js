@@ -234,7 +234,7 @@ export class ChatUIRenderer {
             <div class="ww-welcome-message">
                 <div class="ww-welcome-icon">🤖</div>
                 <h3>WebWire Assistant</h3>
-                <p>I can analyze this webpage and help you with questions. I also have access to various tools through MCP integration.</p>
+                <p>I can analyze this webpage and help you with questions. Ask me anything.</p>
                 <div class="ww-quick-actions">
                     ${promptButtons}
                 </div>
@@ -311,7 +311,7 @@ export class ChatUIRenderer {
                 <div class="ww-wrapper">
                     <textarea 
                         class="ww-input" 
-                        placeholder="Ask me anything about this page or use tools..."
+                        placeholder="Ask me anything about this page..."
                     ></textarea>
                     <button class="ww-send-button" disabled title="Send message">
                         ${this.templates.icons.send}

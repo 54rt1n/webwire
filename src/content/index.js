@@ -328,6 +328,10 @@ class WebWireContentHost {
                 ...(currentThread?.metadata || {})
             };
             
+            // Get selected model and config
+            const selectedModel = stateService.ui.getSelectedModel() || 'chat';
+            const modelConfig = stateService.settings.getModelConfig(selectedModel);
+            
             // Get connection states directly from services
             const state = {
                 currentThread: currentThread,
@@ -337,6 +341,8 @@ class WebWireContentHost {
                 useMCP: stateService.ui.getUseMCP() !== false,
                 useBrowserTools: stateService.ui.getUseBrowserTools() !== false,
                 autoExecuteTools: stateService.ui.getAutoExecuteTools() !== false,
+                selectedModel: selectedModel,
+                modelConfig: modelConfig,
                 tabId: stateService.ui.getTabId(),
                 messageOptions: messageOptions
             };

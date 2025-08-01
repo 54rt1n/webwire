@@ -1247,7 +1247,7 @@ export class WebChatPanel {
         }
 
         if (state.selectedModel !== undefined) {
-            this.updateSelectedModelSetting(state.selectedModel);
+            this.updateSelectedModelSetting(state.selectedModel, state.modelConfig?.model, state.modelConfig);
         }
         
         // Update tab ID display if available

@@ -201,30 +201,6 @@
         }
       }
 
-      .ww-filter-group {
-        display: flex;
-        gap: var(--space-3);
-        
-        .ww-filter-btn {
-          @include common.ww-button-base;
-          @include common.ww-button-variant-secondary;
-          padding: var(--space-2) var(--space-3);
-          font-size: var(--font-size-sm);
-          
-          &.active {
-            @include common.ww-button-variant-primary;
-          }
-
-          .ww-filter-count {
-            background: var(--color-primary-600);
-            color: white;
-            padding: 0 var(--space-2);
-            border-radius: var(--radius-full);
-            font-size: var(--font-size-xs);
-            margin-left: var(--space-2);
-          }
-        }
-      }
 
       .ww-bulk-actions {
         display: flex;
@@ -267,10 +243,6 @@
           width: 100%;
         }
 
-        .ww-filter-group {
-          width: 100%;
-          justify-content: space-between;
-        }
 
         .ww-bulk-actions {
           width: 100%;

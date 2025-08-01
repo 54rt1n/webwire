@@ -216,7 +216,12 @@ export class ConversationModal extends EventBindableComponent {
         return `
             <div class="ww-message message-${message.role}" data-message-id="${messageId}">
                 <div class="ww-message-header">
-                    <span class="ww-message-role">${this._escapeHtml(participantName)}</span>
+                    <div class="ww-message-header-left">
+                        <span class="ww-message-role">${this._escapeHtml(participantName)}</span>
+                        <div class="ww-message-metadata-chips">
+                            ${this._renderMessageMetadata(message)}
+                        </div>
+                    </div>
                     ${actionButtons}
                 </div>
                 <div class="ww-message-content">
@@ -232,6 +237,54 @@ export class ConversationModal extends EventBindableComponent {
         `;
     }
 
+    /**
+     * Renders message metadata in the footer
+     * @param {Object} message - Message object
+     * @param {string} timestamp - Formatted timestamp
+     * @param {string} messageId - Message ID
+     * @returns {string} HTML for message metadata
+     * @private
+     */
+    _renderMessageMetadata(message) {
+        const metadataItems = [];
+        
+        // Show model if available
+        if (message.model) {
+            metadataItems.push(`<span class="ww-meta-item"><strong>Model:</strong> ${this._escapeHtml(message.model)}</span>`);
+        }
+        
+        // Show page URL if available
+        if (message.url) {
+            const truncatedUrl = message.url.length > 50 ? message.url.substring(0, 47) + '...' : message.url;
+            metadataItems.push(`<span class="ww-meta-item"><strong>URL:</strong> <a href="${this._escapeHtml(message.url)}" target="_blank" rel="noopener noreferrer" title="${this._escapeHtml(message.url)}">${this._escapeHtml(truncatedUrl)}</a></span>`);
+        }
+        
+        // Show page title if available
+        if (message.title && message.title !== message.url) {
+            const truncatedTitle = message.title.length > 50 ? message.title.substring(0, 47) + '...' : message.title;
+            metadataItems.push(`<span class="ww-meta-item"><strong>Page:</strong> ${this._escapeHtml(truncatedTitle)}</span>`);
+        }
+        
+        // Show parse errors if any
+        if (message.parseErrors && message.parseErrors.length > 0) {
+            metadataItems.push(`<span class="ww-meta-item ww-meta-error"><strong>Parse Errors:</strong> ${message.parseErrors.length}</span>`);
+        }
+        
+        // Show saved status
+        if (message.saved !== undefined) {
+            const savedStatus = message.saved ? '✓ Saved' : '✗ Not saved';
+            const savedClass = message.saved ? 'ww-meta-success' : 'ww-meta-warning';
+            metadataItems.push(`<span class="ww-meta-item ${savedClass}"><strong>Status:</strong> ${savedStatus}</span>`);
+        }
+        
+        // Only return metadata panel if there are items to show
+        if (metadataItems.length === 0) {
+            return '';
+        }
+        
+        return metadataItems.map(item => `<span class="ww-metadata-chip">${item}</span>`).join('');
+    }
+    
     /**
      * Renders the thinking section
      * @param {string} thinking - Thinking content
