@@ -1,6 +1,7 @@
 import '../../src/shared/global.scss';
 import './style.scss';
 import { MessageBuilder } from '../chat/message-builder.js';
+import { logger } from '../js/core/logging.js';
 
 export class OptionsPanel {
     constructor(eventBus) {
@@ -77,7 +78,7 @@ export class OptionsPanel {
      */
     showStatus(message, isError = false) {
         if (!this.elements.status) {
-            console.error('[OptionsPanel] Status element not found!');
+            logger.error('OptionsPanel', 'Status element not found!');
             return;
         }
         
@@ -307,7 +308,7 @@ export class OptionsPanel {
      * Get all settings from the form fields
      */
     getAllSettings() {
-        console.log('[OptionsPanel] getAllSettings', this.elements);
+        logger.log('OptionsPanel', 'getAllSettings', this.elements);
         const settings = {
             aim: {
                 userName: this.elements.userNameInput.value.trim(),

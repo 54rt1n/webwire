@@ -1,6 +1,7 @@
 import { generateMessageId } from '../js/utils/id-generator.js';
 import { buildToolMessages } from './message-utils.js';
 import { Tiktoken } from 'js-tiktoken/lite';
+import { logger } from '../js/core/logging.js';
 
 const MESSAGE_ROLES = {
     USER: 'user',
@@ -60,9 +61,9 @@ export class MessageBuilder {
             
             // Create Tiktoken instance with the loaded ranks
             this.encoder = new Tiktoken(ranks);
-            console.log(`[MessageBuilder] Initialized with tokenizer: ${tokenizerName}`);
+            logger.log(this, `Initialized with tokenizer: ${tokenizerName}`);
         } catch (error) {
-            console.warn('[MessageBuilder] Failed to initialize tiktoken encoder, falling back to word-based estimation:', error);
+            logger.warn(this, 'Failed to initialize tiktoken encoder, falling back to word-based estimation:', error);
             this.encoder = null;
             // Fallback: 1 token ≈ 0.75 words (common approximation for English text)
             this.WORDS_PER_TOKEN = 0.75;
@@ -85,10 +86,10 @@ export class MessageBuilder {
                 // Use tiktoken for accurate token counting
                 const tokens = this.encoder.encode(text);
                 const tokenCount = tokens.length;
-                console.log('[MessageBuilder] Counting tokens with tiktoken:', text.substring(0, 50) + '...', 'tokens:', tokenCount);
+                logger.log(this, 'Counting tokens with tiktoken:', text.substring(0, 50) + '...', 'tokens:', tokenCount);
                 return tokenCount;
             } catch (error) {
-                console.warn('[MessageBuilder] Error encoding text with tiktoken:', error);
+                logger.warn(this, 'Error encoding text with tiktoken:', error);
                 // Fall through to word-based estimation
             }
         }
@@ -98,7 +99,7 @@ export class MessageBuilder {
         
         // Convert to approximate tokens
         const tokens = Math.ceil(words / this.WORDS_PER_TOKEN);
-        console.log('[MessageBuilder] Counting tokens (fallback):', text.substring(0, 50) + '...', 'words:', words, 'tokens:', tokens);
+        logger.log(this, 'Counting tokens (fallback):', text.substring(0, 50) + '...', 'words:', words, 'tokens:', tokens);
         return tokens;
     }
 
@@ -234,7 +235,7 @@ export class MessageBuilder {
             try {
                 this.encoder.free();
             } catch (error) {
-                console.warn('[MessageBuilder] Error freeing encoder:', error);
+                logger.warn(this, 'Error freeing encoder:', error);
             }
         }
         this.encoder = null;

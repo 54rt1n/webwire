@@ -13,9 +13,10 @@
  * // Validate tool format
  * const validation = ToolFormatter.validateToolsFormat(tools);
  * if (!validation.valid) {
- *   console.error('Invalid tools:', validation.errors);
+ *   logger.error('ToolFormatter', 'Invalid tools:', validation.errors);
  * }
  */
+import { logger } from '../core/logging.js';
 
 export class ToolFormatter {
     /**

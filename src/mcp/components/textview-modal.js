@@ -1,5 +1,6 @@
 import './textview.scss';
 import { StashButton } from './stash-button.js';
+import { logger } from '../../js/core/logging.js';
 
 /**
  * TextViewModal
@@ -200,7 +201,7 @@ export class TextViewModal {
         const button = this.stashButton.create(this.currentFilePath, 'fs', {
             size: 'icon',
             onToggle: async (stashedUri, isStashed) => {
-                console.log(`[TextViewModal] ${isStashed ? 'Added to' : 'Removed from'} stash: ${stashedUri}`);
+                logger.log('TextViewModal', `${isStashed ? 'Added to' : 'Removed from'} stash: ${stashedUri}`);
                 this.eventBus.emit(isStashed ? EVENTS.STASH.ADD : EVENTS.STASH.REMOVE, { uri: stashedUri, isStashed, type: 'fs' });
             }
         });

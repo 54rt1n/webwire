@@ -1,4 +1,5 @@
 import { AbstractAIClient } from '../abstract-ai-client.js';
+import { logger } from '../../core/logging.js';
 
 /**
  * OpenAI API client implementation for GPT models with streaming support.
@@ -59,7 +60,7 @@ export class OpenAIClient extends AbstractAIClient {
             throw new Error('OpenAI API key not configured');
         }
 
-        console.log('[OpenAIClient]', `Generating turn for input: "${userTurn}"`);
+        logger.log('OpenAIClient', `Generating turn for input: "${userTurn}"`);
         
         try {
             const messages = this.buildMessages(userTurn, history, systemPrompt, options);

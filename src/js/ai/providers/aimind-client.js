@@ -1,4 +1,5 @@
 import { AbstractAIClient } from '../abstract-ai-client.js';
+import { logger } from '../../core/logging.js';
 
 /**
  * AIMind Client - Handles communication with AIMind API
@@ -26,7 +27,7 @@ export class AIMindClient extends AbstractAIClient {
      * @returns {Promise<string>} AI response
      */
     async generateTurn(userTurn, history = [], options = {}) {
-        console.log('[AIMindClient]', `Generating turn for input: "${userTurn}"`);
+        logger.log('AIMindClient', `Generating turn for input: "${userTurn}"`);
         
         try {
             const messages = this.buildMessages(userTurn, history, options);

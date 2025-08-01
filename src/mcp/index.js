@@ -8,6 +8,7 @@ import { ChatService } from '../chat/chat-service.js';
 import { EventBus } from '../js/core/event-bus.js';
 import { StashPanel } from './components/stash-panel.js';
 import { EventBindableComponent } from '../js/core/event-bindable-panel.js';
+import { logger } from '../js/core/logging.js';
 import '../chat/chat.scss';
 
 /**
@@ -40,7 +41,7 @@ class MCPControlPanelApp extends EventBindableComponent {
      * Initializes the entire application.
      */
     async initialize() {
-        console.log('[MCPApp] Initializing Control Panel...');
+        logger.log('MCPApp', 'Initializing Control Panel...');
 
         await this.core.initialize();
         this.panelEventHandlers = new PanelEventHandlers(this.core);
@@ -56,7 +57,7 @@ class MCPControlPanelApp extends EventBindableComponent {
             this.stashPanel = new StashPanel(this.eventBus, this.core.stateService);
             
             // 3. Initialize ChatService
-            console.log('[MCPApp] Initializing ChatService...');
+            logger.log('MCPApp', 'Initializing ChatService...');
             await this.chatService.initialize(this.core.mcpConnector, this.core.stateService);
 
             // 4. Update ChatService with current settings if available
@@ -67,13 +68,13 @@ class MCPControlPanelApp extends EventBindableComponent {
         }
 
         // 5. Show the chat panel by default (for debugging)
-        console.log('[MCPApp] Showing chat panel...');
+        logger.log('MCPApp', 'Showing chat panel...');
         setTimeout(() => {
             if (this.chatService.isReady()) {
                 this.chatService.showPanel();
-                console.log('[MCPApp] Chat panel should now be visible');
+                logger.log('MCPApp', 'Chat panel should now be visible');
             } else {
-                console.warn('[MCPApp] ChatService not ready when trying to show panel');
+                logger.warn('MCPApp', 'ChatService not ready when trying to show panel');
             }
         }, 1000); // Give it a moment to fully initialize
         
@@ -94,7 +95,7 @@ class MCPControlPanelApp extends EventBindableComponent {
         // 6. Attempt to auto-connect
         await this.connect();
         
-        console.log('[MCPApp] Initialization complete');
+        logger.log('MCPApp', 'Initialization complete');
     }
 
     /**
@@ -102,11 +103,11 @@ class MCPControlPanelApp extends EventBindableComponent {
      */
     setupMCPListeners() {
         this.on(EVENTS.MCP.CONNECTED, (payload) => {
-            console.log('[MCPApp] Handling MCP connected event:', this.core.mcpConnector);
+            logger.log('MCPApp', 'Handling MCP connected event:', this.core.mcpConnector);
             this.chatService.setMCPConnector(this.core.mcpConnector);
         });
         this.on(EVENTS.MCP.DISCONNECTED, (payload) => {
-            console.log('[MCPApp] Handling MCP disconnected event:', this.core.mcpConnector);
+            logger.log('MCPApp', 'Handling MCP disconnected event:', this.core.mcpConnector);
             this.chatService.setMCPConnector(null);
         });
     }
@@ -132,7 +133,7 @@ class MCPControlPanelApp extends EventBindableComponent {
             
             // Share MCP connector with ChatService and StashService
             if (this.core.mcpConnector) {
-                console.log('[MCPApp] Shared MCP connector with ChatService after connection');
+                logger.log('MCPApp', 'Shared MCP connector with ChatService after connection');
                 
                 try {
                     const tools = await this.core.stateService.mcp.getMcpTools();
@@ -141,7 +142,7 @@ class MCPControlPanelApp extends EventBindableComponent {
                         tools: tools || []
                     });
                 } catch (error) {
-                    console.warn('[MCPApp] Failed to get MCP tools:', error);
+                    logger.warn('MCPApp', 'Failed to get MCP tools:', error);
                     this.eventBus.emit(EVENTS.MCP.CONNECTION_CHANGED, {
                         connected: true,
                         tools: []
@@ -185,7 +186,7 @@ class MCPControlPanelApp extends EventBindableComponent {
                 throw new Error(result.error || 'Unknown error');
             }
         } catch (error) {
-            console.error('[MCPApp] Health check failed:', error);
+            logger.error('MCPApp', 'Health check failed:', error);
             this.panel.renderHealthCheck(null); // Renders an error state
         }
     }
@@ -204,7 +205,7 @@ class MCPControlPanelApp extends EventBindableComponent {
                 throw new Error(result.error || 'Unknown error');
             }
         } catch (error) {
-            console.error('[MCPApp] Filesystem fetch failed:', error);
+            logger.error('MCPApp', 'Filesystem fetch failed:', error);
             this.panel.renderFilesystem(null); // Renders an error state
         }
     }
@@ -228,7 +229,7 @@ class MCPControlPanelApp extends EventBindableComponent {
                 throw new Error(result.error || 'Unknown error');
             }
         } catch (error) {
-            console.error('[MCPApp] KB fetch failed:', error);
+            logger.error('MCPApp', 'KB fetch failed:', error);
             this.panel.renderKbGraph(null);
         }
     }
@@ -249,7 +250,7 @@ class MCPControlPanelApp extends EventBindableComponent {
                 throw new Error(result.error || 'Unknown error');
             }
         } catch (error) {
-            console.error('[MCPApp] Fetching lists failed:', error);
+            logger.error('MCPApp', 'Fetching lists failed:', error);
             this.panel.renderListsBrowser(null);
         }
     }
@@ -269,7 +270,7 @@ class MCPControlPanelApp extends EventBindableComponent {
                 throw new Error(result.error || 'Unknown error');
             }
         } catch (error) {
-            console.error(`[MCPApp] Fetching content for list "${listName}" failed:`, error);
+            logger.error("MCPApp", `Fetching content for list "${listName}" failed:`, error);
             this.panel.listContentView.innerHTML = `<div class="placeholder error">Failed to load list content.</div>`;
         }
     }
@@ -281,7 +282,7 @@ class MCPControlPanelApp extends EventBindableComponent {
     async openFile(filePath) {
         if (!this.core.mcpConnector) return;
         
-        console.log(`[MCPApp] Opening file: ${filePath}`);
+        logger.log("MCPApp", `Opening file: ${filePath}`);
         
         try {
             // Show modal with loading state first
@@ -300,7 +301,7 @@ class MCPControlPanelApp extends EventBindableComponent {
                 this.panel.updateFileViewerContent(errorMsg);
             }
         } catch (error) {
-            console.error(`[MCPApp] Failed to open file "${filePath}":`, error);
+            logger.error("MCPApp", `Failed to open file "${filePath}":`, error);
             // Show error in modal
             const errorMsg = `Failed to read file: ${error.message}`;
             this.panel.updateFileViewerContent(errorMsg);
@@ -315,7 +316,7 @@ class MCPControlPanelApp extends EventBindableComponent {
         if (!this.core.mcpConnector) return;
         
         const uri = node.uri || node.urn;
-        console.log(`[MCPApp] Opening KB document: ${uri}`);
+        logger.log("MCPApp", `Opening KB document: ${uri}`);
         
         try {
             // Show modal with loading state first
@@ -352,7 +353,7 @@ class MCPControlPanelApp extends EventBindableComponent {
                 });
             }
         } catch (error) {
-            console.error(`[MCPApp] Failed to open KB document "${uri}":`, error);
+            logger.error("MCPApp", `Failed to open KB document "${uri}":`, error);
             // Show error in modal
             const errorMsg = `Failed to read document: ${error.message}`;
             documentModal.updateContent({
@@ -367,11 +368,11 @@ class MCPControlPanelApp extends EventBindableComponent {
      * Toggle the chat panel visibility
      */
     toggleChat() {
-        console.log('[MCPApp] Toggling chat panel...');
+        logger.log('MCPApp', 'Toggling chat panel...');
         if (this.chatService && this.chatService.isReady()) {
             this.chatService.togglePanel();
         } else {
-            console.warn('[MCPApp] ChatService not ready for toggle');
+            logger.warn('MCPApp', 'ChatService not ready for toggle');
         }
     }
 
@@ -379,10 +380,10 @@ class MCPControlPanelApp extends EventBindableComponent {
      * Start a new conversation
      */
     async startNewConversation() {
-        console.log('[MCPApp] Starting new conversation...');
+        logger.log('MCPApp', 'Starting new conversation...');
         
         if (!this.core.stateService || !this.core.stateService.conversation) {
-            console.error('[MCPApp] No conversation state service available');
+            logger.error('MCPApp', 'No conversation state service available');
             return;
         }
 
@@ -412,7 +413,7 @@ class MCPControlPanelApp extends EventBindableComponent {
             // Set as active (deactivates previous conversations)
             this.core.stateService.conversation.setActiveConversation(newConversationId);
             
-            console.log('[MCPApp] Created new conversation:', newConversationId);
+            logger.log('MCPApp', 'Created new conversation:', newConversationId);
             
             // Notify ChatService about the new conversation
             this.eventBus.emit(EVENTS.CHAT.CONVERSATION_LOADED, {
@@ -423,7 +424,7 @@ class MCPControlPanelApp extends EventBindableComponent {
             });
 
         } catch (error) {
-            console.error('[MCPApp] Failed to start new conversation:', error);
+            logger.error('MCPApp', 'Failed to start new conversation:', error);
         }
     }
 
@@ -443,10 +444,10 @@ class MCPControlPanelApp extends EventBindableComponent {
      * Handle get or create thread request from ChatService
      */
     async handleGetOrCreateThread(data) {
-        console.log('[MCPApp] Getting or creating thread:', data);
+        logger.log('MCPApp', 'Getting or creating thread:', data);
         
         if (!this.core.stateService || !this.core.stateService.conversation) {
-            console.error('[MCPApp] No conversation state service available');
+            logger.error('MCPApp', 'No conversation state service available');
             return;
         }
 
@@ -456,13 +457,13 @@ class MCPControlPanelApp extends EventBindableComponent {
                 threadId = this.core.stateService.conversation.createNewConversation();
             }
 
-            console.log('[MCPApp] Thread ID:', threadId);
+            logger.log('MCPApp', 'Thread ID:', threadId);
 
             // Get existing conversation messages
             const messages = this.core.stateService.conversation.getConversationMessages(threadId);
             
             // Send conversation to ChatService
-            console.log('[MCPApp] Emitting chat:conversation-loaded event with threadId:', threadId);
+            logger.log('MCPApp', 'Emitting chat:conversation-loaded event with threadId:', threadId);
             this.eventBus.emit(EVENTS.CHAT.CONVERSATION_LOADED, {
                 conversation: {
                     threadId: threadId,
@@ -471,7 +472,7 @@ class MCPControlPanelApp extends EventBindableComponent {
             });
 
         } catch (error) {
-            console.error('[MCPApp] Failed to get or create thread:', error);
+            logger.error('MCPApp', 'Failed to get or create thread:', error);
         }
     }
 
@@ -479,10 +480,10 @@ class MCPControlPanelApp extends EventBindableComponent {
      * Handle save message request from ChatService
      */
     async handleSaveMessage(data) {
-        console.log('[MCPApp] Saving message:', data);
+        logger.log('MCPApp', 'Saving message:', data);
         
         if (!this.core.stateService || !this.core.stateService.conversation) {
-            console.error('[MCPApp] No conversation state service available');
+            logger.error('MCPApp', 'No conversation state service available');
             return;
         }
 
@@ -517,7 +518,7 @@ class MCPControlPanelApp extends EventBindableComponent {
                 }
             );
 
-            console.log(`[MCPApp] Message saved to conversation ${threadId}`);
+            logger.log("MCPApp", `Message saved to conversation ${threadId}`);
 
             await this.core.stateService.disk.saveToStorage();
 
@@ -527,7 +528,7 @@ class MCPControlPanelApp extends EventBindableComponent {
             });
 
         } catch (error) {
-            console.error('[MCPApp] Failed to save message:', error);
+            logger.error('MCPApp', 'Failed to save message:', error);
         }
     }
 
@@ -535,7 +536,7 @@ class MCPControlPanelApp extends EventBindableComponent {
      * Handle UI settings toggle request from ChatService
      */
     async handleUISettingsToggle(data) {
-        console.log('[MCPApp] Handling UI settings toggle:', data);
+        logger.log('MCPApp', 'Handling UI settings toggle:', data);
         
         // Update settings for each setting provided
         if ('includePageContent' in data) {
@@ -566,7 +567,7 @@ class MCPControlPanelApp extends EventBindableComponent {
      */
     async handleStashAdd(data, { autoSave = true, ...options } = {}) {
         if (!this.core.stateService || !this.core.stateService.stash) {
-            console.error('[MCPApp] No stash service available');
+            logger.error('MCPApp', 'No stash service available');
             return;
         }
 
@@ -616,18 +617,18 @@ class MCPControlPanelApp extends EventBindableComponent {
                     }
                     break;
                 default:
-                    console.warn('[MCPApp] Unknown stash source:', source);
+                    logger.warn('MCPApp', 'Unknown stash source:', source);
                     return;
             }
 
             if (content !== null) {
-                console.log(`[MCPApp] Successfully stashed ${uri} (${content.length} chars)`);
+                logger.log("MCPApp", `Successfully stashed ${uri} (${content.length} chars)`);
             } else {
-                console.warn(`[MCPApp] Failed to fetch content for ${uri}`);
+                logger.warn("MCPApp", `Failed to fetch content for ${uri}`);
             }
 
         } catch (error) {
-            console.error(`[MCPApp] Error stashing ${uri}:`, error);
+            logger.error("MCPApp", `Error stashing ${uri}:`, error);
         }
     }
 }

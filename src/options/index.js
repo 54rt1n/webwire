@@ -3,6 +3,7 @@ import { OptionsPanel } from './panel.js';
 import { createInitialState, createInitialSettingsState } from '../js/state/state-container.js';
 import { deepMerge } from '../js/utils/deep-merge.js';
 import { AppConfig } from '../js/core/app-config.js';
+import { logger } from '../js/core/logging.js';
 
 /**
  * Options Page Script
@@ -42,7 +43,7 @@ class OptionsApp extends BaseSimpleApp {
 
     setupEventListeners() {
         this.panel.elements.saveBtn.addEventListener('click', () => {
-            console.log('[OptionsApp] 🔘 Save button clicked!');
+            logger.log('OptionsApp', '🔘 Save button clicked!');
             this.saveAllSettings();
         });
 
@@ -186,7 +187,7 @@ class OptionsApp extends BaseSimpleApp {
             const hydratedSettings = this.hydrateSettings(defaultSettings);
             this.panel.setAllSettings(hydratedSettings);
         } catch (error) {
-            console.error('Error loading settings:', error);
+            logger.error('OptionsApp', 'Error loading settings:', error);
             this.panel.showStatus('Error loading settings: ' + error.message, true);
         }
     }
@@ -275,42 +276,42 @@ class OptionsApp extends BaseSimpleApp {
      * Save all settings to storage
      */
     async saveAllSettings() {
-        console.log('[OptionsApp] ===== SAVE ALL SETTINGS STARTED =====');
+        logger.log('OptionsApp', '===== SAVE ALL SETTINGS STARTED =====');
         
         try {
             const settings = this.panel.getAllSettings();
-            console.log('[OptionsApp] 1. Settings from panel:', settings);
+            logger.log('OptionsApp', '1. Settings from panel:', settings);
             
             // Enhanced validation with visual feedback
             const validationResult = this.validateSettings(settings);
             
             if (!validationResult.isValid) {
-                console.log('[OptionsApp] ❌ Validation failed:', validationResult.errors);
+                logger.log('OptionsApp', '❌ Validation failed:', validationResult.errors);
                 this.highlightMissingFields(validationResult.missingFields);
                 this.panel.showStatus(validationResult.message, true);
                 return;
             }
 
-            console.log('[OptionsApp] 2. Validation passed, saving to state service...');
+            logger.log('OptionsApp', '2. Validation passed, saving to state service...');
             await this.stateService.settings.setSettings(settings);
-            console.log('[OptionsApp] 3. Settings set in state service');
+            logger.log('OptionsApp', '3. Settings set in state service');
             
             await this.stateService.settings.saveToStorage();
-            console.log('[OptionsApp] 4. Settings saved to storage');
+            logger.log('OptionsApp', '4. Settings saved to storage');
             
             // No need to notify background - it will detect the storage change automatically
             this.panel.showStatus('Saved', false);
-            console.log('[OptionsApp] ===== SAVE ALL SETTINGS COMPLETED =====');
+            logger.log('OptionsApp', '===== SAVE ALL SETTINGS COMPLETED =====');
 
         } catch (error) {
-            console.error('[OptionsApp] ❌ Error in saveAllSettings:', error);
-            console.error('[OptionsApp] Error details:', {
+            logger.error('OptionsApp', '❌ Error in saveAllSettings:', error);
+            logger.error('OptionsApp', 'Error details:', {
                 name: error.name,
                 message: error.message,
                 stack: error.stack
             });
             this.panel.showStatus(`Error saving settings: ${error.message}`, true);
-            console.log('[OptionsApp] ===== SAVE ALL SETTINGS FAILED =====');
+            logger.log('OptionsApp', '===== SAVE ALL SETTINGS FAILED =====');
         }
     }
 }

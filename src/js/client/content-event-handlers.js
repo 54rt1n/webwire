@@ -2,6 +2,7 @@
 import { EVENTS } from '../core/events.js';
 import { CONTENT_ACTIONS, BACKGROUND_ACTIONS } from '../core/cc-actions.js';
 import { EventBindableComponent } from '../core/event-bindable-panel.js';
+import { logger } from '../core/logging.js';
 
 export class ContentEventHandlers extends EventBindableComponent {
     constructor(core) {
@@ -27,11 +28,11 @@ export class ContentEventHandlers extends EventBindableComponent {
             BACKGROUND_ACTIONS.REPORT_ERROR,
             { error: errorObj, context },
             { target: 'background' }
-        ).catch(console.error);
+        ).catch(err => logger.error(this, 'Failed to report error:', err));
     }
 
     setupEventListeners() {
-        console.log('[ContentEventHandlers] Setting up event listeners');
+        logger.log(this, 'Setting up event listeners');
         this.setupStashListeners();
         this.setupSettingsListeners();
         this.setupChatListeners();
@@ -41,7 +42,7 @@ export class ContentEventHandlers extends EventBindableComponent {
 
     setupGlobalErrorHandlers() {
         window.addEventListener('error', (event) => {
-            console.error('[ContentEventHandlers] Uncaught error:', event.error);
+            logger.error(this, 'Uncaught error:', event.error);
             this.reportError(event.error, { 
                 operation: 'uncaught_error',
                 message: event.message,
@@ -52,7 +53,7 @@ export class ContentEventHandlers extends EventBindableComponent {
         });
         
         window.addEventListener('unhandledrejection', (event) => {
-            console.error('[ContentEventHandlers] Unhandled promise rejection:', event.reason);
+            logger.error(this, 'Unhandled promise rejection:', event.reason);
             this.reportError(event.reason, {
                 operation: 'unhandled_rejection',
                 promise: true
@@ -77,28 +78,28 @@ export class ContentEventHandlers extends EventBindableComponent {
      * @param {Object} options - { autoSave: boolean }
      */
     async handleStashAdd(data, { autoSave = true, ...options } = {}) {
-        console.log('[MCPApp] Handling stash add request:', data);
+        logger.log(this, 'Handling stash add request:', data);
         if (!this.stateService || !this.stateService.stash) {
-            console.error('[MCPApp] No stash service available');
+            logger.error(this, 'No stash service available');
             return;
         }
 
         const { uri, content } = data;
         if (!uri || !content) {
-            console.error('[MCPApp] Invalid stash add request:', data);
+            logger.error(this, 'Invalid stash add request:', data);
             return;
         }
 
         const added = this.stateService.stash.set(uri, content);
 
         if (added) {
-            console.log(`[MCPApp] Added ${uri} to stash`);
+            logger.log(this, `Added ${uri} to stash`);
             if (autoSave) {
                 await this.handleSaveStash(false);
             }
             this.eventBus.emit(EVENTS.STASH.UPDATED, { uri, added: true, saved: true, ...options });
         } else {
-            console.log(`[MCPApp] ${uri} was already in stash`);
+            logger.log(this, `${uri} was already in stash`);
         }
     }
 
@@ -109,26 +110,26 @@ export class ContentEventHandlers extends EventBindableComponent {
      */
     async handleStashRemove(data, { autoSave = true, ...options } = {}) {
         if (!this.stateService || !this.stateService.stash) {
-            console.error('[MCPApp] No stash service available', this.stateService, this.stateService?.stash);
+            logger.error(this, 'No stash service available', this.stateService, this.stateService?.stash);
             return;
         }
 
         const { uri } = data;
         if (!uri) {
-            console.error('[MCPApp] Invalid stash remove request:', data);
+            logger.error(this, 'Invalid stash remove request:', data);
             return;
         }
 
         const removed = this.stateService.stash.delete(uri);
         
         if (removed) {
-            console.log(`[MCPApp] Removed ${uri} from stash`);
+            logger.log(this, `Removed ${uri} from stash`);
             if (autoSave) {
                 await this.handleSaveStash(false);
             }
             this.eventBus.emit(EVENTS.STASH.UPDATED, { uri, removed: true, saved: true, ...options });
         } else {
-            console.log(`[MCPApp] ${uri} was not in stash`);
+            logger.log(this, `${uri} was not in stash`);
         }
     }
 
@@ -137,12 +138,12 @@ export class ContentEventHandlers extends EventBindableComponent {
      */
     async handleStashClearAll() {
         if (!this.stateService || !this.stateService.stash) {
-            console.error('[MCPApp] No stash service available');
+            logger.error(this, 'No stash service available');
             return;
         }
 
         this.stateService.stash.clearAll();
-        console.log('[MCPApp] Cleared all stash content');
+        logger.log(this, 'Cleared all stash content');
         await this.handleSaveStash(false);
         this.eventBus.emit(EVENTS.STASH.UPDATED, { uri: 'all', cleared: true, saved: true, ...options });
     }
@@ -156,7 +157,7 @@ export class ContentEventHandlers extends EventBindableComponent {
         try {
             await this.dispatcher.dispatch(BACKGROUND_ACTIONS.SAVE_STASH, { announce, options }, { target: 'background', tabId: this.stateService.ui.getTabId() });
         } catch (error) {
-            console.error('[MCPApp] Failed to save stash data:', error);
+            logger.error(this, 'Failed to save stash data:', error);
             this.reportError(error, { operation: 'save_stash' });
         }
     }
@@ -170,7 +171,7 @@ export class ContentEventHandlers extends EventBindableComponent {
             const response = await this.dispatcher.dispatch(BACKGROUND_ACTIONS.LOAD_STASH, options, { target: 'background', tabId: this.stateService.ui.getTabId() });
             // TODO Patch the state with the stash response
         } catch (error) {
-            console.error('[MCPApp] Failed to load stash data:', error);
+            logger.error(this, 'Failed to load stash data:', error);
         }
     }
 
@@ -209,7 +210,7 @@ export class ContentEventHandlers extends EventBindableComponent {
      * Handle resync request from ChatService
      */
     async handleResync(data) {
-        console.log('[ContentEventHandlers] Handling resync request');
+        logger.log(this, 'Handling resync request');
         
         try {
             // Gather local content state
@@ -228,7 +229,7 @@ export class ContentEventHandlers extends EventBindableComponent {
             );
             
             if (response.success && response.result) {
-                console.log('[ContentEventHandlers] Received fresh state from background:', response.result);
+                logger.log(this, 'Received fresh state from background:', response.result);
 
                 const { tabId, ...state } = response.result;
                 
@@ -242,7 +243,7 @@ export class ContentEventHandlers extends EventBindableComponent {
                 throw new Error('Failed to get state from background');
             }
         } catch (error) {
-            console.error('[ContentEventHandlers] Failed to resync:', error);
+            logger.error(this, 'Failed to resync:', error);
             this.reportError(error, { operation: 'resync' });
             return { success: false, error: error.message };
         }
@@ -252,7 +253,7 @@ export class ContentEventHandlers extends EventBindableComponent {
      * Handle end conversation request from ChatService
      */
     async handleEndConversation(data) {
-        console.log('[ContentEventHandlers] Handling end conversation request:', data);
+        logger.log(this, 'Handling end conversation request:', data);
         
         try {
             const response = await this.dispatcher.dispatch(
@@ -261,10 +262,10 @@ export class ContentEventHandlers extends EventBindableComponent {
                 { target: 'background', tabId: this.stateService.ui.getTabId() }
             );
             
-            console.log('[ContentEventHandlers] End conversation response:', response);
+            logger.log(this, 'End conversation response:', response);
             return response;
         } catch (error) {
-            console.error('[ContentEventHandlers] Failed to end conversation:', error);
+            logger.error(this, 'Failed to end conversation:', error);
             return { success: false, error: error.message };
         }
     }
@@ -273,7 +274,7 @@ export class ContentEventHandlers extends EventBindableComponent {
      * Handle execute tool event
      */
     async handleExecuteTool(data) {
-        console.log('[MCPApp] Handling execute tool event:', data);
+        logger.log(this, 'Handling execute tool event:', data);
         try {
             const { callId, name } = data;
             // We need to look up the threadId and the messageId for the callId
@@ -282,7 +283,7 @@ export class ContentEventHandlers extends EventBindableComponent {
             // Update the conversation state with the tool result
             this.stateService.conversation.updateToolResult(threadId, messageId, callId, toolResult);
             const conversation = this.stateService.conversation.getConversation(threadId);
-            console.log('[MCPApp] Updated tool result (saving to disk):', conversation);
+            logger.log(this, 'Updated tool result (saving to disk):', conversation);
             // Save to disk // TODO this should not work
             await this.dispatcher.dispatch(BACKGROUND_ACTIONS.SAVE_THREAD_MESSAGE, { threadId, messageId, conversation }, { target: 'background' });
 
@@ -296,7 +297,7 @@ export class ContentEventHandlers extends EventBindableComponent {
                 toolResult: toolResult
             };
         } catch (error) {
-            console.error('[MCPApp] Failed to execute tool:', error);
+            logger.error(this, 'Failed to execute tool:', error);
             this.reportError(error, { operation: 'execute_tool', tool: data.name });
         }
     }
@@ -305,7 +306,7 @@ export class ContentEventHandlers extends EventBindableComponent {
      * Handle cancel tool event
      */
     async handleCancelTool(data) {
-        console.log('[MCPApp] Handling cancel tool event:', data);
+        logger.log(this, 'Handling cancel tool event:', data);
         return {
             success: true,
             threadId: data.threadId,
@@ -321,7 +322,7 @@ export class ContentEventHandlers extends EventBindableComponent {
         try {
             const threadId = this.stateService.conversation.getActiveThreadId();
             if (!threadId) {
-                console.log('[ContentEventHandlers] No threadId found in data:', data);
+                logger.log(this, 'No threadId found in data:', data);
                 throw new Error('[ContentEventHandlers] No threadId found in data');
             }
 
@@ -334,7 +335,7 @@ export class ContentEventHandlers extends EventBindableComponent {
             this.eventBus.emit(EVENTS.UI.THREAD_SAVED, { threadId, data, status: 'success' });
             return response;
         } catch (error) {
-            console.error('[ContentEventHandlers] Failed to save message:', error);
+            logger.error(this, 'Failed to save message:', error);
             this.eventBus.emit(EVENTS.UI.THREAD_SAVED, { data, status: 'error', error: error.message });
             return { success: false, error: error.message };
         }
@@ -353,7 +354,7 @@ export class ContentEventHandlers extends EventBindableComponent {
 
             return response;
         } catch (error) {
-            console.error('[ContentEventHandlers] Failed to update message:', error);
+            logger.error(this, 'Failed to update message:', error);
             return { success: false, error: error.message };
         }
     }
@@ -370,7 +371,7 @@ export class ContentEventHandlers extends EventBindableComponent {
             );
             return response;
         } catch (error) {
-            console.error('[ContentEventHandlers] Failed to save panel visibility:', error);
+            logger.error(this, 'Failed to save panel visibility:', error);
             return { success: false, error: error.message };
         }
     }
@@ -379,7 +380,7 @@ export class ContentEventHandlers extends EventBindableComponent {
      * Handle update settings request using EventDispatcher
      */
     async handleUpdateSettings(data) {
-        console.log('[ContentEventHandlers] Handling settings update request:', data);
+        logger.log(this, 'Handling settings update request:', data);
         try {
             const tabId = this.stateService.ui.getTabId();
             // Get the current tab state from the tabs collection
@@ -393,21 +394,21 @@ export class ContentEventHandlers extends EventBindableComponent {
                 { tabId, ...updatedTabState },
                 { target: 'background', tabId: this.stateService.ui.getTabId() }
             );
-            console.log('[ContentEventHandlers] Settings update response from background:', response);
+            logger.log(this, 'Settings update response from background:', response);
             return response;
         } catch (error) {
-            console.error('[ContentEventHandlers] Failed to update settings:', error);
+            logger.error(this, 'Failed to update settings:', error);
             return { success: false, error: error.message };
         }
     }
 
     async handleUpdateConversation(data) {
-        console.log('[ContentEventHandlers] Handling update conversation request:', data);
+        logger.log(this, 'Handling update conversation request:', data);
         try {
             // Validate we have a threadId, messages, and metadata
             const threadId = this.stateService.conversation.getActiveThreadId();
             if (!threadId) {
-                console.error('[ContentEventHandlers] Invalid update conversation request:', data);
+                logger.error(this, 'Invalid update conversation request:', data);
                 throw new Error('[ContentEventHandlers] Invalid update conversation request');
             }
 
@@ -428,9 +429,9 @@ export class ContentEventHandlers extends EventBindableComponent {
             return response;
         } catch (error) {
             if (error.message.includes('Extension context')) {
-                console.log('[ContentEventHandlers] Background gone. Reload required.');
+                logger.log(this, 'Background gone. Reload required.');
             } else {
-                console.error('[ContentEventHandlers] Failed to update conversation:', error);
+                logger.error(this, 'Failed to update conversation:', error);
             }
             
             // Emit THREAD_SAVED event with error status
@@ -454,13 +455,13 @@ export class ContentEventHandlers extends EventBindableComponent {
                 { target: 'background', tabId: this.stateService.ui.getTabId() }
             );
 
-            console.log('[ContentEventHandlers] handleGetOrCreateThread', response);
+            logger.log(this, 'handleGetOrCreateThread', response);
             
             // Emit conversation loaded event for ChatService
             if (response.success && response.result) {
                 // CRITICAL: Update local conversation state from background data
                 if (this.stateService && this.stateService.conversation) {
-                    console.log('[ContentEventHandlers] Syncing thread state from background:', response.result.threadId);
+                    logger.log(this, 'Syncing thread state from background:', response.result.threadId);
                     
                     // Ensure we have the proper conversation structure
                     const conversationData = {
@@ -481,12 +482,12 @@ export class ContentEventHandlers extends EventBindableComponent {
                     conversation: response.result
                 });
             } else {
-                console.error('[ContentEventHandlers] Failed to get/create thread:', response.error);
+                logger.error(this, 'Failed to get/create thread:', response.error);
             }
             
             return response;
         } catch (error) {
-            console.error('[ContentEventHandlers] Failed to get/create thread:', error);
+            logger.error(this, 'Failed to get/create thread:', error);
             return { success: false, error: error.message };
         }
     }
@@ -495,7 +496,7 @@ export class ContentEventHandlers extends EventBindableComponent {
      * Handle create new thread request from ChatService
      */
     async handleCreateNewThread(data) {
-        console.log('[ContentEventHandlers] Handling create new thread request:', data);
+        logger.log(this, 'Handling create new thread request:', data);
         
         try {
             const response = await this.dispatcher.dispatch(
@@ -509,7 +510,7 @@ export class ContentEventHandlers extends EventBindableComponent {
                 
                 // CRITICAL: Update local conversation state from background data
                 if (this.stateService && this.stateService.conversation) {
-                    console.log('[ContentEventHandlers] Syncing new thread state from background:', response.thread.threadId);
+                    logger.log(this, 'Syncing new thread state from background:', response.thread.threadId);
                     
                     // Ensure we have the proper conversation structure
                     const conversationData = {
@@ -534,7 +535,7 @@ export class ContentEventHandlers extends EventBindableComponent {
             
             return response;
         } catch (error) {
-            console.error('[WebWireContentHost] Failed to create new thread:', error);
+            logger.error(this, 'Failed to create new thread:', error);
             return { success: false, error: error.message };
         }
     }
@@ -550,7 +551,7 @@ export class ContentEventHandlers extends EventBindableComponent {
      */
     async handleSettingsChanged(data) {
         try {
-            console.log('[ContentEventHandlers] Settings changed:', data.settings);
+            logger.log(this, 'Settings changed:', data.settings);
             this.currentSettings = data.settings || {};
             
             // Trigger full resync to ensure everything is properly updated
@@ -561,7 +562,7 @@ export class ContentEventHandlers extends EventBindableComponent {
             
             return { success: true };
         } catch (error) {
-            console.error('[ContentEventHandlers] Failed to handle settings change:', error);
+            logger.error(this, 'Failed to handle settings change:', error);
             return { success: false, error: error.message };
         }
     }
@@ -576,7 +577,7 @@ export class ContentEventHandlers extends EventBindableComponent {
             
             // CRITICAL: Update local conversation state from background data
             if (this.stateService && this.stateService.conversation && conversation) {
-                console.log('[WebWireContentHost] Syncing conversation state from background:', conversation.threadId);
+                logger.log(this, 'Syncing conversation state from background:', conversation.threadId);
                 this.stateService.conversation.patchConversation(conversation);
             }
             
@@ -584,7 +585,7 @@ export class ContentEventHandlers extends EventBindableComponent {
             this.eventBus.emit(EVENTS.CHAT.CONVERSATION_LOADED, { conversation });
             return { success: true };
         } catch (error) {
-            console.error('[WebWireContentHost] Failed to handle conversation update:', error);
+            logger.error(this, 'Failed to handle conversation update:', error);
             return { success: false, error: error.message };
         }
     }
@@ -598,7 +599,7 @@ export class EarlyEventHandlers extends EventBindableComponent {
     }
 
     setupEventListeners() {
-        console.log('[EarlyEventHandlers] Setting up event listeners');
+        logger.log(this, 'Setting up event listeners');
         this.onAsync(CONTENT_ACTIONS.PING, this.handlePing);
         this.onAsync(CONTENT_ACTIONS.GET_WEBWIRE_STATE, this.handleGetWebwireState);
         this.onAsync(CONTENT_ACTIONS.INJECT_WEBWIRE_PANEL, this.handleInjectPanel);
@@ -620,7 +621,7 @@ export class EarlyEventHandlers extends EventBindableComponent {
             await this.contentHost.injectPanel();
             return { success: true };
         } catch (error) {
-            console.error('[WebWireContentHost] Failed to inject panel:', error);
+            logger.error(this, 'Failed to inject panel:', error);
             return { success: false, error: error.message };
         }
     }
@@ -633,7 +634,7 @@ export class EarlyEventHandlers extends EventBindableComponent {
             await this.chatService.togglePanel();
             return { success: true };
         } catch (error) {
-            console.error('[WebWireContentHost] Failed to toggle panel:', error);
+            logger.error(this, 'Failed to toggle panel:', error);
             return { success: false, error: error.message };
         }
     }
@@ -652,7 +653,7 @@ export class EarlyEventHandlers extends EventBindableComponent {
                 }
             };
         } catch (error) {
-            console.error('[WebWireContentHost] Error getting state:', error);
+            logger.error(this, 'Error getting state:', error);
             return {
                 success: true,
                 state: {

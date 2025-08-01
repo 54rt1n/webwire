@@ -1,5 +1,6 @@
 import { WebWirePopup } from './popup.js';
 import { AppConfig } from '../js/core/app-config.js';
+import { logger } from '../js/core/logging.js';
 
 /**
  * WebWire Popup Application - Main business logic for the extension popup.
@@ -26,7 +27,7 @@ class WebWirePopupApp {
      * Initialize the popup application
      */
     async initialize() {
-        console.log('[WebWirePopupApp] Initializing WebWire Popup...');
+        logger.log('WebWirePopupApp', 'Initializing WebWire Popup...');
         
         try {
             // Initialize the popup UI
@@ -35,10 +36,10 @@ class WebWirePopupApp {
             // Setup event listeners
             this.setupEventListeners();
             
-            console.log('[WebWirePopupApp] WebWire Popup initialized successfully');
+            logger.log('WebWirePopupApp', 'WebWire Popup initialized successfully');
             
         } catch (error) {
-            console.error('[WebWirePopupApp] Failed to initialize:', error);
+            logger.error('WebWirePopupApp', 'Failed to initialize:', error);
             this.popup.showError(`Initialization failed: ${error.message}`);
         }
     }
@@ -62,15 +63,15 @@ class WebWirePopupApp {
      */
     async toggleAssistant(e) {
         try {
-            console.log('[WebWirePopupApp] Toggling assistant...');
+            logger.log('WebWirePopupApp', 'Toggling assistant...');
             const result = await this.popup.toggleAssistant();
-            console.log('[WebWirePopupApp] Assistant toggled:', result);
+            logger.log('WebWirePopupApp', 'Assistant toggled:', result);
             
             // Update the UI to reflect the new state
             await this.popup.updateAssistantUI(result.visible);
             
         } catch (error) {
-            console.error('[WebWirePopupApp] Failed to toggle assistant:', error);
+            logger.error('WebWirePopupApp', 'Failed to toggle assistant:', error);
             if (error.autoInjectDisabled) {
                 // Show a more user-friendly message for auto-inject disabled
                 this.popup.showError('Auto-inject is disabled. Click the WebWire icon in the toolbar while on a webpage to activate the assistant.');
@@ -87,13 +88,13 @@ class WebWirePopupApp {
      */
     async openSettings() {
         try {
-            console.log('[WebWirePopupApp] Opening settings page...');
+            logger.log('WebWirePopupApp', 'Opening settings page...');
             
             await chrome.runtime.openOptionsPage();
             this.popup.close();
             
         } catch (error) {
-            console.error('[WebWirePopupApp] Failed to open settings:', error);
+            logger.error('WebWirePopupApp', 'Failed to open settings:', error);
             this.popup.showError('Failed to open settings');
         }
     }
@@ -105,7 +106,7 @@ class WebWirePopupApp {
     openHelp(e) {
         try {
             e.preventDefault();
-            console.log('[WebWirePopupApp] Opening help documentation...');
+            logger.log('WebWirePopupApp', 'Opening help documentation...');
             
             const guideUrl = chrome.runtime.getURL('guide.html');
             chrome.tabs.create({
@@ -114,7 +115,7 @@ class WebWirePopupApp {
             this.popup.close();
             
         } catch (error) {
-            console.error('[WebWirePopupApp] Failed to open help:', error);
+            logger.error('WebWirePopupApp', 'Failed to open help:', error);
             this.popup.showError('Failed to open help');
         }
     }
@@ -126,20 +127,20 @@ class WebWirePopupApp {
     async openMCP(e) {
         try {
             e.preventDefault();
-            console.log('[WebWirePopupApp] Opening MCP panel...');
+            logger.log('WebWirePopupApp', 'Opening MCP panel...');
             
             const mcpUrl = chrome.runtime.getURL('mcp_status.html');
-            console.log('[WebWirePopupApp] MCP URL:', mcpUrl);
+            logger.log('WebWirePopupApp', 'MCP URL:', mcpUrl);
             
             const tab = await chrome.tabs.create({
                 url: mcpUrl
             });
-            console.log('[WebWirePopupApp] Tab created:', tab);
+            logger.log('WebWirePopupApp', 'Tab created:', tab);
             
             this.popup.close();
             
         } catch (error) {
-            console.error('[WebWirePopupApp] Failed to open MCP panel:', error);
+            logger.error('WebWirePopupApp', 'Failed to open MCP panel:', error);
             this.popup.showError(`Failed to open MCP panel: ${error.message}`);
             
             // Don't close popup if there's an error so user can see it
@@ -153,20 +154,20 @@ class WebWirePopupApp {
     async openConversations(e) {
         try {
             e.preventDefault();
-            console.log('[WebWirePopupApp] Opening Conversations panel...');
+            logger.log('WebWirePopupApp', 'Opening Conversations panel...');
             
             const conversationsUrl = chrome.runtime.getURL('conversations.html');
-            console.log('[WebWirePopupApp] Conversations URL:', conversationsUrl);
+            logger.log('WebWirePopupApp', 'Conversations URL:', conversationsUrl);
             
             const tab = await chrome.tabs.create({
                 url: conversationsUrl
             });
-            console.log('[WebWirePopupApp] Tab created:', tab);
+            logger.log('WebWirePopupApp', 'Tab created:', tab);
             
             this.popup.close();
             
         } catch (error) {
-            console.error('[WebWirePopupApp] Failed to open Conversations panel:', error);
+            logger.error('WebWirePopupApp', 'Failed to open Conversations panel:', error);
             this.popup.showError(`Failed to open Conversations panel: ${error.message}`);
             
             // Don't close popup if there's an error so user can see it
@@ -180,20 +181,20 @@ class WebWirePopupApp {
     async openPrompts(e) {
         try {
             e.preventDefault();
-            console.log('[WebWirePopupApp] Opening Prompts panel...');
+            logger.log('WebWirePopupApp', 'Opening Prompts panel...');
             
             const promptsUrl = chrome.runtime.getURL('prompts.html');
-            console.log('[WebWirePopupApp] Prompts URL:', promptsUrl);
+            logger.log('WebWirePopupApp', 'Prompts URL:', promptsUrl);
             
             const tab = await chrome.tabs.create({
                 url: promptsUrl
             });
-            console.log('[WebWirePopupApp] Tab created:', tab);
+            logger.log('WebWirePopupApp', 'Tab created:', tab);
             
             this.popup.close();
             
         } catch (error) {
-            console.error('[WebWirePopupApp] Failed to open Prompts panel:', error);
+            logger.error('WebWirePopupApp', 'Failed to open Prompts panel:', error);
             this.popup.showError(`Failed to open Prompts panel: ${error.message}`);
             
             // Don't close popup if there's an error so user can see it
@@ -207,7 +208,7 @@ class WebWirePopupApp {
         try {
             await this.popup.loadStatus();
         } catch (error) {
-            console.error('[WebWirePopupApp] Failed to refresh status:', error);
+            logger.error('WebWirePopupApp', 'Failed to refresh status:', error);
         }
     }
 }

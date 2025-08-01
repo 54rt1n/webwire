@@ -1,5 +1,6 @@
 import { generateMessageId } from '../js/utils/id-generator.js';
 import { EVENTS } from '../js/core/events.js';
+import { logger } from '../js/core/logging.js';
 
 /**
  * AIResponseHandler - Processes streaming and final AI responses
@@ -104,7 +105,7 @@ export class AIResponseHandler {
         // Set up streaming
         const unsubscribeStream = this.setupStreaming(thinkingMessage);
 
-        console.log('[AIResponseHandler]', 'API args:', apiArgs);
+        logger.log(this, 'API args:', apiArgs);
         
         try {
             const response = await aiClient.generateTurn(enhancedUserMessage, messagesForAPI, { 

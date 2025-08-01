@@ -23,6 +23,9 @@ import { generateToolCallId } from '../utils/id-generator.js';
  *   // Process the response
  * }
  */
+
+import { logger } from '../core/logging.js';
+
 export class ToolParser {
     /**
      * Create a ToolParser instance with predefined regex patterns
@@ -64,10 +67,10 @@ export class ToolParser {
         if (unclosedThinkMatch) {
             const startIndex = unclosedThinkMatch.index;
             filtered = filtered.substring(0, startIndex);
-            console.log('[ToolParser] Removed unclosed thinking block from position', startIndex);
+            logger.log('ToolParser', 'Removed unclosed thinking block from position', startIndex);
         }
         
-        console.log('[ToolParser] Filtered thinking blocks from response');
+        logger.log('ToolParser', 'Filtered thinking blocks from response');
         return filtered;
     }
 
@@ -127,10 +130,10 @@ export class ToolParser {
         const codeBlocks = this.extractCodeBlocks(response);
         const jsonBlocks = codeBlocks.filter(block => block.language === 'json');
 
-        console.log('[ToolParser] Found', jsonBlocks.length, 'JSON code blocks');
+        logger.log('ToolParser', 'Found', jsonBlocks.length, 'JSON code blocks');
         
         if (jsonBlocks.length === 0) {
-            console.log('[ToolParser] No JSON code blocks found in response');
+            logger.log('ToolParser', 'No JSON code blocks found in response');
             result.errors.push('No JSON code blocks found in response');
             return result;
         }
@@ -141,7 +144,7 @@ export class ToolParser {
             const jsonString = block.content.trim();
             
             if (!jsonString) {
-                console.log('[ToolParser] Empty JSON code block', i + 1);
+                logger.log('ToolParser', 'Empty JSON code block', i + 1);
                 result.errors.push(`Empty JSON code block ${i + 1}`);
                 continue;
             }
@@ -150,7 +153,7 @@ export class ToolParser {
                 const preprocessed = this.preprocessJsonString(jsonString);
                 const parsed = JSON.parse(preprocessed);
                 parsed.callId = generateToolCallId();
-                console.log('[ToolParser] Parsed tool call:', parsed);
+                logger.log('ToolParser', 'Parsed tool call:', parsed);
                 const validation = this.validateToolCall(parsed);
                 
                 if (validation.valid) {
@@ -160,7 +163,7 @@ export class ToolParser {
                 }
                 
             } catch (parseError) {
-                console.log('[ToolParser] JSON parse error in block', i + 1, ':', parseError.message);
+                logger.log('ToolParser', 'JSON parse error in block', i + 1, ':', parseError.message);
                 result.errors.push(`JSON parse error in block ${i + 1}: ${parseError.message}`);
             }
         }
@@ -281,13 +284,13 @@ export class ToolParser {
                 if (nameKey !== 'name') {
                     normalized.name = normalized[nameKey];
                     delete normalized[nameKey];
-                    console.log(`[ToolParser] Fuzzy match: '${nameKey}' -> 'name'`);
+                    logger.log('ToolParser', `Fuzzy match: '${nameKey}' -> 'name'`);
                 }
                 
                 if (paramsKey !== 'parameters') {
                     normalized.parameters = normalized[paramsKey];
                     delete normalized[paramsKey];
-                    console.log(`[ToolParser] Fuzzy match: '${paramsKey}' -> 'parameters'`);
+                    logger.log('ToolParser', `Fuzzy match: '${paramsKey}' -> 'parameters'`);
                 }
             }
         }
@@ -306,7 +309,7 @@ export class ToolParser {
             JSON.parse(jsonString);
             return jsonString;
         } catch (error) {
-            console.log('[ToolParser] JSON preprocessing needed, error:', error.message);
+            logger.log('ToolParser', 'JSON preprocessing needed, error:', error.message);
             
             // More robust approach: parse character by character to properly handle strings
             let processed = '';
@@ -375,7 +378,7 @@ export class ToolParser {
                 i++;
             }
             
-            console.log('[ToolParser] Preprocessed JSON result:', processed);
+            logger.log('ToolParser', 'Preprocessed JSON result:', processed);
             return processed;
         }
     }
@@ -399,7 +402,7 @@ export class ToolParser {
                 language: match[1] || 'text',
                 content: match[2].trim()
             });
-            console.log('[ToolParser] Extracted code block:', blocks[blocks.length - 1]);
+            logger.log('ToolParser', 'Extracted code block:', blocks[blocks.length - 1]);
         }
 
         return blocks;

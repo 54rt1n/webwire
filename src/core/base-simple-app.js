@@ -2,6 +2,7 @@ import { EventBindableComponent } from '../js/core/event-bindable-panel.js';
 import { initializeContext } from '../js/context/context-init.js';
 import { EventBus } from '../js/core/event-bus.js';
 import { EVENT_CONTEXT } from '../js/core/events.js';
+import { logger } from '../js/core/logging.js';
 
 /**
  * BaseSimpleApp - Template Method Pattern for Simple Applications
@@ -32,7 +33,7 @@ export class BaseSimpleApp extends EventBindableComponent {
      * Instead, they should implement the hook methods below.
      */
     async initialize() {
-        console.log(`[${this.constructor.name}] Initializing simple app...`);
+        logger.log(this, 'Initializing simple app...');
 
         // 1. Initialize context with minimal services (invariant)
         const { dispatcher, stateService, storage } = await initializeContext(
@@ -60,7 +61,7 @@ export class BaseSimpleApp extends EventBindableComponent {
         // 6. Load initial data (variant hook)
         await this._loadData();
 
-        console.log(`[${this.constructor.name}] Initialization complete`);
+        logger.log(this, 'Initialization complete');
     }
 
     // --- HOOK METHODS: To be implemented by subclasses ---

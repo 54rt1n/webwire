@@ -2,6 +2,7 @@ import './conversation-modal.scss';
 import { EVENTS } from '../../js/core/events.js';
 import { buildToolMessages } from '../../chat/message-utils.js';
 import { EventBindableComponent } from '../../js/core/event-bindable-panel.js';
+import { logger } from '../../js/core/logging.js';
 
 /**
  * ConversationModal
@@ -679,7 +680,7 @@ export class ConversationModal extends EventBindableComponent {
         const messageId = button.dataset.messageId;
         
         if (!messageContent) {
-            console.warn('[ConversationModal] No content found for play button');
+            logger.warn(this, 'No content found for play button');
             return;
         }
         
@@ -697,11 +698,11 @@ export class ConversationModal extends EventBindableComponent {
                 });
                 
                 // Success - result contains { success: true, message: ... }
-                console.log('[ConversationModal] Audio playback completed:', result.message);
+                logger.log(this, 'Audio playback completed:', result.message);
             }
         } catch (error) {
             // Handler threw an error
-            console.error('[ConversationModal] Audio playback failed:', error.message);
+            logger.error(this, 'Audio playback failed:', error.message);
             // Could show user error feedback here
         } finally {
             // Remove playing state
@@ -719,7 +720,7 @@ export class ConversationModal extends EventBindableComponent {
         const messageId = button.dataset.messageId;
         
         if (!messageContent) {
-            console.warn('[ConversationModal] No content found for copy button');
+            logger.warn(this, 'No content found for copy button');
             return;
         }
         
@@ -744,7 +745,7 @@ export class ConversationModal extends EventBindableComponent {
                     button.classList.remove('copied');
                 }, 2000);
                 
-                console.log('[ConversationModal] Message copied successfully:', result.message);
+                logger.log(this, 'Message copied successfully:', result.message);
             }
         } catch (error) {
             // Handler threw an error - show error feedback
@@ -756,7 +757,7 @@ export class ConversationModal extends EventBindableComponent {
                 button.classList.remove('error');
             }, 2000);
             
-            console.error('[ConversationModal] Failed to copy message:', error.message);
+            logger.error(this, 'Failed to copy message:', error.message);
         }
     }
 }

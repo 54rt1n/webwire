@@ -1,3 +1,5 @@
+import { logger } from '../core/logging.js';
+
 /**
  * Prompt Loader Utility
  * 
@@ -33,18 +35,18 @@ export class PromptLoader {
         
         for (const file of promptFiles) {
             try {
-                console.log(`[PromptLoader] Attempting to load: /prompts/${file}`);
+                logger.log('PromptLoader', `Attempting to load: /prompts/${file}`);
                 const response = await fetch(`/prompts/${file}`);
-                console.log(`[PromptLoader] Response for ${file}:`, response.status, response.statusText);
+                logger.log('PromptLoader', `Response for ${file}:`, response.status, response.statusText);
                 if (response.ok) {
                     const promptData = await response.json();
-                    console.log(`[PromptLoader] Loaded data from ${file}:`, promptData);
+                    logger.log('PromptLoader', `Loaded data from ${file}:`, promptData);
                     Object.assign(prompts, promptData);
                 } else {
-                    console.warn(`Failed to load prompt file: ${file} - ${response.status} ${response.statusText}`);
+                    logger.warn('PromptLoader', `Failed to load prompt file: ${file} - ${response.status} ${response.statusText}`);
                 }
             } catch (error) {
-                console.error(`Error loading prompt file ${file}:`, error);
+                logger.error('PromptLoader', `Error loading prompt file ${file}:`, error);
             }
         }
         
@@ -65,7 +67,7 @@ export class PromptLoader {
                 return prompts;
             }
         } catch (error) {
-            console.log('Standard loading failed, trying Chrome extension resources');
+            logger.log('PromptLoader', 'Standard loading failed, trying Chrome extension resources');
         }
 
         // Fallback to Chrome extension resource URLs
@@ -97,7 +99,7 @@ export class PromptLoader {
                         Object.assign(prompts, promptData);
                     }
                 } catch (error) {
-                    console.error(`Error loading prompt file ${file} from extension:`, error);
+                    logger.error('PromptLoader', `Error loading prompt file ${file} from extension:`, error);
                 }
             }
         }
@@ -129,7 +131,7 @@ export class PromptLoader {
                 return await response.json();
             }
         } catch (error) {
-            console.error(`Error loading prompt file ${filename}:`, error);
+            logger.error('PromptLoader', `Error loading prompt file ${filename}:`, error);
         }
         
         return {};

@@ -2,6 +2,7 @@ import '../../src/shared/global.scss';
 import './style.scss';
 import { EventDispatcher } from '../js/core/event-dispatcher.js';
 import { BACKGROUND_ACTIONS, CONTENT_ACTIONS } from '../js/core/cc-actions.js';
+import { logger } from '../js/core/logging.js';
 
 /**
  * UI management for the WebWire popup providing status display and user interaction controls.
@@ -74,7 +75,7 @@ export class WebWirePopup {
             this.showContent();
 
         } catch (error) {
-            console.error('Failed to initialize popup:', error);
+            logger.error('WebWirePopup', 'Failed to initialize popup:', error);
             this.showError('Failed to initialize');
         }
     }
@@ -109,12 +110,12 @@ export class WebWirePopup {
                 throw new Error('Failed to load stats');
             }
 
-            console.log('Extension stats:', result);
+            logger.log('WebWirePopup', 'Extension stats:', result);
             this.updateStatus(result);
             this.showContent();
 
         } catch (error) {
-            console.error('Failed to load status:', error);
+            logger.error('WebWirePopup', 'Failed to load status:', error);
             this.updateStatus({});
             this.showContent();
         }
@@ -173,7 +174,7 @@ export class WebWirePopup {
      * @param {string} message - Error message
      */
     showError(message) {
-        console.error(message);
+        logger.error('WebWirePopup', message);
         const content = this.contentElement;
         content.innerHTML = `
             <div style="text-align: center; padding: 20px; color: #ef4444;">
@@ -233,7 +234,7 @@ export class WebWirePopup {
                     currentlyVisible = result.isInjected || false;
                 }
             } catch (error) {
-                console.log('[WebWirePopup] Could not get panel state:', error);
+                logger.log('WebWirePopup', 'Could not get panel state:', error);
                 // Fallback to background state
                 const stateResponse = await this.dispatcher.dispatch(
                     BACKGROUND_ACTIONS.GET_ASSISTANT_STATE,
@@ -259,7 +260,7 @@ export class WebWirePopup {
                 return { success: true, visible: !currentlyVisible };
             } else if (response?.autoInjectDisabled) {
                 // Auto-inject is disabled, show appropriate message
-                console.log('[WebWirePopup] Auto-inject is disabled');
+                logger.log('WebWirePopup', 'Auto-inject is disabled');
                 return { 
                     success: false, 
                     error: 'Auto-inject is disabled. Click the extension icon on the page to manually inject the assistant.',
@@ -270,7 +271,7 @@ export class WebWirePopup {
             }
             
         } catch (error) {
-            console.error('Failed to toggle assistant:', error);
+            logger.error('WebWirePopup', 'Failed to toggle assistant:', error);
             throw error;
         }
     }
@@ -330,7 +331,7 @@ export class WebWirePopup {
                 }
             } catch (contentError) {
                 // Content script might not be injected yet
-                console.log('[WebWirePopup] Could not get panel state from content script:', contentError);
+                logger.log('WebWirePopup', 'Could not get panel state from content script:', contentError);
             }
             
             // If we can't get panel state, disable the toggle
@@ -343,7 +344,7 @@ export class WebWirePopup {
             }
             
         } catch (error) {
-            console.error('[WebWirePopup] Failed to initialize assistant UI:', error);
+            logger.error('WebWirePopup', 'Failed to initialize assistant UI:', error);
             // Disable toggle on error
             if (this.toggleAssistantBtn) {
                 this.toggleAssistantBtn.disabled = true;

@@ -1,3 +1,5 @@
+import { logger } from '../../js/core/logging.js';
+
 /**
  * GraphDraw - Knowledge Base Graph Visualization
  * Renders an interactive node graph for knowledge base entries using canvas
@@ -129,16 +131,16 @@ export class GraphDraw {
             }
         });
         
-        console.log(`[GraphDraw] Created ${this.nodes.length} nodes and ${this.edges.length} edges`);
+        logger.log('GraphDraw', `Created ${this.nodes.length} nodes and ${this.edges.length} edges`);
         
-        console.log(`[GraphDraw] Starting force simulation...`);
+        logger.log('GraphDraw', 'Starting force simulation...');
         // Run force simulation to position nodes
         this.runForceSimulation();
         
-        console.log(`[GraphDraw] Force simulation complete, starting render...`);
+        logger.log('GraphDraw', 'Force simulation complete, starting render...');
         // Render
         this.render();
-        console.log(`[GraphDraw] Render complete`);
+        logger.log('GraphDraw', 'Render complete');
         
         // Notify that graph is ready
         const event = new CustomEvent('kb-graph-ready');

@@ -7,6 +7,7 @@
  */
 import { SemanticPageExtractor } from './page-utils.js';
 import { generateUUID } from '../utils/id-generator.js';
+import { logger } from '../core/logging.js';
 
 export class DOMAgent {
     constructor(eventBus) {
@@ -81,7 +82,7 @@ export class DOMAgent {
         const executionStart = Date.now();
         const toolCallId = generateUUID();
 
-        console.log(`[DOMAgent] Executing tool: ${toolName}`, parameters);
+        logger.log(this, `Executing tool: ${toolName}`, parameters);
 
         try {
             if (!this.isTool(toolName)) {
@@ -100,7 +101,7 @@ export class DOMAgent {
             };
 
         } catch (error) {
-            console.error(`[DOMAgent] Tool ${toolName} execution failed:`, error);
+            logger.error(this, `Tool ${toolName} execution failed:`, error);
             return {
                 callId: toolCallId,
                 name: toolName,
@@ -122,7 +123,7 @@ export class DOMAgent {
         if (!url || typeof url !== 'string') {
             throw new Error('URL parameter is required and must be a string.');
         }
-        console.log(`[DOMAgent] Navigating to: ${url}`);
+        logger.log(this, `Navigating to: ${url}`);
         window.location.href = url;
         // The page will reload, so this promise might not resolve in the current context.
         return { message: `Navigation to ${url} initiated.` };
@@ -138,7 +139,7 @@ export class DOMAgent {
             throw new Error(`Element not found for parameters: ${JSON.stringify(params)}`);
         }
         
-        console.log('[DOMAgent] Clicking element:', element);
+        logger.log(this, 'Clicking element:', element);
         element.click();
         
         return {
@@ -173,7 +174,7 @@ export class DOMAgent {
                 input.dispatchEvent(new Event('change', { bubbles: true }));
                 fieldsFilled++;
             } else {
-                console.warn(`[DOMAgent] Could not find form field with identifier: ${identifier}`);
+                logger.warn(this, `Could not find form field with identifier: ${identifier}`);
             }
         }
 
@@ -231,7 +232,7 @@ export class DOMAgent {
             try {
                 return document.evaluate(elementData.selectors.xpath, document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue;
             } catch (e) {
-                console.warn(`[DOMAgent] Invalid XPath: ${elementData.selectors.xpath}`);
+                logger.warn(this, `Invalid XPath: ${elementData.selectors.xpath}`);
             }
         }
         return null;

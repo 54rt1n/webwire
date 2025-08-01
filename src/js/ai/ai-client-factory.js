@@ -2,6 +2,7 @@ import { FeatherlessClient } from './providers/featherless-client.js';
 import { OpenAIClient } from './providers/openai-client.js';
 import { AIStudioClient } from './providers/aistudio-client.js';
 import { AIMindClient } from './providers/aimind-client.js';
+import { logger } from '../core/logging.js';
 
 /**
  * Factory for creating AI clients from configuration with unified interface support.
@@ -87,7 +88,7 @@ export class AIClientFactory {
                 client.baseUrl = modelConfig.apiEndpoint;
                 break;
             default:
-                console.warn(`[AIClientFactory] Unknown provider "${modelConfig.provider}", falling back to legacy client.`);
+                logger.warn('AIClientFactory', `Unknown provider "${modelConfig.provider}", falling back to legacy client.`);
                 throw new Error(`Unknown provider "${modelConfig.provider}"`);
         }
 
@@ -105,7 +106,7 @@ export class AIClientFactory {
             client.maxTokens = modelConfig.sampler_config.max_tokens;
         }
 
-        console.log(`[AIClientFactory] Created ${modelConfig.provider} client for model: ${modelConfig.model}`);
+        logger.log('AIClientFactory', `Created ${modelConfig.provider} client for model: ${modelConfig.model}`);
         return client;
     }
 

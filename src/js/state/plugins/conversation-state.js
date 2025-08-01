@@ -1,5 +1,6 @@
 import { EVENTS } from '../../core/events.js';
 import { generateMessageId } from '../../utils/id-generator.js';
+import { logger } from '../../core/logging.js';
 
 /**
  * Plugin for handling conversation history and management.
@@ -155,7 +156,7 @@ export class ConversationStatePlugin {
             }
         }
 
-        console.log(`Stored partial user message in conversation ${threadId}.`);
+        logger.log(this, `Stored partial user message in conversation ${threadId}.`);
         this.eventBus.emit(EVENTS.CONVERSATION.UPDATED, { threadId });
     }
 
@@ -205,7 +206,7 @@ export class ConversationStatePlugin {
             }
         }
 
-        console.log(`Stored assistant message in conversation ${threadId}.`);
+        logger.log(this, `Stored assistant message in conversation ${threadId}.`);
         this.eventBus.emit(EVENTS.CONVERSATION.UPDATED, { threadId });
     }
 
@@ -288,7 +289,7 @@ export class ConversationStatePlugin {
             state.metadata[threadId].duration = timestamp - state.metadata[threadId].startTime;
         }
         
-        console.log(`[ConversationState] Stored message in conversation ${threadId}.`);
+        logger.log(this, `Stored message in conversation ${threadId}.`);
         this.eventBus.emit(EVENTS.CONVERSATION.UPDATED, { threadId });
     }
 
@@ -316,7 +317,7 @@ export class ConversationStatePlugin {
             delete state.history[threadId];
             delete state.metadata[threadId];
             
-            console.log(`Cleared history for conversation ${threadId}`);
+            logger.log(this, `Cleared history for conversation ${threadId}`);
             this.eventBus.emit(EVENTS.CONVERSATION.DELETED, { threadId });
             return true;
         }
@@ -344,7 +345,7 @@ export class ConversationStatePlugin {
                 state.metadata[threadId].duration = endTime - state.metadata[threadId].startTime;
             }
             
-            console.log(`Updated conversation ${threadId} status to ${status}`);
+            logger.log(this, `Updated conversation ${threadId} status to ${status}`);
             this.eventBus.emit(EVENTS.CONVERSATION.STATUS_UPDATED, { threadId, status });
         }
     }
@@ -429,7 +430,7 @@ export class ConversationStatePlugin {
             if (metadata.tabId === currentTabId && 
                 metadata.status === 'active' && 
                 convThreadId !== threadId) {
-                console.log(`[StateService::ConversationState] Auto-completing previous active conversation: ${convThreadId}`);
+                logger.log('StateService:ConversationState', `Auto-completing previous active conversation: ${convThreadId}`);
                 this.updateConversationStatus(convThreadId, 'completed');
             }
         });
@@ -437,7 +438,7 @@ export class ConversationStatePlugin {
         // Update the UI state for this tab
         this.stateService.ui.setTrackedThreadId(threadId);
         
-        console.log(`[StateService::ConversationState] Set active conversation to ${threadId} (tab: ${currentTabId})`);
+        logger.log('StateService:ConversationState', `Set active conversation to ${threadId} (tab: ${currentTabId})`);
         this.eventBus.emit(EVENTS.CONVERSATION.ACTIVATED, { threadId, tabId: currentTabId });
     }
 
@@ -451,11 +452,11 @@ export class ConversationStatePlugin {
         if (!tabId) {
             tabId = this.stateService.ui.getTabId();
         }
-        console.log('[ConversationState] getCurrentConversation called for tab:', tabId);
+        logger.log(this, 'getCurrentConversation called for tab:', tabId);
         
         // Try to get existing active conversation for this tab
         let threadId = this.getActiveThreadId(tabId);
-        console.log('[ConversationState] Active thread ID:', threadId);
+        logger.log(this, 'Active thread ID:', threadId);
 
         if (threadId) {
             return threadId;
@@ -464,7 +465,7 @@ export class ConversationStatePlugin {
         // No active conversation found, try to recover one for this tab
         threadId = this.recoverActiveForTab(tabId);
         if (threadId) {
-            console.log(`[ConversationState] Recovered conversation for tab ${tabId}: ${threadId}`);
+            logger.log(this, `Recovered conversation for tab ${tabId}: ${threadId}`);
             return threadId;
         }
         
@@ -482,12 +483,12 @@ export class ConversationStatePlugin {
         
         // Check if message was found in any thread
         if (!threadId) {
-            console.warn('[ConversationState] Message not found in any conversation:', messageId);
+            logger.warn(this, 'Message not found in any conversation:', messageId);
             return null;
         }
         
         if (!state.history[threadId]) {
-            console.error('[ConversationState] Conversation not found:', threadId, state);
+            logger.error(this, 'Conversation not found:', threadId, state);
             throw new Error(`Conversation ${threadId} not found`);
         }
         return state.history[threadId].find(m => m.messageId === messageId);
@@ -499,7 +500,7 @@ export class ConversationStatePlugin {
      * @returns {string} The thread ID
      */
     createNewConversation(options = {setActive: true}) {
-        console.log('[ConversationState] createNewConversation called with options:', options);
+        logger.log(this, 'createNewConversation called with options:', options);
         
         const tabId = options.tabId || this.stateService.ui.getTabId();
         const currentUser = this.stateService.state.settings?.aim?.userName || 'User';
@@ -527,7 +528,7 @@ export class ConversationStatePlugin {
             errorType: undefined,
         };
 
-        console.log(`[ConversationState] Created new conversation: ${threadId} for tab: ${tabId}`);
+        logger.log(this, `Created new conversation: ${threadId} for tab: ${tabId}`);
         
         if (options.setActive) {
             // Set this as the active conversation for this tab
@@ -546,7 +547,7 @@ export class ConversationStatePlugin {
         if (!tabId) {
             tabId = this.stateService.ui.getTabId();
         }
-        console.log('[ConversationState] Recovering active conversation for tab:', tabId);
+        logger.log(this, 'Recovering active conversation for tab:', tabId);
 
         // Find conversations for this tab only
         const tabConversations = Object.values(this.stateService.state.conversation.metadata)
@@ -560,12 +561,12 @@ export class ConversationStatePlugin {
         
         if (tabConversations.length > 0) {
             const mostRecent = tabConversations[0];
-            console.log(`[ConversationState] Found most recent conversation for tab ${tabId}: ${mostRecent.threadId}`);
+            logger.log(this, `Found most recent conversation for tab ${tabId}: ${mostRecent.threadId}`);
             this.stateService.ui.setTrackedThreadId(mostRecent.threadId);
             return mostRecent.threadId;
         }
         
-        console.log('[ConversationState] No conversations found to recover for tab:', tabId);
+        logger.log(this, 'No conversations found to recover for tab:', tabId);
         return null;
     }
 
@@ -608,7 +609,7 @@ export class ConversationStatePlugin {
         const state = this._safeConversationState();
 
         if (!state.history[threadId]) {
-            console.error('[ConversationState] Conversation not found:', threadId, state);
+            logger.error(this, 'Conversation not found:', threadId, state);
             throw new Error(`Conversation ${threadId} not found`);
         }
         
@@ -624,14 +625,14 @@ export class ConversationStatePlugin {
         const state = this._safeConversationState();
         const threadId = this.getThreadForMessage(messageId);
         if (!state.history[threadId]) {
-            console.error('[ConversationState] Conversation not found:', threadId, state);
+            logger.error(this, 'Conversation not found:', threadId, state);
             throw new Error(`Conversation ${threadId} not found`);
         }
         const message = state.history[threadId].find(m => m.messageId === messageId);
         if (message) {
             message.toolCalls = toolCalls;
         }
-        console.log(`[ConversationState] Updated tool calls for message ${messageId} in conversation ${threadId}`);
+        logger.log(this, `Updated tool calls for message ${messageId} in conversation ${threadId}`);
         this.eventBus.emit(EVENTS.CONVERSATION.UPDATED, { threadId });
     }
 
@@ -654,7 +655,7 @@ export class ConversationStatePlugin {
             }
             message.toolResults.push({ callId, ...toolResult });
         }
-        console.log(`[ConversationState] Updated tool result for message ${messageId} in conversation ${threadId}`);
+        logger.log(this, `Updated tool result for message ${messageId} in conversation ${threadId}`);
         //this.eventBus.emit(EVENTS.CONVERSATION.UPDATED, { threadId, save: true });
     }
 
@@ -680,7 +681,7 @@ export class ConversationStatePlugin {
                 m => m.toolCalls?.some(
                     r => r.callId === callId)));
         if (!threadId) {
-            console.error('[ConversationState] Call ID not found in any conversation:', callId, this.stateService.state.conversation.history);
+            logger.error(this, 'Call ID not found in any conversation:', callId, this.stateService.state.conversation.history);
             throw new Error(`Call ID ${callId} not found in any conversation`);
         }
         const messageId = state.history[threadId].find(m => m.toolCalls?.some(r => r.callId === callId))?.messageId;
@@ -692,12 +693,12 @@ export class ConversationStatePlugin {
      * This is a destructive operation that cannot be undone
      */
     hardResetAllConversations() {
-        console.log('[ConversationState] Performing hard reset of all conversations');
+        logger.log(this, 'Performing hard reset of all conversations');
         
         // Clear all conversation history and metadata
         this._safeConversationState({force: true});
         
-        console.log('[ConversationState] Hard reset completed - all conversations cleared');
+        logger.log(this, 'Hard reset completed - all conversations cleared');
         this.eventBus.emit(EVENTS.CONVERSATION.HARD_RESET, {});
     }
 
@@ -714,13 +715,13 @@ export class ConversationStatePlugin {
         const { threadId, metadata, messages, isActive } = conversationData;
         
         if (!threadId) {
-            console.error('[ConversationState] patchConversation: threadId is required');
+            logger.error(this, 'patchConversation: threadId is required');
             return;
         }
 
         const state = this._safeConversationState();
         
-        console.log(`[ConversationState] Patching conversation ${threadId} with ${messages?.length || 0} messages`);
+        logger.log(this, `Patching conversation ${threadId} with ${messages?.length || 0} messages`);
         
         // Update conversation metadata - ensure it exists
         if (metadata) {
@@ -765,7 +766,7 @@ export class ConversationStatePlugin {
             this.setActiveConversation(threadId, {tabId: this.stateService.ui.getTabId()});
         }
         
-        console.log(`[ConversationState] Successfully patched conversation ${threadId}`);
+        logger.log(this, `Successfully patched conversation ${threadId}`);
         this.eventBus.emit(EVENTS.CONVERSATION.UPDATED, { threadId });
     }
 
@@ -779,7 +780,7 @@ export class ConversationStatePlugin {
         const state = this._safeConversationState();
         
         if (!state.history[threadId]) {
-            console.warn(`[ConversationState] Thread ${threadId} not found`);
+            logger.warn(this, `Thread ${threadId} not found`);
             return;
         }
         
@@ -788,10 +789,10 @@ export class ConversationStatePlugin {
         
         if (message) {
             message.status = status;
-            console.log(`[ConversationState] Marked message ${messageId} as ${status}`);
+            logger.log(this, `Marked message ${messageId} as ${status}`);
             this.eventBus.emit(EVENTS.CONVERSATION.UPDATED, { threadId });
         } else {
-            console.warn(`[ConversationState] Message ${messageId} not found in thread ${threadId}`);
+            logger.warn(this, `Message ${messageId} not found in thread ${threadId}`);
         }
     }
 

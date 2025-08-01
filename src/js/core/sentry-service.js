@@ -5,6 +5,7 @@ import {
   makeFetchTransport,
   Scope,
 } from "@sentry/browser";
+import { logger } from './logging.js';
 
 export class SentryService {
   constructor(config = {}) {
@@ -17,7 +18,7 @@ export class SentryService {
 
   async initialize(crashReportingEnabled = true) {
     if (!crashReportingEnabled) {
-      console.log('[SentryService] Crash reporting disabled');
+      logger.log('SentryService', 'Crash reporting disabled');
       return;
     }
 
@@ -32,7 +33,7 @@ export class SentryService {
       this.context = context;
 
       if (!dsn) {
-        console.warn('[SentryService] No DSN provided, Sentry not initialized');
+        logger.warn('SentryService', 'No DSN provided, Sentry not initialized');
         return;
       }
 
@@ -74,9 +75,9 @@ export class SentryService {
       this.client.init(); // initializing has to be done after setting the client on the scope
 
       this.initialized = true;
-      console.log(`[SentryService] Initialized for ${context} context`);
+      logger.log('SentryService', `Initialized for ${context} context`);
     } catch (error) {
-      console.error('[SentryService] Failed to initialize:', error);
+      logger.error('SentryService', 'Failed to initialize:', error);
     }
   }
 
@@ -85,7 +86,7 @@ export class SentryService {
       this.scope.setContext('custom', context);
       this.scope.captureException(error);
     } else {
-      console.error('[SentryService] Not initialized:', error, context);
+      logger.error('SentryService', 'Not initialized:', error, context);
     }
   }
 
@@ -94,7 +95,7 @@ export class SentryService {
       this.scope.setContext('custom', context);
       this.scope.captureMessage(message, level);
     } else {
-      console.log(`[${level}] ${message}`, context);
+      logger.log('SentryService', `${level}: ${message}`, context);
     }
   }
 

@@ -1,4 +1,5 @@
 import { createInitialState, serializeState, deserializeState } from '../state-container.js';
+import { logger } from '../../core/logging.js';
 
 /**
  * Plugin for handling state loading, saving, and serialization
@@ -26,10 +27,10 @@ export class DiskStatePlugin {
 
             await this.stateAdapter.save(saveData);
             this.stateService.state.session.lastSaved = Date.now();
-            console.log('[StateService::DiskState] State saved', saveData, conversation);
+            logger.log('StateService::DiskState', 'State saved', saveData, conversation);
 
         } catch (error) {
-            console.error('[StateService::DiskState] Save failed:', error);
+            logger.error('StateService::DiskState', 'Save failed:', error);
         }
     }
 
@@ -53,7 +54,7 @@ export class DiskStatePlugin {
     async loadFromStorage() {
         const savedState = await this.stateAdapter.load();
         if (!savedState) {
-            console.log('[StateService::DiskState] No saved state found');
+            logger.log('StateService::DiskState', 'No saved state found');
             return false;
         }
 
@@ -66,13 +67,13 @@ export class DiskStatePlugin {
     async updateFromStorage() {
         const savedState = await this.stateAdapter.load();
         if (!savedState) {
-            console.log('[StateService::DiskState] No saved state found for update');
+            logger.log('StateService::DiskState', 'No saved state found for update');
             return false;
         }
 
         try {
             if (!savedState) {
-                console.log('[StateService::DiskState] No data to restore', savedState);
+                logger.log('StateService::DiskState', 'No data to restore', savedState);
                 throw new Error('No data to restore');
             }
             const stateToRestore = {
@@ -81,11 +82,11 @@ export class DiskStatePlugin {
                 conversation: savedState.conversation,
             };
 
-            console.log('[StateService::DiskState] State to restore:', stateToRestore, savedState);
+            logger.log('StateService::DiskState', 'State to restore:', stateToRestore, savedState);
 
             return this.deserialize(stateToRestore);
         } catch (error) {
-            console.error('[StateService::DiskState] Failed to update from storage:', error);
+            logger.error('StateService::DiskState', 'Failed to update from storage:', error);
             throw error;
         }
     }
@@ -107,10 +108,10 @@ export class DiskStatePlugin {
                 this.stateService.state, 
             );
             this.stateService.disk.updateLastActiveTime();
-            console.log('[StateService::DiskState] State loaded from save data');
+            logger.log('StateService::DiskState', 'State loaded from save data');
             return true;
         } catch (error) {
-            console.error('[StateService::DiskState] Failed to load from save:', error);
+            logger.error('StateService::DiskState', 'Failed to load from save:', error);
             return false;
         }
     }

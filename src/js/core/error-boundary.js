@@ -1,5 +1,5 @@
-import { EVENT_TYPES } from './events.js';
 import { BACKGROUND_ACTIONS } from './cc-actions.js';
+import { logger } from './logging.js';
 
 /**
  * EventErrorBoundary provides automatic error handling for event systems.
@@ -11,7 +11,7 @@ export class EventErrorBoundary {
     this.errorCount = new Map(); // Track error frequency per event
     this.maxRetries = 3;
     this.retryDelay = 1000;
-    
+
     this.setupGlobalErrorHandling();
     this.setupRecoveryStrategies();
   }
@@ -21,7 +21,7 @@ export class EventErrorBoundary {
    */
   setupGlobalErrorHandling() {
     const originalDispatch = this.dispatcher.dispatch.bind(this.dispatcher);
-    
+
     this.dispatcher.dispatch = async (event, data, options = {}) => {
       try {
         return await originalDispatch(event, data, options);
@@ -38,10 +38,10 @@ export class EventErrorBoundary {
   createErrorBoundaryWrapper(event, handler, options) {
     return async (...args) => {
       const errorKey = `${event}:${handler.name || 'anonymous'}`;
-      
+
       try {
         return await handler(...args);
-        
+
       } catch (error) {
         await this.handleEventError(event, error, args, errorKey, handler, options);
       }
@@ -56,7 +56,7 @@ export class EventErrorBoundary {
     const currentCount = this.errorCount.get(errorKey) || 0;
     this.errorCount.set(errorKey, currentCount + 1);
 
-    console.error(`[EventErrorBoundary] Event ${event} failed:`, {
+    logger.error('EventErrorBoundary', `Event ${event} failed:`, {
       error: error.message,
       stack: error.stack,
       args,
@@ -91,12 +91,12 @@ export class EventErrorBoundary {
           ...errorReport.context,
           operation: 'event_handler_error'
         }
-      }, { 
+      }, {
         target: 'background',
-        timeout: 2000 
+        timeout: 2000
       });
     } catch (dispatchError) {
-      console.error('[EventErrorBoundary] Failed to report error to background:', dispatchError);
+      logger.error('EventErrorBoundary', 'Failed to report error to background:', dispatchError);
     }
   }
 
@@ -104,7 +104,7 @@ export class EventErrorBoundary {
    * Handle errors in event dispatch itself
    */
   handleDispatchError(event, error, data, options) {
-    console.error(`[EventErrorBoundary] Dispatch failed for ${event}:`, {
+    logger.error('EventErrorBoundary', `Dispatch failed for ${event}:`, {
       error: error.message,
       data,
       options
@@ -112,7 +112,7 @@ export class EventErrorBoundary {
 
     // Try to recover based on event type
     if (options.target === 'background' && error.message.includes('Extension context invalidated')) {
-      console.warn('[EventErrorBoundary] Extension context invalidated, queuing for retry');
+      logger.warn('EventErrorBoundary', 'Extension context invalidated, queuing for retry');
       // Could implement a retry queue here
     }
   }
@@ -122,11 +122,11 @@ export class EventErrorBoundary {
    */
   async applyRecoveryStrategy(event, errorReport, handler, args, options) {
     const strategy = this.getRecoveryStrategy(event);
-    
+
     try {
       await strategy(errorReport, handler, args, options);
     } catch (recoveryError) {
-      console.error(`[EventErrorBoundary] Recovery strategy failed for ${event}:`, recoveryError);
+      logger.error('EventErrorBoundary', `Recovery strategy failed for ${event}:`, recoveryError);
     }
   }
 
@@ -137,7 +137,7 @@ export class EventErrorBoundary {
     this.recoveryStrategies = {
       // Default strategy - log and continue
       default: async (errorReport) => {
-        console.log(`[Recovery] No specific recovery strategy for ${errorReport.event}, logging only`);
+        logger.log('EventErrorBoundary', `No specific recovery strategy for ${errorReport.event}, logging only`);
       }
     };
   }
@@ -166,7 +166,7 @@ export class EventErrorBoundary {
     }
 
     stats.topErrors = Array.from(this.errorCount.entries())
-      .sort(([,a], [,b]) => b - a)
+      .sort(([, a], [, b]) => b - a)
       .slice(0, 10)
       .map(([key, count]) => ({ error: key, count }));
 

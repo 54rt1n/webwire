@@ -6,18 +6,19 @@ import { StorageManager } from '../storage/storage-manager.js';
 import { createInitialState } from '../state/state-container.js';
 import { PromptLoader } from '../utils/prompt-loader.js';
 import { SentryService } from '../core/sentry-service.js';
+import { logger } from '../core/logging.js';
 
 export async function contextFactory(eventBus, context,
     {storage = false, state = false, contentState = false, ai = false, mcp = false, sentry = false},
     {backgroundIsLocal = false, loadSettings = false, loadState = false, loadStash = false, modelType = null, initialState = null, readInitialState = false, config = null} = {}) {
 
     if ((ai || mcp) && ((!state || !loadSettings) && (!readInitialState && !initialState))) {
-        console.error('[ContextFactory] Invalid context configuration: loading settings is required for AI and MCP', {ai, mcp, state, loadSettings, readInitialState, initialState});
+        logger.error('ContextFactory', 'Invalid context configuration: loading settings is required for AI and MCP', {ai, mcp, state, loadSettings, readInitialState, initialState});
         throw new Error('Invalid context configuration: loading settings is required for AI and MCP');
     }
 
     if (state && !storage) {
-        console.error('[ContextFactory] Invalid context configuration: storage is required for state', {state, storage});
+        logger.error('ContextFactory', 'Invalid context configuration: storage is required for state', {state, storage});
         throw new Error('Invalid context configuration: storage is required for state');
     }
 
@@ -42,7 +43,7 @@ export async function contextFactory(eventBus, context,
                 {}, 
                 { target: 'background' }
             );
-        console.log('[ContextFactory] Initial state from background:', response);
+        logger.log('ContextFactory', 'Initial state from background:', response);
         const { tabId, ...state } = response.result;
         initialState = {
             ...createInitialState(tabId),
@@ -54,7 +55,7 @@ export async function contextFactory(eventBus, context,
             initialState.ui.tabId = tabId;
         }
         
-        console.log('[ContextFactory] Final initial state with tab ID:', tabId, 'UI state:', initialState.ui);
+        logger.log('ContextFactory', 'Final initial state with tab ID:', tabId, 'UI state:', initialState.ui);
     }
 
     if (storage) {
@@ -90,11 +91,11 @@ export async function contextFactory(eventBus, context,
                 
                 if (Object.keys(existingPrompts).length === 0) {
                     // First time - load default prompts from JSON files
-                    console.log('[ContextFactory] No prompts found in storage, loading defaults from JSON files...');
+                    logger.log('ContextFactory', 'No prompts found in storage, loading defaults from JSON files...');
                     const defaultPrompts = await PromptLoader.loadPromptsWithFallback();
                     
                     if (Object.keys(defaultPrompts).length > 0) {
-                        console.log('[ContextFactory] Loaded default prompts:', Object.keys(defaultPrompts));
+                        logger.log('ContextFactory', 'Loaded default prompts:', Object.keys(defaultPrompts));
                         
                         // Add prompts one by one to get proper display order
                         for (const [promptId, promptData] of Object.entries(defaultPrompts)) {
@@ -103,19 +104,19 @@ export async function contextFactory(eventBus, context,
                         
                         // Save to storage for next time
                         await results.stateService.prompts.saveToStorage();
-                        console.log('[ContextFactory] Prompts saved to storage');
+                        logger.log('ContextFactory', 'Prompts saved to storage');
                     } else {
-                        console.warn('[ContextFactory] No default prompts found in JSON files');
+                        logger.warn('ContextFactory', 'No default prompts found in JSON files');
                     }
                 } else {
-                    console.log('[ContextFactory] Found existing prompts in storage:', Object.keys(existingPrompts));
+                    logger.log('ContextFactory', 'Found existing prompts in storage:', Object.keys(existingPrompts));
                 }
                 
                 // Verify prompts are in state
                 const finalPrompts = results.stateService.prompts.getAllPrompts();
-                console.log('[ContextFactory] Final prompts in state:', finalPrompts);
+                logger.log('ContextFactory', 'Final prompts in state:', finalPrompts);
             } catch (error) {
-                console.error('[ContextFactory] Failed to initialize prompts:', error);
+                logger.error('ContextFactory', 'Failed to initialize prompts:', error);
             }
         }
         
@@ -123,7 +124,7 @@ export async function contextFactory(eventBus, context,
         if (!initialState) {
             throw new Error('Initial state is required for content state');
         }
-        console.log('[ContextFactory] Creating content state service with initial state:', initialState);
+        logger.log('ContextFactory', 'Creating content state service with initial state:', initialState);
         results.stateService = new ContentStateService(initialState, results.eventBus);
     }
 

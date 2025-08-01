@@ -1,3 +1,5 @@
+import { logger } from '../core/logging.js';
+
 /**
  * Speech synthesis utility for text-to-speech functionality
  */
@@ -29,7 +31,7 @@ export class SpeechUtil {
         this.stop();
 
         if (!text || typeof text !== 'string') {
-            console.warn('[SpeechUtil] Invalid text provided for speech');
+            logger.warn('SpeechUtil', 'Invalid text provided for speech');
             return;
         }
 
@@ -70,7 +72,7 @@ export class SpeechUtil {
                     this.isSpeaking = false;
                     this.currentUtterance = null;
                     this.cleanupButtons();
-                    console.error('[SpeechUtil] Speech synthesis error:', event.error);
+                    logger.error('SpeechUtil', 'Speech synthesis error:', event.error);
                     reject(event.error);
                 };
 
@@ -79,7 +81,7 @@ export class SpeechUtil {
                 window.speechSynthesis.speak(utterance);
 
             } catch (error) {
-                console.error('[SpeechUtil] Failed to speak:', error);
+                logger.error('SpeechUtil', 'Failed to speak:', error);
                 this.cleanupButtons();
                 reject(error);
             }

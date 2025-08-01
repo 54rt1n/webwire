@@ -11,6 +11,7 @@ import { ToolExecutor } from './tool-executor.js';
 import { AIResponseHandler } from './ai-response-handler.js';
 import { AIClientFactory } from '../js/ai/ai-client-factory.js';
 import { chatSelectModal } from './components/chat-select.js';
+import { logger } from '../js/core/logging.js';
 
 /**
  * WebWire Chat Service - Platform-Agnostic Core
@@ -69,7 +70,7 @@ export class ChatService extends EventBindableComponent {
         
         // If tokenizer is explicitly set in config, use it
         if (modelConfig.tokenizer) {
-            console.log(`[ChatService] Using configured tokenizer: ${modelConfig.tokenizer}`);
+            logger.log(this, `Using configured tokenizer: ${modelConfig.tokenizer}`);
             return { tokenizer: modelConfig.tokenizer };
         }
         
@@ -99,13 +100,13 @@ export class ChatService extends EventBindableComponent {
         // Find the first matching tokenizer
         for (const [key, tokenizer] of Object.entries(modelTokenizerMap)) {
             if (modelName.includes(key)) {
-                console.log(`[ChatService] Auto-detected tokenizer for ${key}: ${tokenizer}`);
+                logger.log(this, `Auto-detected tokenizer for ${key}: ${tokenizer}`);
                 return { tokenizer };
             }
         }
         
         // Default to cl100k_base for unknown models (most modern models use this)
-        console.log('[ChatService] Using default cl100k_base tokenizer for unknown model:', modelName);
+        logger.log(this, 'Using default cl100k_base tokenizer for unknown model:', modelName);
         return { tokenizer: 'cl100k_base' };
     }
 
@@ -146,7 +147,7 @@ export class ChatService extends EventBindableComponent {
      * Initialize the chat service (async setup)
      */
     async initialize(mcpConnector, stateService) {
-        console.log('[ChatService] Starting initialization...');
+        logger.log(this, 'Starting initialization...');
 
         if (this.initialized) {
             throw new Error('[ChatService] Already initialized');
@@ -163,7 +164,7 @@ export class ChatService extends EventBindableComponent {
         const currentConfig = this.stateService.settings.getModelConfig(currentModel);
         const encodingOptions = this.getEncodingOptions(currentConfig);
         this.messageBuilder = new MessageBuilder(this.pageUtils, encodingOptions);
-        console.log('[ChatService] Message builder initialized');
+        logger.log(this, 'Message builder initialized');
         
         // Initialize tool executor with dependencies
         this.toolExecutor = new ToolExecutor(
@@ -172,38 +173,38 @@ export class ChatService extends EventBindableComponent {
             this.domConnector,
             this.stateService
         );
-        console.log('[ChatService] Tool executor initialized');
+        logger.log(this, 'Tool executor initialized');
         
         this.responseHandler = new AIResponseHandler(this.eventBus, this.stateService, this.panel);
-        console.log('[ChatService] Response handler initialized');
+        logger.log(this, 'Response handler initialized');
 
         this.setupEventListeners();
-        console.log('[ChatService] Event listeners set up');
+        logger.log(this, 'Event listeners set up');
         
         try {
             // DO NOT initialize panel here - it injects DOM
-            console.log('[ChatService] Skipping panel initialization');
+            logger.log(this, 'Skipping panel initialization');
             
             // Load current conversation on startup
-            console.log('[ChatService] Loading current conversation on startup...');
+            logger.log(this, 'Loading current conversation on startup...');
 
             // Initialize all UI settings
             this.panel.setPageContentCheckboxState(this.stateService.ui.getIncludePageContent() || false);
             this.panel.updateMcpSetting(this.stateService.ui.getUseMCP());
             this.panel.updateBrowserToolsSetting(this.stateService.ui.getUseBrowserTools());
             this.panel.updateAutoExecuteSetting(this.stateService.ui.getAutoExecuteTools());
-            console.log('[ChatService] UI settings initialized');
+            logger.log(this, 'UI settings initialized');
             
             // Initialize selected model
             this.panel.updateSelectedModelSetting(currentModel, currentConfig?.model, currentConfig);
-            console.log('[ChatService] Selected model initialized');
+            logger.log(this, 'Selected model initialized');
 
-            console.log('[ChatService] Active thread ID:', this.stateService.state);
+            logger.log(this, 'Active thread ID:', this.stateService.state);
             // Note: Conversation loading moved to ensurePanelInitialized() to avoid race condition
 
-            console.log('[ChatService] Initialization complete');
+            logger.log(this, 'Initialization complete');
         } catch (error) {
-            console.error('[ChatService] Initialization failed:', error);
+            logger.error(this, 'Initialization failed:', error);
             throw error;
         }
     }
@@ -218,10 +219,10 @@ export class ChatService extends EventBindableComponent {
         if (!selectedModel) {
             throw new Error('[ChatService] No model selected');
         }
-        console.log('[ChatService] getAiClient() called for model type:', selectedModel);
+        logger.log(this, 'getAiClient() called for model type:', selectedModel);
         
         const currentConfig = this.stateService.settings.getModelConfig(selectedModel);
-        console.log('[ChatService] Current config retrieved:', currentConfig);
+        logger.log(this, 'Current config retrieved:', currentConfig);
         
         if (!currentConfig) {
             throw new Error(`No model configuration found for: ${selectedModel}`);
@@ -233,12 +234,12 @@ export class ChatService extends EventBindableComponent {
             if (this.aiClient && this.aiClient.isStreaming()) {
                 this.cancelStreamingResponse();
             }
-            console.log('[ChatService] Creating/updating AI client for model:', selectedModel, 'provider:', currentConfig.provider);
-            console.log('[ChatService] Full config being passed to factory:', JSON.stringify(currentConfig));
+            logger.log(this, 'Creating/updating AI client for model:', selectedModel, 'provider:', currentConfig.provider);
+            logger.log(this, 'Full config being passed to factory:', JSON.stringify(currentConfig));
             this.aiClient = AIClientFactory.createClient(this.eventBus, currentConfig);
-            console.log('[ChatService] AI client created, type:', this.aiClient.constructor.name);
+            logger.log(this, 'AI client created, type:', this.aiClient.constructor.name);
         } else {
-            console.log('[ChatService] Using existing AI client');
+            logger.log(this, 'Using existing AI client');
         }
         
         return this.aiClient;
@@ -258,7 +259,7 @@ export class ChatService extends EventBindableComponent {
      */
     async handleUserMessage(payload, { autoExecuteTools = false, silent = false,
         forcePageContent = false, customSystemPrompt = null, isRetry = false } = {}) {
-        console.log('[ChatService] Handling user message:', payload);
+        logger.log(this, 'Handling user message:', payload);
         
         const { message } = payload;
         
@@ -266,7 +267,7 @@ export class ChatService extends EventBindableComponent {
         try {
             aiClient = this.getAiClient();
         } catch (error) {
-            console.error('[ChatService] Failed to get AI client:', error);
+            logger.error(this, 'Failed to get AI client:', error);
             this.panel.displayError(error.message);
             return;
         }
@@ -284,7 +285,7 @@ export class ChatService extends EventBindableComponent {
         try {
 
             if (!threadId) {
-                console.log('[ChatService] No active thread found', this.stateService);
+                logger.log(this, 'No active thread found', this.stateService);
                 this.panel.displayError('No active thread found. Please create a new conversation.');
                 return;
             }
@@ -317,7 +318,7 @@ export class ChatService extends EventBindableComponent {
             const maxContentTokens = this.aiClient.samplerConfig?.maxContentTokens || 16384;
             const paddingTokens = 256;
             const maxTextTokens = maxContentTokens - aiResponseTokens - conversationTokens - systemPromptTokens - userMessageTokens - paddingTokens;
-            console.log('[ChatService] Max text tokens:', maxTextTokens, 'aiResponseTokens:', aiResponseTokens, 'conversationTokens:', conversationTokens, 'systemPromptTokens:', systemPromptTokens, 'userMessageTokens:', userMessageTokens);
+            logger.log(this, 'Max text tokens:', maxTextTokens, 'aiResponseTokens:', aiResponseTokens, 'conversationTokens:', conversationTokens, 'systemPromptTokens:', systemPromptTokens, 'userMessageTokens:', userMessageTokens);
             const pageContext = await this.messageBuilder.buildPageContext(this.stateService, { forcePageContent, include: { navigation: false, links: true }, maxTextTokens });
             let { messagesForAPI, enhancedUserMessage } = this.messageBuilder.prepareMessagesForAPI(
                 userMessage.content,
@@ -394,7 +395,7 @@ export class ChatService extends EventBindableComponent {
                 title: document.title,
             });
 
-            console.log('[ChatService] Message processing complete');
+            logger.log(this, 'Message processing complete');
 
             this.panel.updateReparseButton(true);
 
@@ -403,7 +404,7 @@ export class ChatService extends EventBindableComponent {
             
             // Handle request cancellation
             if (error.message === 'Request cancelled') {
-                console.log('[ChatService] Request cancelled by user');
+                logger.log(this, 'Request cancelled by user');
                 if (streamingState.currentMessage) {
                     // Append cancellation message to existing content
                     const cancelledContent = streamingState.streamingText + '\n\n[Request Cancelled By User]';
@@ -440,10 +441,10 @@ export class ChatService extends EventBindableComponent {
             }
             
             if (error.message.includes("Error: Empty response from AI provider")) {
-                console.log('[ChatService] Empty response from AI provider, skipping');
+                logger.log(this, 'Empty response from AI provider, skipping');
                 this.panel.displayError(error.message, streamingState.currentMessage?.messageId);
             } else {
-                console.error('[ChatService] Error handling user message:', error);
+                logger.error(this, 'Error handling user message:', error);
                 this.panel.displayError(error.message, streamingState.currentMessage?.messageId);
             }
 
@@ -468,7 +469,7 @@ export class ChatService extends EventBindableComponent {
             // Always save the conversation to persistent storage
             // This ensures error/cancelled messages are persisted
             if (userMsg && assistantMsg) {
-                console.log('[ChatService] Persisting conversation (including errors/cancellations)');
+                logger.log(this, 'Persisting conversation (including errors/cancellations)');
                 
                 this.eventBus.emit(EVENTS.CHAT.SAVE_MESSAGE, {
                     threadId: threadId,
@@ -491,7 +492,7 @@ export class ChatService extends EventBindableComponent {
      * Handle reparse message event
      */
     async handleReparseMessage(payload) {
-        console.log('[ChatService] Handling reparse message:', payload);
+        logger.log(this, 'Handling reparse message:', payload);
         const tools = this.stateService.mcp.getMcpTools();
         const threadId = this.stateService.conversation.getActiveThreadId();
         const messages = this.stateService.conversation.getConversationMessages(threadId);
@@ -499,12 +500,12 @@ export class ChatService extends EventBindableComponent {
         const { toolCalls, parseErrors } = await this.parseToolsFromResponse(lastAssistantMessage.content, tools);
         this.stateService.conversation.updateToolCalls(lastAssistantMessage.messageId, toolCalls);
 
-        console.log('[ChatService] Reparsed message:', toolCalls, parseErrors, lastAssistantMessage);
+        logger.log(this, 'Reparsed message:', toolCalls, parseErrors, lastAssistantMessage);
         const lastChatMessageElement = this.panel.getLastChatMessageElement();
         if (lastChatMessageElement) {
             this.panel.finalizeThinkingMessage(lastChatMessageElement.id, lastAssistantMessage.content, toolCalls);
         } else {
-            console.warn('[ChatService] No last chat message element to finalize');
+            logger.warn(this, 'No last chat message element to finalize');
         }
     }
 
@@ -512,13 +513,13 @@ export class ChatService extends EventBindableComponent {
      * Handle page analysis request event
      */
     async handlePageAnalysisRequest(payload) {
-        console.log('[ChatService] Handling page analysis request', payload);
+        logger.log(this, 'Handling page analysis request', payload);
         
         const { promptId } = payload;
         const prompt = this.stateService.prompts.getPrompt(promptId);
         
         if (!prompt) {
-            console.error(`[ChatService] Prompt not found: ${promptId}`);
+            logger.error(this, `Prompt not found: ${promptId}`);
             return;
         }
         
@@ -540,18 +541,18 @@ export class ChatService extends EventBindableComponent {
      * Handle settings update event
      */
     async handleSettingsRefresh(payload) {
-        console.log('[ChatService] Handling settings update:', payload);
+        logger.log(this, 'Handling settings update:', payload);
         
         const { settings } = payload;
         this.stateService.settings.patchSettings(settings);
-        console.log('[ChatService] Settings update processed successfully');
+        logger.log(this, 'Settings update processed successfully');
     }
 
     /**
      * Handle UI settings toggle request
      */
     async handleUISettingsToggle(data) {
-        console.log('[ChatService] Handling UI settings toggle:', data);
+        logger.log(this, 'Handling UI settings toggle:', data);
         
         // Update local state for each setting provided
         if ('includePageContent' in data) {
@@ -581,7 +582,7 @@ export class ChatService extends EventBindableComponent {
             
             // Clear the AI client to force rebuild with new model on next message
             if (this.aiClient) {
-                console.log('[ChatService] Model changed, clearing AI client for rebuild');
+                logger.log(this, 'Model changed, clearing AI client for rebuild');
                 this.aiClient = null;
             }
         }
@@ -600,14 +601,14 @@ export class ChatService extends EventBindableComponent {
         // Note: We send the specific UI settings that were toggled, not the entire settings object
         this.eventBus.emit(EVENTS.CHAT.UPDATE_SETTINGS, data, { target: EVENT_CONTEXT.BACKGROUND });
         
-        console.log('[ChatService] UI settings toggle processed successfully');
+        logger.log(this, 'UI settings toggle processed successfully');
     }
 
     /**
      * Handle MCP status update event
      */
     async handleMCPStatusUpdate(payload) {
-        console.log('[ChatService] Handling MCP status update:', payload);
+        logger.log(this, 'Handling MCP status update:', payload);
         
         // Update local state and UI
         this.updateConnectionStatus();
@@ -617,7 +618,7 @@ export class ChatService extends EventBindableComponent {
      * Handle conversation updated event
      */
     async handleConversationUpdated(payload) {
-        console.log('[ChatService] Handling conversation updated:', payload);
+        logger.log(this, 'Handling conversation updated:', payload);
         
         const { threadId } = payload;
         
@@ -631,12 +632,12 @@ export class ChatService extends EventBindableComponent {
      * Handle new conversation request event
      */
     async handleNewConversationRequest(payload) {
-        console.log('[ChatService] Handling new conversation request');
+        logger.log(this, 'Handling new conversation request');
         
         // Cancel any active streaming first to prevent orphaned streams
         if (this.responseHandler) {
             this.responseHandler.cancelStreaming();
-            console.log('[ChatService] Cancelled active streaming before new conversation');
+            logger.log(this, 'Cancelled active streaming before new conversation');
         }
         
         try {
@@ -644,7 +645,7 @@ export class ChatService extends EventBindableComponent {
             const result = await this.eventBus.emitAsync(EVENTS.CHAT.END_CONVERSATION, {}, { target: EVENT_CONTEXT.BACKGROUND });
             
             if (result && result.newThreadId) {
-                console.log('[ChatService] New conversation created by END_CONVERSATION:', result.newThreadId);
+                logger.log(this, 'New conversation created by END_CONVERSATION:', result.newThreadId);
                 
                 // Update local conversation state with the new thread ID
                 if (this.stateService && this.stateService.conversation) {
@@ -665,12 +666,12 @@ export class ChatService extends EventBindableComponent {
                 // Update the panel directly with the new conversation
                 await this.handleConversationLoaded({ conversation: newConversation });
             } else {
-                console.log('[ChatService] END_CONVERSATION did not return new thread, creating one');
+                logger.log(this, 'END_CONVERSATION did not return new thread, creating one');
                 // Fallback: create new conversation if END_CONVERSATION didn't
                 await this.sendGetOrCreateThread({ createOnly: true });
             }
         } catch (error) {
-            console.error('[ChatService] Error creating new conversation:', error);
+            logger.error(this, 'Error creating new conversation:', error);
             this.panel.displayError(`Failed to create new conversation: ${error.message}`);
         }
     }
@@ -679,36 +680,36 @@ export class ChatService extends EventBindableComponent {
      * Handle swap conversation request event
      */
     async handleSwapConversation(payload) {
-        console.log('[ChatService] Handling swap conversation request');
+        logger.log(this, 'Handling swap conversation request');
         
         // Cancel any active streaming first to prevent orphaned streams
         if (this.responseHandler) {
             this.responseHandler.cancelStreaming();
-            console.log('[ChatService] Cancelled active streaming before conversation swap');
+            logger.log(this, 'Cancelled active streaming before conversation swap');
         }
         
         try {
             // Open the modal and wait for user selection
             const selectedThreadId = await chatSelectModal.open(this.stateService);
             
-            console.log('[ChatService] User selected conversation:', selectedThreadId);
+            logger.log(this, 'User selected conversation:', selectedThreadId);
             
             // Check if user selected a different conversation
             const currentActiveThreadId = this.stateService.conversation.getActiveThreadId();
             if (selectedThreadId === currentActiveThreadId) {
-                console.log('[ChatService] Same conversation selected, no swap needed');
+                logger.log(this, 'Same conversation selected, no swap needed');
                 return;
             }
             
             // Mark current conversation as completed (if it exists)
             if (currentActiveThreadId) {
                 this.stateService.conversation.updateConversationStatus(currentActiveThreadId, 'completed');
-                console.log('[ChatService] Marked current conversation as completed:', currentActiveThreadId);
+                logger.log(this, 'Marked current conversation as completed:', currentActiveThreadId);
             }
             
             // Set the selected conversation as active
             this.stateService.conversation.setActiveConversation(selectedThreadId);
-            console.log('[ChatService] Set conversation as active:', selectedThreadId);
+            logger.log(this, 'Set conversation as active:', selectedThreadId);
             
             // Load the selected conversation
             const selectedConversation = this.stateService.conversation.getConversation(selectedThreadId);
@@ -718,18 +719,18 @@ export class ChatService extends EventBindableComponent {
                 
                 // Load the conversation in the panel
                 await this.handleConversationLoaded({ conversation: selectedConversation });
-                console.log('[ChatService] Successfully swapped to conversation:', selectedThreadId);
+                logger.log(this, 'Successfully swapped to conversation:', selectedThreadId);
             } else {
-                console.error('[ChatService] Selected conversation not found:', selectedThreadId);
+                logger.error(this, 'Selected conversation not found:', selectedThreadId);
                 this.panel.displayError('Selected conversation could not be loaded');
             }
             
         } catch (error) {
             // User might have cancelled the modal or there was an error
             if (error.message.includes('closed without selection')) {
-                console.log('[ChatService] User cancelled conversation swap');
+                logger.log(this, 'User cancelled conversation swap');
             } else {
-                console.error('[ChatService] Error swapping conversation:', error);
+                logger.error(this, 'Error swapping conversation:', error);
                 this.panel.displayError(`Failed to swap conversation: ${error.message}`);
             }
         }
@@ -739,11 +740,11 @@ export class ChatService extends EventBindableComponent {
      * Handle replay last turn request event
      */
     async handleReplayLastTurn() {
-        console.log('[ChatService] Handling replay last turn request');
+        logger.log(this, 'Handling replay last turn request');
 
         const threadId = this.stateService.conversation.getActiveThreadId();
         if (!threadId) {
-            console.log('[ChatService] No active thread found');
+            logger.log(this, 'No active thread found');
             this.panel.displayError('No active thread found to replay');
             return;
         }
@@ -751,14 +752,14 @@ export class ChatService extends EventBindableComponent {
         // Get the last user message from the conversation state
         const lastUserMessage = this.stateService.conversation.getLastUserMessage(threadId);
         if (!lastUserMessage) {
-            console.log('[ChatService] No last user message found');
+            logger.log(this, 'No last user message found');
             this.panel.displayError('No last message found to replay');
             return;
         }
 
         const metadata = this.stateService.conversation.getConversationMetadata(threadId);
         if (!metadata) {
-            console.log('[ChatService] No conversation metadata found');
+            logger.log(this, 'No conversation metadata found');
             this.panel.displayError('No conversation metadata found to replay');
             return;
         }
@@ -783,18 +784,18 @@ export class ChatService extends EventBindableComponent {
      * Handle back button request event - marks last message as dropped
      */
     async handleBackButton() {
-        console.log('[ChatService] Handling back button request');
+        logger.log(this, 'Handling back button request');
 
         const threadId = this.stateService.conversation.getActiveThreadId();
         if (!threadId) {
-            console.log('[ChatService] No active thread found');
+            logger.log(this, 'No active thread found');
             this.panel.displayError('No active thread found');
             return;
         }
 
         const metadata = this.stateService.conversation.getConversationMetadata(threadId);
         if (!metadata) {
-            console.log('[ChatService] No conversation metadata found');
+            logger.log(this, 'No conversation metadata found');
             this.panel.displayError('No conversation metadata found to mark as dropped');
             return;
         }
@@ -811,7 +812,7 @@ export class ChatService extends EventBindableComponent {
             }, { target: 'background' });
 
             if (response && response.success) {
-                console.log('[ChatService] Message marked as dropped successfully');
+                logger.log(this, 'Message marked as dropped successfully');
                 // Refresh the conversation display to hide the dropped message
                 const threadId = this.stateService.conversation.getActiveThreadId();
                 const conversation = this.stateService.conversation.getConversation(threadId);
@@ -819,11 +820,11 @@ export class ChatService extends EventBindableComponent {
                     this.panel.displayConversation(conversation, this.stateService.aim.getAimMessageOptions());
                 }
             } else {
-                console.error('[ChatService] Failed to mark message as dropped:', response);
+                logger.error(this, 'Failed to mark message as dropped:', response);
                 this.panel.displayError('Failed to mark message as dropped');
             }
         } catch (error) {
-            console.error('[ChatService] Error marking message as dropped:', error);
+            logger.error(this, 'Error marking message as dropped:', error);
             this.panel.displayError('Error marking message as dropped');
         }
     }
@@ -832,17 +833,17 @@ export class ChatService extends EventBindableComponent {
      * Handle conversation loaded event
      */
     async handleConversationLoaded(payload) {
-        console.log('[ChatService] Handling conversation loaded:', payload);
+        logger.log(this, 'Handling conversation loaded:', payload);
         
         let { conversation } = payload;
         
         // Check for error response first
         if (conversation && conversation.success === false) {
-            console.error('[ChatService] Failed to load conversation:', conversation.error);
+            logger.error(this, 'Failed to load conversation:', conversation.error);
             
             // Handle specific errors
             if (conversation.error && conversation.error.includes('Extension context invalidated')) {
-                console.log('[ChatService] Extension context invalidated, showing reload message');
+                logger.log(this, 'Extension context invalidated, showing reload message');
                 if (this.panel.isReady()) {
                     this.panel.displayError(
                         'WebWire extension was updated. Please refresh this page to continue using the chat.',
@@ -873,12 +874,12 @@ export class ChatService extends EventBindableComponent {
         
         // Update the panel with the new conversation
         if (conversation && this.panel.isReady()) {
-            console.log(`[ChatService] Displaying conversation with ID: ${conversation.threadId}`);
+            logger.log(this, `Displaying conversation with ID: ${conversation.threadId}`);
             
             this.panel.displayConversation(conversation, this.stateService.aim.getAimMessageOptions());
-            console.log(`[ChatService] Loaded conversation with ${conversation.messages?.length || 0} messages`);
+            logger.log(this, `Loaded conversation with ${conversation.messages?.length || 0} messages`);
         } else {
-            console.warn('[ChatService] Cannot display conversation - panel not ready or no conversation data');
+            logger.warn(this, 'Cannot display conversation - panel not ready or no conversation data');
         }
     }
 
@@ -886,7 +887,7 @@ export class ChatService extends EventBindableComponent {
      * Handle tool execution request from ChatService
      */
     async handleExecuteTool(data) {
-        console.log('[WebWireContentHost] Handling execute tool request:', data);
+        logger.log(this, 'Handling execute tool request:', data);
         
         const { toolName, parameters } = data;
         
@@ -896,24 +897,24 @@ export class ChatService extends EventBindableComponent {
         try {
             if (domTools.includes(toolName)) {
                 // Handle DOM tools locally using the DOM agent
-                console.log('[WebWireContentHost] Executing DOM tool locally:', toolName);
+                logger.log(this, 'Executing DOM tool locally:', toolName);
                 const result = await this.domAgent.executeTool(toolName, parameters);
-                console.log('[WebWireContentHost] DOM tool execution result:', result);
+                logger.log(this, 'DOM tool execution result:', result);
                 return result;
             } else {
                 // Handle MCP tools using the MCP connector
                 if (!this.core.mcpConnector) {
-                    console.error('[WebWireContentHost] No MCP connector available for tool execution');
+                    logger.error(this, 'No MCP connector available for tool execution');
                     throw new Error('MCP connector not available');
                 }
                 
-                console.log('[WebWireContentHost] Executing MCP tool:', toolName);
+                logger.log(this, 'Executing MCP tool:', toolName);
                 const result = await this.core.mcpConnector.executeTool(toolName, parameters);
-                console.log('[WebWireContentHost] MCP tool execution result:', result);
+                logger.log(this, 'MCP tool execution result:', result);
                 return result;
             }
         } catch (error) {
-            console.error('[WebWireContentHost] Failed to execute tool:', error);
+            logger.error(this, 'Failed to execute tool:', error);
             throw error;
         }
     }
@@ -922,7 +923,7 @@ export class ChatService extends EventBindableComponent {
      * Handle execute tool call event
      */
     async handleExecuteToolCall(payload) {
-        console.log('[ChatService] Handling execute tool call:', payload);
+        logger.log(this, 'Handling execute tool call:', payload);
         const { toolCall } = payload;
         return this.toolExecutor.executeTool(toolCall);
     }
@@ -931,7 +932,7 @@ export class ChatService extends EventBindableComponent {
      * Handle tool result event
      */
     async handleToolResult(payload) {
-        console.log('[ChatService] Handling tool result:', payload);
+        logger.log(this, 'Handling tool result:', payload);
         const { callId, toolResult } = payload;
         // We need to update the tool result for our panel
         this.panel.updateToolResult(callId, toolResult);
@@ -1134,7 +1135,7 @@ export class ChatService extends EventBindableComponent {
      * Load the current conversation when the panel is shown
      */
     async loadCurrentConversation() {
-        console.log('[ChatService] Loading current conversation...');
+        logger.log(this, 'Loading current conversation...');
         
         try {
             // Check if we already have an active thread
@@ -1144,18 +1145,18 @@ export class ChatService extends EventBindableComponent {
                 // Load the existing conversation into the panel
                 const conversation = this.stateService.conversation.getConversation(activeThreadId);
                 if (conversation && conversation.messages && conversation.messages.length > 0) {
-                    console.log('[ChatService] Loading existing conversation:', activeThreadId);
+                    logger.log(this, 'Loading existing conversation:', activeThreadId);
                     await this.handleConversationLoaded({ conversation });
                     return;
                 }
             }
             
             // No active thread or empty conversation, get or create one
-            console.log('[ChatService] No active conversation found, requesting from background...');
+            logger.log(this, 'No active conversation found, requesting from background...');
             await this.sendGetOrCreateThread();
             
         } catch (error) {
-            console.error('[ChatService] Error loading current conversation:', error);
+            logger.error(this, 'Error loading current conversation:', error);
             // Don't show error to user, just create a new conversation silently
             await this.sendGetOrCreateThread({ createOnly: true });
         }
@@ -1190,7 +1191,7 @@ export class ChatService extends EventBindableComponent {
      * @param {boolean} options.createOnly - Force creation of new thread, skip recovery
      */
     async sendGetOrCreateThread(options = {}) {
-        console.log('[ChatService] Requesting current conversation from host...', options);
+        logger.log(this, 'Requesting current conversation from host...', options);
         
         try {
             // Request the current conversation from the host
@@ -1199,18 +1200,18 @@ export class ChatService extends EventBindableComponent {
                 ...options
             }, { target: EVENT_CONTEXT.BACKGROUND });
 
-            console.log('[ChatService] Current conversation loaded:', conversationData);
+            logger.log(this, 'Current conversation loaded:', conversationData);
 
             // Handle the conversation result
             if (conversationData) {
                 // Trigger the conversation loaded handler to update the panel
                 await this.handleConversationLoaded({ conversation: conversationData });
             } else {
-                console.warn('[ChatService] Failed to load conversation or no conversation returned:', conversationData);
+                logger.warn(this, 'Failed to load conversation or no conversation returned:', conversationData);
                 this.panel.displayError('Failed to load conversation: No data returned');
             }
         } catch (error) {
-            console.error('[ChatService] Error loading conversation:', error);
+            logger.error(this, 'Error loading conversation:', error);
             this.panel.displayError(`Failed to load conversation: ${error.message}`);
         }
     }
@@ -1220,7 +1221,7 @@ export class ChatService extends EventBindableComponent {
      * @param {Object} data - { threadId, status, error }
      */
     handleThreadSaved(data) {
-        console.log('[ChatService] Thread saved event:', data);
+        logger.log(this, 'Thread saved event:', data);
         
         if (!this.panel) return;
         
@@ -1252,6 +1253,6 @@ export class ChatService extends EventBindableComponent {
             this.mcpConnector.disconnect();
         }
         
-        console.log('[ChatService] Destroyed');
+        logger.log(this, 'Destroyed');
     }
 }

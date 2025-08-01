@@ -1,5 +1,6 @@
 import { StorageAdapter } from './storage-adapter.js';
 import { EVENTS } from '../../core/events.js';
+import { logger } from '../../core/logging.js';
 
 /**
  * Prompt Adapter - Specialized adapter for prompt library management
@@ -17,7 +18,7 @@ export class PromptAdapter {
                                  chrome.storage && 
                                  chrome.storage.local;
         
-        console.log('[PromptAdapter] Initialized with storage type:', 
+        logger.log('PromptAdapter', 'Initialized with storage type:', 
                    this.isChromeExtension ? 'Chrome Extension Storage' : 'localStorage');
     }
 
@@ -31,33 +32,33 @@ export class PromptAdapter {
             
             // Use Chrome extension storage if available (for extension contexts)
             if (this.isChromeExtension) {
-                console.log('[PromptAdapter] Loading from Chrome extension storage');
+                logger.log('PromptAdapter', 'Loading from Chrome extension storage');
                 const result = await chrome.storage.local.get(this.storageKey);
                 data = result[this.storageKey] || null;
             } else {
                 // Fallback to localStorage for non-extension contexts
-                console.log('[PromptAdapter] Loading from localStorage fallback');
+                logger.log('PromptAdapter', 'Loading from localStorage fallback');
                 data = this.storage.get(this.storageKey);
             }
             
             if (!data) {
-                console.log('[PromptAdapter] No prompts found in storage');
+                logger.log('PromptAdapter', 'No prompts found in storage');
                 return null;
             }
             
             // Handle version migration if needed
             if (data.version !== this.version) {
-                console.log('[PromptAdapter] Version mismatch, migrating...');
+                logger.log('PromptAdapter', 'Version mismatch, migrating...');
                 const migrated = this._migrate(data);
                 await this.save(migrated);
                 return migrated;
             }
 
-            console.log('[PromptAdapter] Prompts loaded:', Object.keys(data.prompts || {}));
+            logger.log('PromptAdapter', 'Prompts loaded:', Object.keys(data.prompts || {}));
             return data;
             
         } catch (error) {
-            console.error('[PromptAdapter] Error loading prompts:', error);
+            logger.error('PromptAdapter', 'Error loading prompts:', error);
             return null;
         }
     }
@@ -79,12 +80,12 @@ export class PromptAdapter {
             
             // Use Chrome extension storage if available (for extension contexts)
             if (this.isChromeExtension) {
-                console.log('[PromptAdapter] Saving to Chrome extension storage');
+                logger.log('PromptAdapter', 'Saving to Chrome extension storage');
                 await chrome.storage.local.set({ [this.storageKey]: data });
                 success = true;
             } else {
                 // Fallback to localStorage for non-extension contexts
-                console.log('[PromptAdapter] Saving to localStorage fallback');
+                logger.log('PromptAdapter', 'Saving to localStorage fallback');
                 success = this.storage.set(this.storageKey, data);
             }
             
@@ -92,11 +93,11 @@ export class PromptAdapter {
                 this.eventBus.emit(EVENTS.PROMPT.UPDATED, data);
             }
 
-            console.log('[PromptAdapter] Prompts saved:', Object.keys(data.prompts || {}));
+            logger.log('PromptAdapter', 'Prompts saved:', Object.keys(data.prompts || {}));
             return success;
             
         } catch (error) {
-            console.error('[PromptAdapter] Error saving prompts:', error);
+            logger.error('PromptAdapter', 'Error saving prompts:', error);
             return false;
         }
     }
@@ -111,12 +112,12 @@ export class PromptAdapter {
             
             // Use Chrome extension storage if available (for extension contexts)
             if (this.isChromeExtension) {
-                console.log('[PromptAdapter] Clearing from Chrome extension storage');
+                logger.log('PromptAdapter', 'Clearing from Chrome extension storage');
                 await chrome.storage.local.remove(this.storageKey);
                 success = true;
             } else {
                 // Fallback to localStorage for non-extension contexts
-                console.log('[PromptAdapter] Clearing from localStorage fallback');
+                logger.log('PromptAdapter', 'Clearing from localStorage fallback');
                 success = this.storage.remove(this.storageKey);
             }
             
@@ -127,7 +128,7 @@ export class PromptAdapter {
             return success;
             
         } catch (error) {
-            console.error('[PromptAdapter] Error clearing prompts:', error);
+            logger.error('PromptAdapter', 'Error clearing prompts:', error);
             return false;
         }
     }
@@ -141,7 +142,7 @@ export class PromptAdapter {
             const data = await this.load();
             return data !== null && typeof data === 'object' && data.prompts;
         } catch (error) {
-            console.error('[PromptAdapter] Error checking if prompts exist:', error);
+            logger.error('PromptAdapter', 'Error checking if prompts exist:', error);
             return false;
         }
     }
@@ -153,7 +154,7 @@ export class PromptAdapter {
      * @private
      */
     _migrate(oldData) {
-        console.log(`[PromptAdapter] Migrating from ${oldData.version} to ${this.version}`);
+        logger.log("PromptAdapter", `Migrating from ${oldData.version} to ${this.version}`);
         
         return {
             ...oldData,

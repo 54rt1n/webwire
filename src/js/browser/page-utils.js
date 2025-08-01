@@ -1,3 +1,5 @@
+import { logger } from '../core/logging.js';
+
 /**
  * Semantic Page Utilities
  * 
@@ -38,7 +40,7 @@ export class SemanticPageExtractor {
 
         extractedData.mainContent = this.extractMainContent();
 
-        console.log('[SemanticPageExtractor] Extracted structured content:', extractedData);
+        logger.log(this, 'Extracted structured content:', extractedData);
 
         return extractedData;
     }

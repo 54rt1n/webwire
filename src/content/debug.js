@@ -7,9 +7,11 @@
 
 import { PageUtils } from '../js/browser/page-utils.js';
 import { EVENTS } from '../js/core/events.js';
+import { logger } from '../js/core/logging.js';
 
 // Export functions for testing and debugging
 let webwireContentHost = null;
+const DEBUGGER_NAME = 'DebugHost'
 
 export function setWebWireInstance(instance) {
     webwireContentHost = instance;
@@ -53,7 +55,7 @@ export function setupDebugMethods(WebWireContentHost) {
          * Force inject the panel
          */
         WebWireContentHost.prototype.forceInject = function() {
-            console.log('Force injecting WebWire panel...');
+            logger.log(DEBUGGER_NAME, 'Force injecting WebWire panel...');
             return this.injectPanel();
         };
 
@@ -61,7 +63,7 @@ export function setupDebugMethods(WebWireContentHost) {
          * Force toggle the panel
          */
         WebWireContentHost.prototype.forceToggle = function() {
-            console.log('Force toggling WebWire panel...');
+            logger.log(DEBUGGER_NAME, 'Force toggling WebWire panel...');
             this.chatService.togglePanel();
         };
 
@@ -69,7 +71,7 @@ export function setupDebugMethods(WebWireContentHost) {
          * Get current page information
          */
         WebWireContentHost.prototype.getPageInfo = function() {
-            console.log('Getting page content...');
+            logger.log(DEBUGGER_NAME, 'Getting page content...');
             const pageUtils = new PageUtils();
             return pageUtils.getCurrentPageContent();
         };
@@ -78,14 +80,14 @@ export function setupDebugMethods(WebWireContentHost) {
          * Debug message enhancement functionality
          */
         WebWireContentHost.prototype.debugMessageEnhancement = function(testMessage = 'Test message') {
-            console.log('=== WebWire Message Enhancement Debug ===');
+            logger.log(DEBUGGER_NAME, '=== WebWire Message Enhancement Debug ===');
             const pageUtils = new PageUtils();
             const original = testMessage;
             const enhanced = pageUtils.enhanceMessageWithContext(testMessage);
             
-            console.log('Original Message:', original);
-            console.log('Enhanced Message (sent to API):', enhanced);
-            console.log('Difference in length:', enhanced.length - original.length, 'characters');
+            logger.log(DEBUGGER_NAME, 'Original Message:', original);
+            logger.log(DEBUGGER_NAME, 'Enhanced Message (sent to API):', enhanced);
+            logger.log(DEBUGGER_NAME, 'Difference in length:', enhanced.length - original.length, 'characters');
             
             return {
                 original,
@@ -98,48 +100,48 @@ export function setupDebugMethods(WebWireContentHost) {
          * Debug panel persistence functionality
          */
         WebWireContentHost.prototype.debugPanelPersistence = function() {
-            console.log('=== WebWire Panel Persistence Debug ===');
-            console.log('Current panel visible state:', this.chatService.panel.isVisible);
+            logger.log(DEBUGGER_NAME, '=== WebWire Panel Persistence Debug ===');
+            logger.log(DEBUGGER_NAME, 'Current panel visible state:', this.chatService.panel.isVisible);
             
             const testActions = {
                 showPanel: () => {
-                    console.log('Testing: Show panel (will persist state to background)');
+                    logger.log(DEBUGGER_NAME, 'Testing: Show panel (will persist state to background)');
                     return this.chatService.showPanel();
                 },
                 hidePanel: () => {
-                    console.log('Testing: Hide panel (will persist state to background)');
+                    logger.log(DEBUGGER_NAME, 'Testing: Hide panel (will persist state to background)');
                     return this.chatService.hidePanel();
                 },
                 togglePanel: () => {
-                    console.log('Testing: Toggle panel (will persist state to background)');
+                    logger.log(DEBUGGER_NAME, 'Testing: Toggle panel (will persist state to background)');
                     return this.chatService.togglePanel();
                 },
                 checkBackgroundState: async () => {
-                    console.log('Testing: Check background state');
+                        logger.log(DEBUGGER_NAME, 'Testing: Check background state');
                     const state = await this.getBackgroundState();
-                    console.log('Background state:', state);
-                    console.log('Panel visible in background:', state?.ui?.panelVisible);
+                    logger.log(DEBUGGER_NAME, 'Background state:', state);
+                    logger.log(DEBUGGER_NAME, 'Panel visible in background:', state?.ui?.panelVisible);
                     return state;
                 },
                 testRestore: async () => {
-                    console.log('Testing: Restore panel from background state');
+                    logger.log(DEBUGGER_NAME, 'Testing: Restore panel from background state');
                     const state = await this.getBackgroundState();
                     const shouldShow = state?.ui?.panelVisible || false;
-                    console.log('Should show panel:', shouldShow);
+                    logger.log(DEBUGGER_NAME, 'Should show panel:', shouldShow);
                     if (shouldShow) {
                         this.chatService.showPanel();
-                        console.log('Panel restored to visible state');
+                        logger.log(DEBUGGER_NAME, 'Panel restored to visible state');
                     } else {
                         this.chatService.hidePanel();
-                        console.log('Panel restored to hidden state');
+                        logger.log(DEBUGGER_NAME, 'Panel restored to hidden state');
                     }
                     return shouldShow;
                 }
             };
             
-            console.log('Available test actions:', Object.keys(testActions));
-            console.log('Usage: webwire.debugPanelPersistence().showPanel()');
-            console.log('Usage: webwire.debugPanelPersistence().checkBackgroundState()');
+            logger.log(DEBUGGER_NAME, 'Available test actions:', Object.keys(testActions));
+            logger.log(DEBUGGER_NAME, 'Usage: webwire.debugPanelPersistence().showPanel()');
+            logger.log(DEBUGGER_NAME, 'Usage: webwire.debugPanelPersistence().checkBackgroundState()');
             
             return testActions;
         };
@@ -148,7 +150,7 @@ export function setupDebugMethods(WebWireContentHost) {
          * Debug event system functionality
          */
         WebWireContentHost.prototype.debugEventSystem = function() {
-            console.log('=== WebWire Event System Debug ===');
+            logger.log(DEBUGGER_NAME, '=== WebWire Event System Debug ===');
             
             const eventBusStats = {
                 totalListeners: this.eventBus.getTotalListeners(),
@@ -161,29 +163,29 @@ export function setupDebugMethods(WebWireContentHost) {
                 eventBusStats.listenerCounts[eventName] = this.eventBus.listenerCount(eventName);
             }
             
-            console.log('Event Bus Statistics:', eventBusStats);
+            logger.log(DEBUGGER_NAME, 'Event Bus Statistics:', eventBusStats);
             
             const testActions = {
                 sendTestMessage: (message = 'Test message from debug') => {
-                    console.log('Testing: Send test message to ChatService');
+                    logger.log(DEBUGGER_NAME, 'Testing: Send test message to ChatService');
                     this.eventBus.emit(EVENTS.CHAT.SEND_MESSAGE, { message });
                 },
                 triggerPageAnalysis: () => {
-                    console.log('Testing: Trigger page analysis');
+                    logger.log(DEBUGGER_NAME, 'Testing: Trigger page analysis');
                     this.eventBus.emit(EVENTS.CHAT.ANALYZE_PAGE, {});
                 },
                 testSettingsUpdate: (testSettings = { test: true }) => {
-                    console.log('Testing: Settings update event');
+                    logger.log(DEBUGGER_NAME, 'Testing: Settings update event');
                     this.eventBus.emit(EVENTS.CHAT.UPDATE_SETTINGS, { settings: testSettings });
                 },
                 listAllEvents: () => {
-                    console.log('All registered events:', this.eventBus.getEventNames());
+                    logger.log(DEBUGGER_NAME, 'All registered events:', this.eventBus.getEventNames());
                     return this.eventBus.getEventNames();
                 }
             };
             
-            console.log('Available test actions:', Object.keys(testActions));
-            console.log('Usage: webwire.debugEventSystem().sendTestMessage("Hello!")');
+            logger.log(DEBUGGER_NAME, 'Available test actions:', Object.keys(testActions));
+            logger.log(DEBUGGER_NAME, 'Usage: webwire.debugEventSystem().sendTestMessage("Hello!")');
             
             return testActions;
         };
@@ -192,7 +194,7 @@ export function setupDebugMethods(WebWireContentHost) {
          * Debug ChatService functionality
          */
         WebWireContentHost.prototype.debugChatService = function() {
-            console.log('=== WebWire ChatService Debug ===');
+            logger.log(DEBUGGER_NAME, '=== WebWire ChatService Debug ===');
             
             const chatServiceState = {
                 isReady: this.chatService.isReady(),
@@ -202,7 +204,7 @@ export function setupDebugMethods(WebWireContentHost) {
                 streamingState: this.chatService.streamingState
             };
             
-            console.log('ChatService State:', chatServiceState);
+            logger.log(DEBUGGER_NAME, 'ChatService State:', chatServiceState);
             
             return {
                 chatService: this.chatService,
@@ -211,21 +213,6 @@ export function setupDebugMethods(WebWireContentHost) {
             };
         };
 
-        console.log('[WebWire Debug] Debug methods attached to WebWireContentHost prototype');
+        logger.log(DEBUGGER_NAME, 'Debug methods attached to WebWireContentHost prototype');
     }
 }
-
-/**
- * Setup global debug access on the window object
- * @param {Object} instance - The WebWire content host instance
- */
-export function setupGlobalDebugAccess(instance) {
-    if (typeof window !== 'undefined') {
-        window.webwireContentHost = instance;
-        window.webwire = instance; // Shorter alias
-        console.log('WebWire hooked to window.webwireContentHost and window.webwire');
-        
-        // Store instance for debug functions
-        setWebWireInstance(instance);
-    }
-} 

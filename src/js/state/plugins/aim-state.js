@@ -1,4 +1,5 @@
 import { EVENTS } from '../../core/events.js';
+import { logger } from '../../core/logging.js';
 
 /**
  * Plugin for handling AIM (AI Mind) related state management.
@@ -33,7 +34,7 @@ export class AIMStatePlugin {
     location: string | undefined;
      */
     getAimMetadata() {
-        console.log('[AIMStatePlugin]', 'getAimMetadata()', this.stateService.state);
+        logger.log('StateService::AIMState', 'getAimMetadata()', this.stateService.state);
         return {
             user_id: this.stateService.state.settings.aim.userName,
             persona_id: this.stateService.state.settings.aim.personaName,
@@ -69,7 +70,7 @@ export class AIMStatePlugin {
         const newValue = !currentValue;
         this.stateService.state.aim.showThought = newValue;
         
-        console.log(`Toggled showThought from ${currentValue} to ${newValue}`);
+        logger.log('StateService::AIMState', `Toggled showThought from ${currentValue} to ${newValue}`);
         this.eventBus.emit(EVENTS.AIM.THOUGHT_TOGGLED, { showThought: newValue });
         
         return newValue;
@@ -85,7 +86,7 @@ export class AIMStatePlugin {
         this.stateService.state.aim.showThought = Boolean(value);
         
         if (oldValue !== this.stateService.state.aim.showThought) {
-            console.log(`Set showThought to ${this.stateService.state.aim.showThought}`);
+            logger.log('StateService::AIMState', `Set showThought to ${this.stateService.state.aim.showThought}`);
             this.eventBus.emit(EVENTS.AIM.THOUGHT_TOGGLED, { showThought: this.stateService.state.aim.showThought });
         }
         
@@ -101,7 +102,7 @@ export class AIMStatePlugin {
         const newValue = !currentValue;
         this.stateService.state.aim.autoThink = newValue;
         
-        console.log(`Toggled autoThink from ${currentValue} to ${newValue}`);
+        logger.log('StateService::AIMState', `Toggled autoThink from ${currentValue} to ${newValue}`);
         this.eventBus.emit(EVENTS.AIM.AUTO_THINK_TOGGLED, { autoThink: newValue });
         
         return newValue;
@@ -117,7 +118,7 @@ export class AIMStatePlugin {
         this.stateService.state.aim.autoThink = Boolean(value);
         
         if (oldValue !== this.stateService.state.aim.autoThink) {
-            console.log(`Set autoThink to ${this.stateService.state.aim.autoThink}`);
+            logger.log('StateService::AIMState', `Set autoThink to ${this.stateService.state.aim.autoThink}`);
             this.eventBus.emit(EVENTS.AIM.AUTO_THINK_TOGGLED, { autoThink: this.stateService.state.aim.autoThink });
         }
         
@@ -134,7 +135,7 @@ export class AIMStatePlugin {
         this.stateService.state.aim.thoughtContent = content;
         
         if (oldContent !== content) {
-            console.log(`Updated thought content (${content ? content.length : 0} characters)`);
+            logger.log('StateService::AIMState', `Updated thought content (${content ? content.length : 0} characters)`);
             this.eventBus.emit(EVENTS.AIM.THOUGHT_CONTENT_CHANGED, { 
                 thoughtContent: content,
                 hasContent: Boolean(content)
@@ -153,7 +154,7 @@ export class AIMStatePlugin {
         this.stateService.state.aim.thoughtContent = undefined;
         
         if (hadContent) {
-            console.log('Cleared thought content');
+            logger.log('StateService::AIMState', 'Cleared thought content');
             this.eventBus.emit(EVENTS.AIM.THOUGHT_CLEARED, {});
         }
         

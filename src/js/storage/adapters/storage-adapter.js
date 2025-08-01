@@ -1,3 +1,5 @@
+import { logger } from '../../core/logging.js';
+
 /**
  * Storage Adapter - Clean, focused storage operations
  * Handles localStorage and IndexedDB without business logic
@@ -21,7 +23,7 @@ export class StorageAdapter {
             const data = localStorage.getItem(key);
             return data ? JSON.parse(data) : null;
         } catch (error) {
-            console.error(`[StorageAdapter] Failed to get ${key}:`, error);
+            logger.error("StorageAdapter", `Failed to get ${key}:`, error);
             return null;
         }
     }
@@ -39,7 +41,7 @@ export class StorageAdapter {
             localStorage.setItem(key, JSON.stringify(value));
             return true;
         } catch (error) {
-            console.error(`[StorageAdapter] Failed to set ${key}:`, error);
+            logger.error("StorageAdapter", `Failed to set ${key}:`, error);
             return false;
         }
     }
@@ -56,7 +58,7 @@ export class StorageAdapter {
             localStorage.removeItem(key);
             return true;
         } catch (error) {
-            console.error(`[StorageAdapter] Failed to remove ${key}:`, error);
+            logger.error("StorageAdapter", `Failed to remove ${key}:`, error);
             return false;
         }
     }
@@ -73,7 +75,7 @@ export class StorageAdapter {
             keys.forEach(key => localStorage.removeItem(key));
             return true;
         } catch (error) {
-            console.error(`[StorageAdapter] Failed to remove multiple keys:`, error);
+            logger.error("StorageAdapter", `Failed to remove multiple keys:`, error);
             return false;
         }
     }

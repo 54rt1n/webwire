@@ -1,3 +1,8 @@
+import { generateUUID } from '../utils/id-generator.js';
+import { EVENTS } from '../core/events.js';
+import { EventBindableComponent } from '../core/event-bindable-panel.js';
+import { logger } from '../core/logging.js';
+
 /**
  * DOM Connector - Event-based Browser Automation Interface
  * 
@@ -5,10 +10,6 @@
  * DOM manipulation events to the content script for execution.
  * This runs in the ChatService context and communicates via events.
  */
-
-import { generateUUID } from '../utils/id-generator.js';
-import { EVENTS } from '../core/events.js';
-import { EventBindableComponent } from '../core/event-bindable-panel.js';
 
 export class DOMConnector extends EventBindableComponent {
     constructor(eventBus) {
@@ -105,7 +106,7 @@ export class DOMConnector extends EventBindableComponent {
         const executionStart = Date.now();
         const operationId = generateUUID();
 
-        console.log(`[DOMConnector] Executing tool: ${toolName}`, parameters);
+        logger.log('DOMConnector', `Executing tool: ${toolName}`, parameters);
 
         try {
             // Validate tool exists
@@ -150,7 +151,7 @@ export class DOMConnector extends EventBindableComponent {
             };
 
         } catch (error) {
-            console.error(`[DOMConnector] Tool ${toolName} execution failed:`, error);
+            logger.error('DOMConnector', `Tool ${toolName} execution failed:`, error);
             
             return {
                 callId: operationId,
@@ -176,7 +177,7 @@ export class DOMConnector extends EventBindableComponent {
             this.pendingOperations.delete(operationId);
             operation.resolve(result);
         } else {
-            console.warn(`[DOMConnector] Received result for unknown operation: ${operationId}`);
+            logger.warn('DOMConnector', `Received result for unknown operation: ${operationId}`);
         }
     }
 
@@ -193,7 +194,7 @@ export class DOMConnector extends EventBindableComponent {
             this.pendingOperations.delete(operationId);
             operation.reject(new Error(error));
         } else {
-            console.warn(`[DOMConnector] Received error for unknown operation: ${operationId}`);
+            logger.warn('DOMConnector', `Received error for unknown operation: ${operationId}`);
         }
     }
 
@@ -211,7 +212,7 @@ export class DOMConnector extends EventBindableComponent {
      * @returns {Promise<Array>} Promise resolving to array of available tools
      */
     async initialize() {
-        console.log('[DOMConnector] Initializing DOM connector...');
+        logger.log('DOMConnector', 'Initializing DOM connector...');
         return this.tools;
     }
 
@@ -225,7 +226,7 @@ export class DOMConnector extends EventBindableComponent {
             operation.reject(new Error('DOM connector disconnected'));
         }
         this.pendingOperations.clear();
-        console.log('[DOMConnector] DOM connector disconnected');
+        logger.log('DOMConnector', 'DOM connector disconnected');
     }
 
     /**

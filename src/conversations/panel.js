@@ -1,6 +1,7 @@
 import '../shared/global.scss';
 import './style.scss';
 import { EVENTS } from '../js/core/events.js';
+import { logger } from '../js/core/logging.js';
 
 /**
  * ConversationsPanel
@@ -79,7 +80,7 @@ export class ConversationsPanel {
     initialize(handlers) {
         this.handlers = handlers;
         this._setupEventListeners();
-        console.log('[ConversationsPanel] Initialized');
+        logger.log(this, 'Initialized');
     }
 
     /**
@@ -168,7 +169,7 @@ export class ConversationsPanel {
      * @param {Array} conversations - Array of conversation objects
      */
     renderConversations(conversations) {
-        console.log(`[ConversationsPanel] Rendering ${conversations.length} conversations`);
+        logger.log(this, `Rendering ${conversations.length} conversations`);
         
         // Calculate stats
         const activeCount = conversations.filter(c => c.status === 'active').length;
@@ -205,7 +206,7 @@ export class ConversationsPanel {
      * @private
      */
     _createConversationElement(conversation) {
-        console.log('[ConversationsPanel] Creating conversation element:', conversation);
+        logger.log(this, 'Creating conversation element:', conversation);
         const conversationEl = this._createEl('div', {
             className: 'ww-conversation-card',
             'data-thread-id': conversation.threadId
@@ -319,7 +320,7 @@ export class ConversationsPanel {
 
         // Click to view conversation in modal
         conversationEl.addEventListener('click', (e) => {
-            console.log('[ConversationsPanel] Conversation clicked:', conversation.threadId, e.target);
+            logger.log(this, 'Conversation clicked:', conversation.threadId, e.target);
             if (this.handlers.onViewConversation) {
                 this.handlers.onViewConversation(conversation);
             }
@@ -720,7 +721,7 @@ export class ConversationsPanel {
      */
     _handleBulkExport() {
         if (!this.stateService || !this.stateService.conversation) {
-            console.warn('[ConversationsPanel] No state service available for export');
+            logger.warn(this, 'No state service available for export');
             return;
         }
 
@@ -747,10 +748,10 @@ export class ConversationsPanel {
             link.download = `webwire-conversations-${new Date().toISOString().split('T')[0]}.json`;
             link.click();
             
-            console.log(`[ConversationsPanel] Exported ${exportData.length} conversations`);
+            logger.log(this, `Exported ${exportData.length} conversations`);
             
         } catch (error) {
-            console.error('[ConversationsPanel] Failed to export conversations:', error);
+            logger.error(this, 'Failed to export conversations:', error);
         }
     }
 
@@ -762,7 +763,7 @@ export class ConversationsPanel {
         const totalConversations = Object.keys(this.stateService.state.conversation.metadata).length;
         
         if (totalConversations === 0) {
-            console.log('[ConversationsPanel] No conversations to delete');
+            logger.log(this, 'No conversations to delete');
             return;
         }
 
@@ -784,7 +785,7 @@ export class ConversationsPanel {
         try {
             if (this.stateService && this.stateService.conversation) {
                 this.stateService.conversation.hardResetAllConversations();
-                console.log('[ConversationsPanel] All conversations deleted successfully');
+                logger.log(this, 'All conversations deleted successfully');
                 
                 // Refresh the conversations list
                 if (this.handlers.onRefreshConversations) {
@@ -792,7 +793,7 @@ export class ConversationsPanel {
                 }
             }
         } catch (error) {
-            console.error('[ConversationsPanel] Failed to delete all conversations:', error);
+            logger.error(this, 'Failed to delete all conversations:', error);
             alert('Failed to delete conversations. Please try again.');
         }
     }
@@ -846,7 +847,7 @@ export class ConversationsPanel {
      */
     async _handleSearch(searchTerm) {
         if (!this.handlers.onSearchConversations) {
-            console.warn('[ConversationsPanel] No search handler available');
+            logger.warn(this, 'No search handler available');
             return;
         }
         
@@ -867,7 +868,7 @@ export class ConversationsPanel {
             }
             
         } catch (error) {
-            console.error('[ConversationsPanel] Search failed:', error);
+            logger.error(this, 'Search failed:', error);
         }
     }
 }

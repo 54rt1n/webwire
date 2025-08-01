@@ -1,3 +1,8 @@
+import { EVENTS } from '../core/events.js';
+import { EventBindableComponent } from '../core/event-bindable-panel.js';
+import { SpeechUtil } from '../utils/speech-util.js';
+import { logger } from '../core/logging.js';
+
 /**
  * BrowserEventHandlers
  * 
@@ -7,10 +12,6 @@
  * 
  * Used by contexts that need play/copy functionality but don't need full chat capabilities.
  */
-
-import { EVENTS } from '../core/events.js';
-import { EventBindableComponent } from '../core/event-bindable-panel.js';
-import { SpeechUtil } from '../utils/speech-util.js';
 
 export class BrowserEventHandlers extends EventBindableComponent {
     constructor(eventBus, stateService = null) {
@@ -34,7 +35,7 @@ export class BrowserEventHandlers extends EventBindableComponent {
      * Supports both messageId lookup and direct content copying
      */
     async handleCopyMessage(data, options) {
-        console.log('[BrowserEventHandlers] Handling copy message request:', data);
+        logger.log('BrowserEventHandlers', 'Handling copy message request:', data);
         
         let textToCopy = '';
         const { messageId, content } = data;
@@ -49,21 +50,21 @@ export class BrowserEventHandlers extends EventBindableComponent {
             if (message) {
                 textToCopy = message.content || '';
             } else {
-                console.warn('[BrowserEventHandlers] Message not found:', messageId);
+                logger.warn('BrowserEventHandlers', 'Message not found:', messageId);
             }
         }
         
         if (!textToCopy) {
-            console.warn('[BrowserEventHandlers] No content found to copy');
+            logger.warn('BrowserEventHandlers', 'No content found to copy');
             throw new Error('No content found to copy');
         }
 
         try {
             await navigator.clipboard.writeText(textToCopy);
-            console.log('[BrowserEventHandlers] Text copied to clipboard successfully');
+            logger.log('BrowserEventHandlers', 'Text copied to clipboard successfully');
             return { success: true, message: 'Text copied to clipboard successfully' };
         } catch (clipboardError) {
-            console.error('[BrowserEventHandlers] Failed to copy to clipboard:', clipboardError);
+            logger.error('BrowserEventHandlers', 'Failed to copy to clipboard:', clipboardError);
             
             // Fallback: try the older execCommand method
             try {
@@ -77,14 +78,14 @@ export class BrowserEventHandlers extends EventBindableComponent {
                 document.body.removeChild(textArea);
                 
                 if (success) {
-                    console.log('[BrowserEventHandlers] Text copied using fallback method');
+                    logger.log('BrowserEventHandlers', 'Text copied using fallback method');
                     return { success: true, message: 'Text copied to clipboard successfully (fallback method)' };
                 } else {
-                    console.error('[BrowserEventHandlers] execCommand copy failed');
+                    logger.error('BrowserEventHandlers', 'execCommand copy failed');
                     throw new Error('execCommand copy failed');
                 }
             } catch (fallbackError) {
-                console.error('[BrowserEventHandlers] Fallback copy method also failed:', fallbackError);
+                logger.error('BrowserEventHandlers', 'Fallback copy method also failed:', fallbackError);
                 throw new Error(`Failed to copy to clipboard: ${fallbackError.message}`);
             }
         }
@@ -95,7 +96,7 @@ export class BrowserEventHandlers extends EventBindableComponent {
      * Supports both messageId lookup and direct content playing
      */
     async handlePlayAudio(data, options) {
-        console.log('[BrowserEventHandlers] Handling play audio request:', data);
+        logger.log('BrowserEventHandlers', 'Handling play audio request:', data);
         
         const { messageId, action = 'play' } = data;
         const { onComplete, onError } = options;
@@ -132,12 +133,12 @@ export class BrowserEventHandlers extends EventBindableComponent {
                 if (message) {
                     textToSpeak = message.content || '';
                 } else {
-                    console.warn('[BrowserEventHandlers] Message not found:', messageId);
+                    logger.warn('BrowserEventHandlers', 'Message not found:', messageId);
                 }
             }
             
             if (!textToSpeak) {
-                console.warn('[BrowserEventHandlers] No content found to play');
+                logger.warn('BrowserEventHandlers', 'No content found to play');
                 throw new Error('No content found to play');
             }
 
@@ -148,7 +149,7 @@ export class BrowserEventHandlers extends EventBindableComponent {
                 this.speechUtil.speak(textToSpeak, voiceSettings).then(onComplete, onError);
                 return { success: true, message: 'Speech started' };
             } catch (speechError) {
-                console.error('[BrowserEventHandlers] Failed to play audio:', speechError);
+                logger.error('BrowserEventHandlers', 'Failed to play audio:', speechError);
                 throw new Error(`Failed to play audio: ${speechError.message}`);
             }
         }

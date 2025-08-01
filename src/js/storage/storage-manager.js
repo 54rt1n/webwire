@@ -3,6 +3,7 @@ import { StateAdapter, StateValidator } from './adapters/state-adapter.js';
 import { TabAdapter } from './adapters/tab-adapter.js';
 import { StashAdapter } from './adapters/stash-adapter.js';
 import { PromptAdapter } from './adapters/prompt-adapter.js';
+import { logger } from '../core/logging.js';
 
 /**
  * Factory and container for specialized storage adapters handling different data types.
@@ -63,7 +64,7 @@ export class StorageManager {
             }, eventBus)
         };
 
-        console.log('[StorageManager] Initialized with clean adapter interface');
+        logger.log('StorageManager', 'Initialized with clean adapter interface');
     }
 
     /**
@@ -72,8 +73,8 @@ export class StorageManager {
      */
     initialize() {
         if (!this.config.keys) {
-            console.warn('[StorageManager] No storage keys provided in config');
+            logger.warn('StorageManager', 'No storage keys provided in config');
         }
-        console.log('[StorageManager] Storage adapters ready');
+        logger.log('StorageManager', 'Storage adapters ready');
     }
 }

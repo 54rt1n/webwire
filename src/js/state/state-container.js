@@ -1,4 +1,5 @@
 import { generateSessionId } from '../utils/id-generator.js';
+import { logger } from '../core/logging.js';
 
 /**
  * Creates the initial state structure for the app.
@@ -308,7 +309,7 @@ export function deserializeState(saveData, currentState) {
         return newState;
 
     } catch (error) {
-        console.error('[StateContainer] Failed to deserialize state:', error);
+        logger.error('StateContainer', 'Failed to deserialize state:', error);
         throw error;
     }
 } 

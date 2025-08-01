@@ -3,6 +3,7 @@ import { BasePanelApp } from '../core/base-panel-app.js';
 import { ConversationsPanel } from './panel.js';
 import { ConversationModal } from './components/conversation-modal.js';
 import { AppConfig } from '../js/core/app-config.js';
+import { logger } from '../js/core/logging.js';
 
 /**
  * ConversationsPanelApp
@@ -56,13 +57,13 @@ class ConversationsPanelApp extends BasePanelApp {
     setupEventListeners() {
         // Listen for conversation updates
         this.on(EVENTS.CONVERSATION.UPDATED, (payload) => {
-            console.log('[ConversationsApp] Conversation updated:', payload);
+            logger.log(this, 'Conversation updated:', payload);
             this.refreshConversations();
         });
 
         // Listen for conversation activation (when one is set as active)
         this.on(EVENTS.CONVERSATION.ACTIVATED, (payload) => {
-            console.log('[ConversationsApp] Conversation activated:', payload);
+            logger.log(this, 'Conversation activated:', payload);
             this.refreshConversations();
         });
     }
@@ -72,13 +73,13 @@ class ConversationsPanelApp extends BasePanelApp {
      */
     async loadConversations() {
         if (!this.core.stateService || !this.core.stateService.conversation) {
-            console.error('[ConversationsApp] No conversation state service available');
+            logger.error(this, 'No conversation state service available');
             this.panel.renderConversations([]);
             return;
         }
 
         try {
-            console.log('[ConversationsApp] Loading conversations...');
+            logger.log(this, 'Loading conversations...');
             
             // Get all conversations from state
             const conversations = this.core.stateService.conversation.listConversations();
@@ -86,11 +87,11 @@ class ConversationsPanelApp extends BasePanelApp {
             // Sort by most recent first
             conversations.sort((a, b) => (b.endTime || b.startTime) - (a.endTime || a.startTime));
             
-            console.log(`[ConversationsApp] Loaded ${conversations.length} conversations`);
+            logger.log(this, `Loaded ${conversations.length} conversations`);
             this.panel.renderConversations(conversations);
             
         } catch (error) {
-            console.error('[ConversationsApp] Failed to load conversations:', error);
+            logger.error(this, 'Failed to load conversations:', error);
             this.panel.renderConversations([]);
         }
     }
@@ -99,7 +100,7 @@ class ConversationsPanelApp extends BasePanelApp {
      * Refresh conversations list
      */
     async refreshConversations() {
-        console.log('[ConversationsApp] Refreshing conversations...');
+        logger.log(this, 'Refreshing conversations...');
         await this.loadConversations();
     }
 
@@ -109,12 +110,12 @@ class ConversationsPanelApp extends BasePanelApp {
      */
     async deleteConversation(threadId) {
         if (!this.core.stateService || !this.core.stateService.conversation) {
-            console.error('[ConversationsApp] No conversation state service available');
+            logger.error(this, 'No conversation state service available');
             return;
         }
 
         try {
-            console.log(`[ConversationsApp] Deleting conversation ${threadId}...`);
+            logger.log(this, `Deleting conversation ${threadId}...`);
             
             // Clear conversation history
             this.core.stateService.conversation.clearConversationHistory(threadId);
@@ -122,7 +123,7 @@ class ConversationsPanelApp extends BasePanelApp {
             // Save state
             await this.core.stateService.disk.saveToStorage();
             
-            console.log(`[ConversationsApp] Conversation ${threadId} deleted`);
+            logger.log(this, `Conversation ${threadId} deleted`);
             
             // Refresh the list
             await this.refreshConversations();
@@ -131,7 +132,7 @@ class ConversationsPanelApp extends BasePanelApp {
             this.eventBus.emit(EVENTS.CONVERSATION.DELETED, { threadId });
             
         } catch (error) {
-            console.error(`[ConversationsApp] Failed to delete conversation ${threadId}:`, error);
+            logger.error(this, `Failed to delete conversation ${threadId}:`, error);
         }
     }
 
@@ -140,7 +141,7 @@ class ConversationsPanelApp extends BasePanelApp {
      * @param {Object} conversation - The conversation metadata to view
      */
     async viewConversation(conversation) {
-        console.log(`[ConversationsApp] Viewing conversation ${conversation.threadId}...`, this);
+        logger.log(this, `Viewing conversation ${conversation.threadId}...`, this);
         
         // Open the conversation modal
         this.conversationModal.open(
@@ -156,12 +157,12 @@ class ConversationsPanelApp extends BasePanelApp {
      */
     async setActiveConversation(threadId) {
         if (!this.core.stateService || !this.core.stateService.conversation) {
-            console.error('[ConversationsApp] No conversation state service available');
+            logger.error(this, 'No conversation state service available');
             return;
         }
 
         if (!threadId) {
-            console.error('[ConversationsApp] Cannot set active conversation: threadId is null or undefined');
+            logger.error(this, 'Cannot set active conversation: threadId is null or undefined');
             return;
         }
 
@@ -171,11 +172,11 @@ class ConversationsPanelApp extends BasePanelApp {
             const isAlreadyActive = currentActiveThreadId === threadId;
             
             if (isAlreadyActive) {
-                console.log(`[ConversationsApp] Conversation ${threadId} is already active, marking as completed...`);
+                logger.log(this, `Conversation ${threadId} is already active, marking as completed...`);
                 // Use the existing method to mark as completed
                 this.core.stateService.conversation.updateConversationStatus(threadId, 'completed');
             } else {
-                console.log(`[ConversationsApp] Setting conversation ${threadId} as active...`);
+                logger.log(this, `Setting conversation ${threadId} as active...`);
                 // Use the existing method (this will automatically complete other active conversations)
                 this.core.stateService.conversation.setActiveConversation(threadId);
                 
@@ -186,7 +187,7 @@ class ConversationsPanelApp extends BasePanelApp {
             // Save state using the disk state plugin
             await this.core.stateService.disk.saveToStorage();
             
-            console.log(`[ConversationsApp] Conversation ${threadId} ${isAlreadyActive ? 'completed' : 'set as active'}`);
+            logger.log(this, `Conversation ${threadId} ${isAlreadyActive ? 'completed' : 'set as active'}`);
             
             // Close modal
             this.conversationModal.close();
@@ -195,7 +196,7 @@ class ConversationsPanelApp extends BasePanelApp {
             await this.refreshConversations();
             
         } catch (error) {
-            console.error(`[ConversationsApp] Failed to set conversation ${threadId} as active:`, error);
+            logger.error(this, `Failed to set conversation ${threadId} as active:`, error);
         }
     }
 
@@ -204,12 +205,12 @@ class ConversationsPanelApp extends BasePanelApp {
      */
     async createNewConversation() {
         if (!this.core.stateService || !this.core.stateService.conversation) {
-            console.error('[ConversationsApp] No conversation state service available');
+            logger.error(this, 'No conversation state service available');
             return;
         }
 
         try {
-            console.log('[ConversationsApp] Creating new conversation...');
+            logger.log(this, 'Creating new conversation...');
             
             // Create new conversation
             const threadId = this.core.stateService.conversation.createNewConversation({
@@ -223,13 +224,13 @@ class ConversationsPanelApp extends BasePanelApp {
             // Save state
             await this.core.stateService.disk.saveToStorage();
             
-            console.log(`[ConversationsApp] New conversation ${threadId} created`);
+            logger.log(this, `New conversation ${threadId} created`);
             
             // Refresh the list
             await this.refreshConversations();
             
         } catch (error) {
-            console.error('[ConversationsApp] Failed to create new conversation:', error);
+            logger.error(this, 'Failed to create new conversation:', error);
         }
     }
 
@@ -240,20 +241,20 @@ class ConversationsPanelApp extends BasePanelApp {
      */
     async searchConversations(query) {
         if (!this.core.stateService || !this.core.stateService.conversation) {
-            console.error('[ConversationsApp] No conversation state service available');
+            logger.error(this, 'No conversation state service available');
             return [];
         }
 
         try {
-            console.log(`[ConversationsApp] Searching conversations with query: "${query}"`);
+            logger.log(this, `Searching conversations with query: "${query}"`);
             
             const results = this.core.stateService.conversation.searchConversations(query);
             
-            console.log(`[ConversationsApp] Found ${results.length} matching conversations`);
+            logger.log(this, `Found ${results.length} matching conversations`);
             return results;
             
         } catch (error) {
-            console.error('[ConversationsApp] Failed to search conversations:', error);
+            logger.error(this, 'Failed to search conversations:', error);
             return [];
         }
     }

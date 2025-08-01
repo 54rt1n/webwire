@@ -1,4 +1,5 @@
 import { EVENTS } from '../../core/events.js';
+import { logger } from '../../core/logging.js';
 
 /**
  * Plugin for handling stash state - URI-based content store with MCP integration
@@ -34,7 +35,7 @@ export class StashStatePlugin {
     has(uri) {
         this._ensureStashExists();
         const exists = uri in this.stateService.state.stash;
-        console.log(`[StateService::StashState] Check URI '${uri}': ${exists}`);
+        logger.log("StateService::StashState", `Check URI '${uri}': ${exists}`);
         return exists;
     }
 
@@ -46,7 +47,7 @@ export class StashStatePlugin {
     get(uri) {
         this._ensureStashExists();
         const content = this.stateService.state.stash[uri] || null;
-        console.log(`[StateService::StashState] Get content for '${uri}':`, content ? `${content.length} chars` : 'not found');
+        logger.log("StateService::StashState", `Get content for '${uri}':`, content ? `${content.length} chars` : 'not found');
         return content;
     }
 
@@ -58,7 +59,7 @@ export class StashStatePlugin {
     set(uri, content) {
         this._ensureStashExists();
         this.stateService.state.stash[uri] = content;
-        console.log(`[StateService::StashState] Set content for '${uri}': ${content.length} chars`);
+        logger.log("StateService::StashState", `Set content for '${uri}': ${content.length} chars`);
         
         this.eventBus.emit(EVENTS.STASH?.UPDATED || 'stash:updated', { 
             uri, 
@@ -78,14 +79,14 @@ export class StashStatePlugin {
         
         if (existed) {
             delete this.stateService.state.stash[uri];
-            console.log(`[StateService::StashState] Deleted content for '${uri}'`);
+            logger.log("StateService::StashState", `Deleted content for '${uri}'`);
             
             this.eventBus.emit(EVENTS.STASH?.UPDATED || 'stash:updated', { 
                 uri, 
                 operation: 'delete'
             });
         } else {
-            console.log(`[StateService::StashState] URI '${uri}' does not exist, nothing to delete`);
+            logger.log("StateService::StashState", `URI '${uri}' does not exist, nothing to delete`);
         }
         
         return existed;
@@ -98,16 +99,16 @@ export class StashStatePlugin {
     async loadFromStorage() {
         try {
             if (!this.stashAdapter) {
-                console.log('[StateService::StashState] No stash adapter found');
+                logger.log('StateService::StashState', 'No stash adapter found');
                 return {};
             }
 
             const stashData = await this.stashAdapter.getAll();
             this.stateService.state.stash = stashData || {};
-            console.log('[StateService::StashState] Stash data loaded:', Object.keys(this.stateService.state.stash).length, 'keys');
+            logger.log('StateService::StashState', 'Stash data loaded:', Object.keys(this.stateService.state.stash).length, 'keys');
             return this.stateService.state.stash;
         } catch (error) {
-            console.error('[StateService::StashState] Error loading stash data:', error);
+            logger.error('StateService::StashState', 'Error loading stash data:', error);
             this.stateService.state.stash = {};
             return {};
         }
@@ -119,15 +120,15 @@ export class StashStatePlugin {
     async saveToStorage() {
         try {
             if (!this.stashAdapter) {
-                console.log('[StateService::StashState] No stash adapter found');
+                logger.log('StateService::StashState', 'No stash adapter found');
                 return;
             }
 
             this._ensureStashExists();
             await this.stashAdapter.setAll(this.stateService.state.stash);
-            console.log('[StateService::StashState] Stash data saved:', Object.keys(this.stateService.state.stash).length, 'keys');
+            logger.log('StateService::StashState', 'Stash data saved:', Object.keys(this.stateService.state.stash).length, 'keys');
         } catch (error) {
-            console.error('[StateService::StashState] Error saving stash data:', error);
+            logger.error('StateService::StashState', 'Error saving stash data:', error);
             throw error;
         }
     }
@@ -138,7 +139,7 @@ export class StashStatePlugin {
     clearAll() {
         const uriCount = this.stateService.state.stash ? Object.keys(this.stateService.state.stash).length : 0;
         this.stateService.state.stash = {};
-        console.log(`[StateService::StashState] Cleared all stash data: ${uriCount} URIs removed`);
+        logger.log("StateService::StashState", `Cleared all stash data: ${uriCount} URIs removed`);
         
         this.eventBus.emit(EVENTS.STASH.CLEARED, { 
             operation: 'clear_all',
@@ -180,7 +181,7 @@ export class StashStatePlugin {
         const allKeys = this.getAllKeys();
         const regex = pattern instanceof RegExp ? pattern : new RegExp(pattern);
         const matching = allKeys.filter(key => regex.test(key));
-        console.log(`[StateService::StashState] Filtered keys by pattern '${pattern}': ${matching.length} matches`);
+        logger.log("StateService::StashState", `Filtered keys by pattern '${pattern}': ${matching.length} matches`);
         return matching;
     }
 
@@ -212,7 +213,7 @@ export class StashStatePlugin {
             isEmpty: keyCount === 0
         };
 
-        console.log('[StateService::StashState] Stats:', stats);
+        logger.log('StateService::StashState', 'Stats:', stats);
         return stats;
     }
 }

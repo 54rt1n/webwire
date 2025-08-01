@@ -2,6 +2,7 @@ import '../shared/global.scss';
 import './style.scss';
 import { EVENTS } from '../js/core/events.js';
 import { emojiBrowser } from '../components/emoji-browser.js';
+import { logger } from '../js/core/logging.js';
 
 /**
  * PromptsPanel
@@ -98,7 +99,7 @@ export class PromptsPanel {
     initialize(handlers) {
         this.handlers = handlers;
         this._setupEventListeners();
-        console.log('[PromptsPanel] Initialized');
+        logger.log('PromptsPanel', 'Initialized');
     }
 
     /**
@@ -203,7 +204,7 @@ export class PromptsPanel {
                 this.elements.promptButtonIconValue.value = emoji;
             } catch (error) {
                 // User cancelled or closed the browser
-                console.log('Emoji selection cancelled');
+                logger.log('PromptsPanel', 'Emoji selection cancelled');
             }
         });
     }
@@ -214,7 +215,7 @@ export class PromptsPanel {
      */
     renderPrompts(prompts) {
         const promptEntries = Object.entries(prompts);
-        console.log(`[PromptsPanel] Rendering ${promptEntries.length} prompts`);
+        logger.log('PromptsPanel', `Rendering ${promptEntries.length} prompts`);
         
         // Update stats
         const totalCount = promptEntries.length;
@@ -441,7 +442,7 @@ export class PromptsPanel {
      */
     _handleDeleteFromModal() {
         if (!this.currentEditingPromptId) {
-            console.warn('[PromptsPanel] No prompt ID to delete');
+            logger.warn('PromptsPanel', 'No prompt ID to delete');
             return;
         }
 
@@ -645,7 +646,7 @@ export class PromptsPanel {
      */
     async _handleSearch(searchTerm) {
         if (!this.handlers.onSearchPrompts) {
-            console.warn('[PromptsPanel] No search handler available');
+            logger.warn('PromptsPanel', 'No search handler available');
             return;
         }
         
@@ -666,7 +667,7 @@ export class PromptsPanel {
             }
             
         } catch (error) {
-            console.error('[PromptsPanel] Search failed:', error);
+            logger.error('PromptsPanel', 'Search failed:', error);
         }
     }
 

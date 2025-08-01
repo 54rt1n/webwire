@@ -1,4 +1,5 @@
 import { createInitialUiState, createInitialTabState } from '../state-container.js';
+import { logger } from '../../core/logging.js';
 
 /**
  * Plugin for handling tab state
@@ -26,7 +27,7 @@ export class TabStatePlugin {
         } else {
             this.stateService.state.tabs[tabId] = tabState;
         }
-        console.log('[StateService::TabState] Tab state set:', tabId, tabState);
+        logger.log('StateService::TabState', 'Tab state set:', tabId, tabState);
     }
 
     /**
@@ -34,17 +35,17 @@ export class TabStatePlugin {
      */
     async loadFromStorage() {
         if (!this.tabAdapter) {
-            console.log('[StateService::TabState] No tab adapter found');
+            logger.log('StateService::TabState', 'No tab adapter found');
             return createInitialTabState();
         }
 
         let tabState = await this.tabAdapter.getAll();
         if (!tabState) {
-            console.log('[StateService::TabState] No tab state found');
+            logger.log('StateService::TabState', 'No tab state found');
             tabState = createInitialTabState();
         }
         this.stateService.state.tab = tabState;
-        console.log('[StateService::TabState] Tab state read:', tabState);
+        logger.log('StateService::TabState', 'Tab state read:', tabState);
         return tabState;
     }
 
@@ -53,7 +54,7 @@ export class TabStatePlugin {
      */
     async saveToStorage() {
         if (!this.tabAdapter) {
-            console.log('[StateService::TabState] No tab adapter found');
+            logger.log('StateService::TabState', 'No tab adapter found');
             return;
         }
 

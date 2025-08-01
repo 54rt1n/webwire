@@ -1,6 +1,7 @@
 import './document-modal.scss';
 import { StashButton } from './stash-button.js';
 import { EVENTS } from '../../js/core/events.js';
+import { logger } from '../../js/core/logging.js';
 
 /**
  * DocumentModal
@@ -340,7 +341,7 @@ export class DocumentModal {
                 copyBtn.classList.remove('copied');
             }, 2000);
         }).catch(err => {
-            console.error('Failed to copy content:', err);
+            logger.error('DocumentModal', 'Failed to copy content:', err);
         });
     }
 
@@ -412,7 +413,7 @@ export class DocumentModal {
         const button = this.stashButton.create(uri, 'kb', {
             size: 'icon',
             onToggle: (stashedUri, isStashed) => {
-                console.log(`[DocumentModal] ${isStashed ? 'Added to' : 'Removed from'} stash: ${stashedUri}`);
+                logger.log('DocumentModal', `${isStashed ? 'Added to' : 'Removed from'} stash: ${stashedUri}`);
                 
                 // Emit event through the event bus to notify other components
                 if (this.stateService && this.stateService.eventBus) {

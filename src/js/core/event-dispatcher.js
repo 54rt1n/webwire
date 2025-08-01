@@ -1,6 +1,7 @@
 import { EventErrorBoundary } from './error-boundary.js';
 import { EVENT_TYPES, EVENT_CONTEXT } from './events.js';
 import { BACKGROUND_ACTIONS } from './cc-actions.js';
+import { logger } from './logging.js';
 
 export class EventDispatcher {
   constructor(context, eventBus, {backgroundIsLocal = false} = {}) {
@@ -56,7 +57,7 @@ export class EventDispatcher {
       throw new Error(`Unknown dispatch target: ${target}`);
       
     } catch (error) {
-      console.error(`[EventDispatcher] Dispatch failed:`, { event, target, error: error.message });
+      logger.error(this, `Dispatch failed:`, { event, target, error: error.message });
       throw error;
     }
   }
@@ -68,7 +69,7 @@ export class EventDispatcher {
   // ── Cross-Context Communication ──────────────────────────────────
 
   async sendToBackground(event, data, timeout = this.defaultTimeout, tabId = null) {
-    console.log('[EventDispatcher] sendToBackground', event, data, timeout, tabId);
+    logger.log(this, 'sendToBackground', event, data, timeout, tabId);
     if (this.context === EVENT_CONTEXT.BACKGROUND && this.backgroundIsLocal) {
       // Already in background, dispatch locally
       return this.eventBus.emit(event, data, {source: EVENT_CONTEXT.BACKGROUND});
@@ -88,7 +89,7 @@ export class EventDispatcher {
   }
 
   async sendToContent(event, data, timeout = this.defaultTimeout, tabId = undefined) {
-    console.log('[EventDispatcher] sendToContent', event, data, timeout, tabId);
+    logger.log(this, 'sendToContent', event, data, timeout, tabId);
     if (this.context === EVENT_CONTEXT.CONTENT) {
       // Already in content, dispatch locally
       return this.eventBus.emit(event, data);
@@ -130,7 +131,7 @@ export class EventDispatcher {
   }
 
   async sendToPanel(event, data, timeout = this.defaultTimeout, tabId = undefined) {
-    console.log('[EventDispatcher] sendToPanel', event, data, timeout, tabId);
+    logger.log(this, 'sendToPanel', event, data, timeout, tabId);
     if (this.context === EVENT_CONTEXT.PANEL) {
       // Already in panel, dispatch locally
       return this.eventBus.emit(event, data, { tabId });
@@ -225,7 +226,7 @@ export class EventDispatcher {
           
           // Check if it's an extension context invalidation
           if (error.includes('Extension context invalidated')) {
-            console.warn('[EventDispatcher] Extension context invalidated, queueing for retry');
+            logger.warn(this, 'Extension context invalidated, queueing for retry');
             
             // Queue for retry
             this.queueForRetry({
@@ -270,7 +271,7 @@ export class EventDispatcher {
       }
     } catch (error) {
       // Ignore errors in tab context detection
-      console.debug('Could not add tab context:', error.message);
+      logger.debug(this, 'Could not add tab context:', error.message);
     }
   }
 
@@ -453,7 +454,7 @@ export class EventDispatcher {
 
   async handleCrossContextEvent(message, sender, sendResponse) {
     if (this.eventBus === undefined) {
-      console.error('[EventDispatcher] Event bus is undefined');
+      logger.error(this, 'Event bus is undefined');
       throw new Error('Event bus is undefined');
     }
     try {
@@ -576,23 +577,23 @@ export class EventDispatcher {
   
   queueForRetry(retryInfo) {
     if (retryInfo.retryCount >= this.maxRetries) {
-      console.error('[EventDispatcher] Max retries reached, failing message');
+      logger.error(this, 'Max retries reached, failing message');
       retryInfo.reject(new Error('Max retries reached after extension context invalidation'));
       return;
     }
     
     this.retryQueue.push(retryInfo);
-    console.log(`[EventDispatcher] Queued message for retry (${this.retryQueue.length} in queue)`);
+    logger.log(this, `Queued message for retry (${this.retryQueue.length} in queue)`);
   }
   
   async handleContextInvalidation() {
     if (this.isReconnecting) {
-      console.log('[EventDispatcher] Already reconnecting, skipping');
+      logger.log(this, 'Already reconnecting, skipping');
       return;
     }
     
     this.isReconnecting = true;
-    console.log('[EventDispatcher] Starting reconnection process');
+    logger.log(this, 'Starting reconnection process');
     
     // Wait a bit for the extension to stabilize
     await new Promise(resolve => setTimeout(resolve, this.retryDelay));
@@ -600,13 +601,13 @@ export class EventDispatcher {
     // Test if we can communicate
     try {
       await this.testConnection();
-      console.log('[EventDispatcher] Connection restored, processing retry queue');
+      logger.log(this, 'Connection restored, processing retry queue');
       
       // Process all queued messages
       await this.processRetryQueue();
       
     } catch (error) {
-      console.error('[EventDispatcher] Connection test failed:', error);
+      logger.error(this, 'Connection test failed:', error);
       // Exponential backoff
       this.retryDelay = Math.min(this.retryDelay * 2, 5000);
       
@@ -644,7 +645,7 @@ export class EventDispatcher {
   }
   
   async processRetryQueue() {
-    console.log(`[EventDispatcher] Processing ${this.retryQueue.length} queued messages`);
+    logger.log(this, `Processing ${this.retryQueue.length} queued messages`);
     
     // Process all queued messages
     while (this.retryQueue.length > 0) {
@@ -660,10 +661,10 @@ export class EventDispatcher {
         
         // Success! Resolve the original promise
         retryInfo.resolve(result);
-        console.log('[EventDispatcher] Successfully retried message');
+        logger.log(this, 'Successfully retried message');
         
       } catch (error) {
-        console.error('[EventDispatcher] Retry failed:', error);
+        logger.error(this, 'Retry failed:', error);
         
         // If it's another invalidation, it will be re-queued
         // Otherwise, reject the original promise

@@ -3,6 +3,7 @@ import { WebWireClientCore } from '../js/client/webwire-client-core.js';
 import { PanelEventHandlers } from '../js/client/panel-event-handlers.js';
 import { BrowserEventHandlers } from '../js/client/browser-event-handlers.js';
 import { EventBus } from '../js/core/event-bus.js';
+import { logger } from '../js/core/logging.js';
 
 /**
  * BasePanelApp - Template Method Pattern for Panel Applications
@@ -36,7 +37,7 @@ export class BasePanelApp extends EventBindableComponent {
      * Instead, they should implement the hook methods below.
      */
     async initialize() {
-        console.log(`[${this.constructor.name}] Initializing panel...`);
+        logger.log(this, 'Initializing panel...');
 
         // 1. Core infrastructure setup (invariant)
         await this.core.initialize();
@@ -66,7 +67,7 @@ export class BasePanelApp extends EventBindableComponent {
         // 7. Load initial data (variant hook)
         await this._loadData();
 
-        console.log(`[${this.constructor.name}] Initialization complete`);
+        logger.log(this, 'Initialization complete');
     }
 
     /**

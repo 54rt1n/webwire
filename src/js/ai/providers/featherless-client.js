@@ -1,4 +1,5 @@
 import { AbstractAIClient } from '../abstract-ai-client.js';
+import { logger } from '../../core/logging.js';
 
 /**
  * Featherless AI API client implementation with OpenAI-compatible interface.
@@ -46,11 +47,11 @@ export class FeatherlessClient extends AbstractAIClient {
             throw new Error('Featherless API key not configured');
         }
 
-        console.log('[FeatherlessClient]', 'Generating turn for input', userTurn.substring(0, 100));
+        logger.log('FeatherlessClient', 'Generating turn for input', userTurn.substring(0, 100));
         
         try {
             const messages = this.buildMessages(userTurn, history, systemPrompt, options);
-            console.log('[FeatherlessClient]', 'Sending messages to AI:', messages);
+            logger.log('FeatherlessClient', 'Sending messages to AI:', messages);
             apiHeaders['HTTP-Referer'] = 'https://webwire.ai/';
             apiHeaders['X-Title'] = 'Webwire';
             const response = await this.streamChatCompletion(messages, { ...options, apiHeaders });

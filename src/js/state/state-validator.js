@@ -1,9 +1,11 @@
+import { logger } from '../core/logging.js';
+
 /**
  * StateValidator - Validates the structure and content of game state objects.
  */
 export class StateValidator {
     constructor() {
-        console.log('[StateValidator] Initialized.');
+        logger.log(this, 'Initialized.');
     }
 
     /**

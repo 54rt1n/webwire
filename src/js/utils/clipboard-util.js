@@ -1,3 +1,5 @@
+import { logger } from '../core/logging.js';
+
 /**
  * ClipboardUtil - Browser clipboard operations utility
  * Provides safe clipboard access with fallback methods
@@ -10,7 +12,7 @@ export class ClipboardUtil {
      */
     static async copyToClipboard(text) {
         if (!text || typeof text !== 'string') {
-            console.warn('[ClipboardUtil] Invalid text provided for copying');
+            logger.warn('ClipboardUtil', 'Invalid text provided for copying');
             return false;
         }
 
@@ -24,13 +26,13 @@ export class ClipboardUtil {
             // Fallback to document.execCommand (deprecated but widely supported)
             return this.fallbackCopyToClipboard(text);
         } catch (error) {
-            console.error('[ClipboardUtil] Error copying to clipboard:', error);
+            logger.error('ClipboardUtil', 'Error copying to clipboard:', error);
             
             // Try fallback method if modern API fails
             try {
                 return this.fallbackCopyToClipboard(text);
             } catch (fallbackError) {
-                console.error('[ClipboardUtil] Fallback copy method also failed:', fallbackError);
+                logger.error('ClipboardUtil', 'Fallback copy method also failed:', fallbackError);
                 return false;
             }
         }
@@ -67,7 +69,7 @@ export class ClipboardUtil {
             
             return true;
         } catch (error) {
-            console.error('[ClipboardUtil] execCommand copy failed:', error);
+            logger.error('ClipboardUtil', 'execCommand copy failed:', error);
             return false;
         } finally {
             // Clean up the temporary element

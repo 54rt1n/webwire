@@ -1,5 +1,6 @@
 import { StorageAdapter } from './storage-adapter.js';
 import { EVENTS } from '../../core/events.js';
+import { logger } from '../../core/logging.js';
 
 /**
  * Tab Adapter - Specialized adapter for tab state management
@@ -18,7 +19,7 @@ export class TabAdapter {
                                  chrome.storage && 
                                  chrome.storage.local;
         
-        console.log('[TabAdapter] Initialized with storage type:', 
+        logger.log('TabAdapter', 'Initialized with storage type:', 
                    this.isChromeExtension ? 'Chrome Extension Storage' : 'localStorage');
     }
 
@@ -32,33 +33,33 @@ export class TabAdapter {
             
             // Use Chrome extension storage if available (for extension contexts)
             if (this.isChromeExtension) {
-                console.log('[TabAdapter] Using Chrome extension storage');
+                logger.log('TabAdapter', 'Using Chrome extension storage');
                 const result = await chrome.storage.local.get(this.storageKey);
                 data = result[this.storageKey] || null;
             } else {
                 // Fallback to localStorage for non-extension contexts
-                console.log('[TabAdapter] Using localStorage fallback');
+                logger.log('TabAdapter', 'Using localStorage fallback');
                 data = this.storage.get(this.storageKey);
             }
             
             if (!data) {
-                console.log('[TabAdapter] No tab state found');
+                logger.log('TabAdapter', 'No tab state found');
                 return null;
             }
             
             // Handle version migration
             if (data.version !== this.version) {
-                console.log('[TabAdapter] Version mismatch, migrating...');
+                logger.log('TabAdapter', 'Version mismatch, migrating...');
                 const migrated = this._migrate(data);
                 await this.setAll(migrated);
                 return migrated;
             }
 
-            console.log('[TabAdapter] Tab state read:', data);
+            logger.log('TabAdapter', 'Tab state read:', data);
             return data;
             
         } catch (error) {
-            console.error('[TabAdapter] Error reading tab state:', error);
+            logger.error('TabAdapter', 'Error reading tab state:', error);
             return null;
         }
     }
@@ -80,12 +81,12 @@ export class TabAdapter {
             
             // Use Chrome extension storage if available (for extension contexts)
             if (this.isChromeExtension) {
-                console.log('[TabAdapter] Saving to Chrome extension storage');
+                logger.log('TabAdapter', 'Saving to Chrome extension storage');
                 await chrome.storage.local.set({ [this.storageKey]: data });
                 success = true;
             } else {
                 // Fallback to localStorage for non-extension contexts
-                console.log('[TabAdapter] Saving to localStorage fallback');
+                logger.log('TabAdapter', 'Saving to localStorage fallback');
                 success = this.storage.set(this.storageKey, data);
             }
             
@@ -93,11 +94,11 @@ export class TabAdapter {
                 this.eventBus.emit(EVENTS.TAB.CHANGED, data);
             }
 
-            console.log('[TabAdapter] Tab state saved:', data);
+            logger.log('TabAdapter', 'Tab state saved:', data);
             return success;
             
         } catch (error) {
-            console.error('[TabAdapter] Error saving tab state:', error);
+            logger.error('TabAdapter', 'Error saving tab state:', error);
             return false;
         }
     }
@@ -151,12 +152,12 @@ export class TabAdapter {
             
             // Use Chrome extension storage if available (for extension contexts)
             if (this.isChromeExtension) {
-                console.log('[TabAdapter] Clearing from Chrome extension storage');
+                logger.log('TabAdapter', 'Clearing from Chrome extension storage');
                 await chrome.storage.local.remove(this.storageKey);
                 success = true;
             } else {
                 // Fallback to localStorage for non-extension contexts
-                console.log('[TabAdapter] Clearing from localStorage fallback');
+                logger.log('TabAdapter', 'Clearing from localStorage fallback');
                 success = this.storage.remove(this.storageKey);
             }
             
@@ -167,7 +168,7 @@ export class TabAdapter {
             return success;
             
         } catch (error) {
-            console.error('[TabAdapter] Error clearing tab state:', error);
+            logger.error('TabAdapter', 'Error clearing tab state:', error);
             return false;
         }
     }
@@ -187,7 +188,7 @@ export class TabAdapter {
      * @private
      */
     _migrate(oldData) {
-        console.log(`[TabAdapter] Migrating from ${oldData.version} to ${this.version}`);
+        logger.log("TabAdapter", `Migrating from ${oldData.version} to ${this.version}`);
         
         return {
             ...oldData,

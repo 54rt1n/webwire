@@ -1,5 +1,6 @@
 import { StorageAdapter } from './storage-adapter.js';
 import { EVENTS } from '../../core/events.js';
+import { logger } from '../../core/logging.js';
 
 /**
  * Stash Adapter - Specialized adapter for stash state management
@@ -18,7 +19,7 @@ export class StashAdapter {
                                  chrome.storage && 
                                  chrome.storage.local;
         
-        console.log('[StashAdapter] Initialized with storage type:', 
+        logger.log('StashAdapter', 'Initialized with storage type:', 
                    this.isChromeExtension ? 'Chrome Extension Storage' : 'localStorage');
     }
 
@@ -32,12 +33,12 @@ export class StashAdapter {
             
             // Use Chrome extension storage if available (for extension contexts)
             if (this.isChromeExtension) {
-                console.log('[StashAdapter] Using Chrome extension storage');
+                logger.log('StashAdapter', 'Using Chrome extension storage');
                 const result = await chrome.storage.local.get(this.storageKey);
                 data = result[this.storageKey] || null;
             } else {
                 // Fallback to localStorage for non-extension contexts
-                console.log('[StashAdapter] Using localStorage fallback');
+                logger.log('StashAdapter', 'Using localStorage fallback');
                 data = this.storage.get(this.storageKey);
             }
             
@@ -47,7 +48,7 @@ export class StashAdapter {
             const { version, timestamp, ...stashData } = data;
             return stashData;
         } catch (error) {
-            console.error('[StashAdapter] Error reading stash data:', error);
+            logger.error('StashAdapter', 'Error reading stash data:', error);
             return {};
         }
     }
@@ -69,12 +70,12 @@ export class StashAdapter {
             
             // Use Chrome extension storage if available (for extension contexts)
             if (this.isChromeExtension) {
-                console.log('[StashAdapter] Saving to Chrome extension storage');
+                logger.log('StashAdapter', 'Saving to Chrome extension storage');
                 await chrome.storage.local.set({ [this.storageKey]: data });
                 success = true;
             } else {
                 // Fallback to localStorage for non-extension contexts
-                console.log('[StashAdapter] Saving to localStorage fallback');
+                logger.log('StashAdapter', 'Saving to localStorage fallback');
                 success = this.storage.set(this.storageKey, data);
             }
             
@@ -84,7 +85,7 @@ export class StashAdapter {
             
             return success;
         } catch (error) {
-            console.error('[StashAdapter] Error saving stash data:', error);
+            logger.error('StashAdapter', 'Error saving stash data:', error);
             return false;
         }
     }
@@ -138,12 +139,12 @@ export class StashAdapter {
             
             // Use Chrome extension storage if available (for extension contexts)
             if (this.isChromeExtension) {
-                console.log('[StashAdapter] Clearing from Chrome extension storage');
+                logger.log('StashAdapter', 'Clearing from Chrome extension storage');
                 await chrome.storage.local.remove(this.storageKey);
                 success = true;
             } else {
                 // Fallback to localStorage for non-extension contexts
-                console.log('[StashAdapter] Clearing from localStorage fallback');
+                logger.log('StashAdapter', 'Clearing from localStorage fallback');
                 success = this.storage.remove(this.storageKey);
             }
             
@@ -153,7 +154,7 @@ export class StashAdapter {
             
             return success;
         } catch (error) {
-            console.error('[StashAdapter] Error clearing stash data:', error);
+            logger.error('StashAdapter', 'Error clearing stash data:', error);
             return false;
         }
     }

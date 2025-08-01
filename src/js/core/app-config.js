@@ -118,9 +118,12 @@ export class AppConfig {
                     quotaWarningThreshold: 0.8
                 },
                 debug: {
-                    enabled: false,
-                    logLevel: 'error',
-                    performanceMetrics: false
+                    enabled: true,
+                    logLevel: 'debug',
+                    performanceMetrics: false,
+                    classWhitelist: [
+                        { className: 'EventBus', logLevel: 'debug' }
+                    ]
                 }
             },
             lite: {
@@ -154,9 +157,12 @@ export class AppConfig {
                     quotaWarningThreshold: 0.9
                 },
                 debug: {
-                    enabled: false,
-                    logLevel: 'error',
-                    performanceMetrics: false
+                    enabled: true,
+                    logLevel: 'debug',
+                    performanceMetrics: false,
+                    classWhitelist: [
+                        //{ className: 'EventBus', logLevel: 'debug' }
+                    ]
                 }
             }
         };

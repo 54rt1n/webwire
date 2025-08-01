@@ -2,6 +2,7 @@ import { EVENTS } from '../js/core/events.js';
 import { generateMessageId } from '../js/utils/id-generator.js';
 import { ChatUIRenderer } from './chat-renderer.js';
 import { buildToolMessages } from './message-utils.js';
+import { logger } from '../js/core/logging.js';
 
 /**
  * WebWire Panel - Manages the chat panel UI and interactions
@@ -37,7 +38,7 @@ export class WebChatPanel {
     async initialize() {
         if (this.isInjected) return;
 
-        console.log('[WebChatPanel] Initializing panel...');
+        logger.log(this, 'Initializing panel...');
         
         // Create and inject panel
         this.createContainer();
@@ -52,7 +53,7 @@ export class WebChatPanel {
         document.body.appendChild(this.container);
         this.isInjected = true;
         
-        console.log('[WebChatPanel] Panel initialized successfully');
+        logger.log(this, 'Panel initialized successfully');
     }
 
     /**
@@ -335,7 +336,7 @@ export class WebChatPanel {
             ? EVENTS.CHAT.EXECUTE_TOOL 
             : EVENTS.CHAT.CANCEL_TOOL;
 
-        console.log('[WebChatPanel] handleToolButtonClick:', eventName, { messageId, callId, name, parameters });
+        logger.log(this, 'handleToolButtonClick:', eventName, { messageId, callId, name, parameters });
 
         this.eventBus.emit(eventName, { messageId, callId, name, parameters });
     }
@@ -344,12 +345,12 @@ export class WebChatPanel {
      * Display a message
      */
     displayMessage(message, {autoScroll = false, ...options} = {}) {
-        console.log('[WebChatPanel] displayMessage:', message, options);
+        logger.log(this, 'displayMessage:', message, options);
 
         this.prepareForMessage();
         
         if (!message || !this.elements.chatContent) {
-            console.log('[WebChatPanel] Missing message or chatContent');
+            logger.log(this, 'Missing message or chatContent');
             return;
         }
 
@@ -374,7 +375,7 @@ export class WebChatPanel {
      * Display a thinking message
      */
     displayThinkingMessage(message, options) {
-        console.log('[WebChatPanel] displayThinkingMessage:', message);
+        logger.log(this, 'displayThinkingMessage:', message);
         
         this.prepareForMessage();
 
@@ -396,7 +397,7 @@ export class WebChatPanel {
     updateStreamingMessage(messageId, content) {
         const messageEl = this.container.querySelector(`#${messageId}`);
         if (!messageEl) {
-            console.log('[WebChatPanel] Message not found:', messageId);
+            logger.log(this, 'Message not found:', messageId);
             return;
         }
 
@@ -409,11 +410,11 @@ export class WebChatPanel {
      * Finalize a thinking message
      */
     finalizeThinkingMessage(messageId, finalContent, toolMessages = []) {
-        console.log('[WebChatPanel] finalizeThinkingMessage:', messageId);
+        logger.log(this, 'finalizeThinkingMessage:', messageId);
         
         const messageEl = this.container.querySelector(`#${messageId}`);
         if (!messageEl) {
-            console.log('[WebChatPanel] Message not found for finalization:', messageId);
+            logger.log(this, 'Message not found for finalization:', messageId);
             return;
         }
 
@@ -424,7 +425,7 @@ export class WebChatPanel {
         // Update content
         const messageContent = messageEl.querySelector('.ww-content');
         if (messageContent) {
-            console.log('[WebChatPanel] Updating message content:', finalContent, toolMessages);
+            logger.log(this, 'Updating message content:', finalContent, toolMessages);
             messageContent.innerHTML = this.renderer.createFinalizedMessageHTML(
                 finalContent, 
                 toolMessages,
@@ -526,7 +527,7 @@ export class WebChatPanel {
     updateToolResult(msgCallId, {name, result, success, error, callId, executionTime, ...results} = {}) {
         const toolEl = this.container.querySelector(`#${callId}`);
         if (!toolEl) {
-            console.warn('[WebChatPanel] Tool element not found:', callId);
+            logger.warn(this, 'Tool element not found:', callId);
             return;
         }
 
@@ -576,7 +577,7 @@ export class WebChatPanel {
             if (message.status === 'retried' || message.status === 'dropped') return;
 
             const toolMessages = buildToolMessages(message.toolCalls, message.toolResults);
-            console.log('[WebChatPanel] displayConversation toolMessages:', message.role, toolMessages);
+            logger.log(this, 'displayConversation toolMessages:', message.role, toolMessages);
 
             this.toolStash = {
                 ...this.toolStash,
@@ -624,7 +625,7 @@ export class WebChatPanel {
             if (message.status === 'retried' || message.status === 'dropped') return;
             
             const toolMessages = buildToolMessages(message.toolCalls, message.toolResults);
-            console.log('[WebChatPanel] loadConversation:', toolMessages);
+            logger.log(this, 'loadConversation:', toolMessages);
 
             this.toolStash = {
                 ...this.toolStash,
@@ -682,7 +683,7 @@ export class WebChatPanel {
         // Also check for any "thinking" messages that might be stuck in the UI
         const thinkingMessages = this.container?.querySelectorAll('.ww-thinking');
         if (thinkingMessages && thinkingMessages.length > 0) {
-            console.log('[ChatService] Found thinking messages during retry, removing them');
+            logger.log(this, 'Found thinking messages during retry, removing them');
             thinkingMessages.forEach(msg => msg.remove());
         }
     }
@@ -964,7 +965,7 @@ export class WebChatPanel {
     }
     
     handleCancelRequest() {
-        console.log('[WebChatPanel] Cancel request');
+        logger.log(this, 'Cancel request');
         this.eventBus.emit(EVENTS.CHAT.CANCEL_STREAM, {});
         this.hideCancelButton();
     }
@@ -976,11 +977,11 @@ export class WebChatPanel {
         const messageId = button.dataset.messageId;
         
         if (!messageId) {
-            console.warn('[WebChatPanel] Copy button clicked but no messageId found');
+            logger.warn(this, 'Copy button clicked but no messageId found');
             return;
         }
 
-        console.log('[WebChatPanel] Copy message request for ID:', messageId);
+        logger.log(this, 'Copy message request for ID:', messageId);
         
         // Extract content directly from the message element
         const messageEl = button.closest('.ww-message');
@@ -1011,7 +1012,7 @@ export class WebChatPanel {
         const messageId = button.dataset.messageId;
         
         if (!messageId) {
-            console.warn('[WebChatPanel] Play button clicked but no messageId found');
+            logger.warn(this, 'Play button clicked but no messageId found');
             return;
         }
         
@@ -1026,16 +1027,16 @@ export class WebChatPanel {
             }
         }
         
-        console.log('[WebChatPanel] Play audio request for message:', messageId, 'action:', action);
+        logger.log(this, 'Play audio request for message:', messageId, 'action:', action);
         
         try {
             const onComplete = () => {
-                console.log('[WebChatPanel] Speech completed successfully');
+                logger.log(this, 'Speech completed successfully');
                 this.updatePlayButton(messageId, 'play');
             }
 
             const onError = (error) => {
-                console.error('[WebChatPanel] Failed to play audio:', error);
+                logger.error(this, 'Failed to play audio:', error);
                 this.updatePlayButton(messageId, 'play');
             }
             // Emit event to browser event handlers
@@ -1069,7 +1070,7 @@ export class WebChatPanel {
             this.updatePlayButton(messageId, newState);
             
         } catch (error) {
-            console.error('[WebChatPanel] Play audio failed:', error);
+            logger.error(this, 'Play audio failed:', error);
             // Reset button to stopped state on error
             this.updatePlayButton(messageId, 'stopped');
         }
@@ -1083,7 +1084,7 @@ export class WebChatPanel {
     updatePlayButton(messageId, state) {
         const button = this.container.querySelector(`.ww-play-button[data-message-id="${messageId}"]`);
         if (!button) {
-            console.warn('[WebChatPanel] Play button not found for message:', messageId);
+            logger.warn(this, 'Play button not found for message:', messageId);
             return;
         }
         
@@ -1138,7 +1139,7 @@ export class WebChatPanel {
     }
 
     handleNewConversationRequest() {
-        console.log('[WebChatPanel] New conversation requested');
+        logger.log(this, 'New conversation requested');
         this.clearMessages();
         this.updateConversationIdDisplay(null);
         this.updateRetryButton(false);
@@ -1147,22 +1148,22 @@ export class WebChatPanel {
     }
 
     handleReplayLastTurn() {
-        console.log('[WebChatPanel] Replay last turn requested');
+        logger.log(this, 'Replay last turn requested');
         this.eventBus.emit(EVENTS.CHAT.REPLAY_LAST_TURN, {});
     }
 
     handleBackButton() {
-        console.log('[WebChatPanel] Back button clicked');
+        logger.log(this, 'Back button clicked');
         this.eventBus.emit(EVENTS.CHAT.BACK_BUTTON, {});
     }
 
     handleResync() {
-        console.log('[WebChatPanel] Resync requested');
+        logger.log(this, 'Resync requested');
         this.eventBus.emit(EVENTS.CHAT.RESYNC, {});
     }
 
     handleSwapConversation() {
-        console.log('[WebChatPanel] Swap conversation requested');
+        logger.log(this, 'Swap conversation requested');
         this.eventBus.emit(EVENTS.CHAT.SWAP_CONVERSATION, {});
     }
     
@@ -1170,7 +1171,7 @@ export class WebChatPanel {
      * Handle save conversation request
      */
     async handleSaveConversation() {
-        console.log('[WebChatPanel] Save conversation requested');
+        logger.log(this, 'Save conversation requested');
         
         // Show saving state
         this.updateSaveIndicator('saving');
@@ -1180,55 +1181,55 @@ export class WebChatPanel {
             const result = await this.eventBus.emitAsync(EVENTS.CHAT.UPDATE_CONVERSATION);
             
             // Result will be handled by THREAD_SAVED event
-            console.log('[WebChatPanel] Save conversation result:', result);
+            logger.log(this, 'Save conversation result:', result);
         } catch (error) {
-            console.error('[WebChatPanel] Failed to save conversation:', error);
+            logger.error(this, 'Failed to save conversation:', error);
             this.updateSaveIndicator('error', error.message || 'Failed to save conversation');
         }
     }
 
     handleReparseRequest() {
-        console.log('[WebChatPanel] Reparse requested');
+        logger.log(this, 'Reparse requested');
         this.eventBus.emit(EVENTS.CHAT.REPARSE_MESSAGE, {});
     }
 
     handlePageContentToggle(includeContent) {
-        console.log('[WebChatPanel] Page content toggle:', includeContent);
+        logger.log(this, 'Page content toggle:', includeContent);
         this.eventBus.emit(EVENTS.CHAT.TOGGLE_UI_SETTING, { 
             includePageContent: includeContent 
         });
     }
 
     handleMcpToggle(useMcp) {
-        console.log('[WebChatPanel] MCP tools toggle:', useMcp);
+        logger.log(this, 'MCP tools toggle:', useMcp);
         this.eventBus.emit(EVENTS.CHAT.TOGGLE_UI_SETTING, { 
             useMCP: useMcp 
         });
     }
 
     handleBrowserToolsToggle(useBrowserTools) {
-        console.log('[WebChatPanel] Browser tools toggle:', useBrowserTools);
+        logger.log(this, 'Browser tools toggle:', useBrowserTools);
         this.eventBus.emit(EVENTS.CHAT.TOGGLE_UI_SETTING, { 
             useBrowserTools: useBrowserTools 
         });
     }
 
     handleAutoExecuteToggle(autoExecuteTools) {
-        console.log('[WebChatPanel] Auto-execute tools toggle:', autoExecuteTools);
+        logger.log(this, 'Auto-execute tools toggle:', autoExecuteTools);
         this.eventBus.emit(EVENTS.CHAT.TOGGLE_UI_SETTING, { 
             autoExecuteTools: autoExecuteTools 
         });
     }
 
     handleSelectedModelChange(selectedModel) {
-        console.log('[WebChatPanel] Selected model change:', selectedModel);
+        logger.log(this, 'Selected model change:', selectedModel);
         this.eventBus.emit(EVENTS.CHAT.TOGGLE_UI_SETTING, { 
             selectedModel: selectedModel 
         });
     }
 
     handleInitialState(state) {
-        console.log('[WebChatPanel] Handling initial state:', state);
+        logger.log(this, 'Handling initial state:', state);
         
         if (state.includePageContent !== undefined) {
             this.updatePageContentSetting(state.includePageContent);
@@ -1267,7 +1268,7 @@ export class WebChatPanel {
      * Show error notification
      */
     showErrorNotification(message) {
-        console.error('WebWire Error:', message);
+        logger.error(this, 'WebWire Error:', message);
         
         const notification = document.createElement('div');
         notification.innerHTML = this.renderer.createErrorNotificationHTML(message);

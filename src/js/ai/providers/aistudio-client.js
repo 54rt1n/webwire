@@ -1,4 +1,5 @@
 import { AbstractAIClient } from '../abstract-ai-client.js';
+import { logger } from '../../core/logging.js';
 
 /**
  * Google AI Studio/Gemini Client - Handles communication with Google Gemini API
@@ -30,7 +31,7 @@ export class AIStudioClient extends AbstractAIClient {
             throw new Error('Google AI Studio API key not configured');
         }
 
-        console.log('[AIStudioClient]', `Generating turn for input: "${userTurn}"`);
+        logger.log('AIStudioClient', `Generating turn for input: "${userTurn}"`);
         
         try {
             const contents = this.buildContents(userTurn, history, systemPrompt, options);
@@ -142,7 +143,7 @@ export class AIStudioClient extends AbstractAIClient {
                 ]
             };
 
-            console.log('[AIStudioClient]', 'Sending Gemini request:', requestBody);
+            logger.log('AIStudioClient', 'Sending Gemini request:', requestBody);
 
             const modelName = this.model.startsWith('models/') ? this.model : `models/${this.model}`;
 
@@ -272,7 +273,7 @@ export class AIStudioClient extends AbstractAIClient {
                             }
                         }
                     } catch (parseError) {
-                        console.log('[AIStudioClient]', `Gemini parse error: ${parseError.message}`, jsonStr.substring(0, 100));
+                        logger.log('AIStudioClient', `Gemini parse error: ${parseError.message}`, jsonStr.substring(0, 100));
                     }
                 }
             }
@@ -286,7 +287,7 @@ export class AIStudioClient extends AbstractAIClient {
                         fullResponse += content;
                     }
                 } catch (parseError) {
-                    console.log('[AIStudioClient]', `Final parse error: ${parseError.message}`);
+                    logger.log('AIStudioClient', `Final parse error: ${parseError.message}`);
                 }
             }
             
@@ -304,7 +305,7 @@ export class AIStudioClient extends AbstractAIClient {
                 throw new Error('Empty response from Gemini');
             }
             
-            console.log('[AIStudioClient]', `Gemini response received: ${fullResponse.length} characters`);
+            logger.log('AIStudioClient', `Gemini response received: ${fullResponse.length} characters`);
             return fullResponse;
             
         } finally {
@@ -326,7 +327,7 @@ export class AIStudioClient extends AbstractAIClient {
                 }
             }
         } catch (error) {
-            console.log('[AIStudioClient]', `Error extracting Gemini content: ${error.message}`);
+            logger.log('AIStudioClient', `Error extracting Gemini content: ${error.message}`);
         }
         return null;
     }

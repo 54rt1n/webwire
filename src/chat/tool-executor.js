@@ -1,3 +1,5 @@
+import { logger } from '../js/core/logging.js';
+
 /**
  * ToolExecutor - Manages tool parsing and execution flow
  * Extracted from ChatService tool handling logic
@@ -24,7 +26,7 @@ export class ToolExecutor {
                     tools.push(...mcpTools);
                 }
             } catch (error) {
-                console.warn('[ToolExecutor] Failed to get MCP tools:', error);
+                logger.warn(this, 'Failed to get MCP tools:', error);
             }
         }
         
@@ -45,7 +47,7 @@ export class ToolExecutor {
                     tools.push(...formattedDomTools);
                 }
             } catch (error) {
-                console.warn('[ToolExecutor] Failed to get DOM tools:', error);
+                logger.warn(this, 'Failed to get DOM tools:', error);
             }
         }
         
@@ -80,14 +82,14 @@ export class ToolExecutor {
             
             // Check if it's a DOM tool
             if (this.domConnector.isTool(toolCall.name)) {
-                console.log(`[ToolExecutor] Executing DOM tool: ${toolCall.name}`);
+                logger.log(this, `Executing DOM tool: ${toolCall.name}`);
                 toolResponse = await this.domConnector.executeTool(
                     toolCall.name, 
                     toolCall.parameters
                 );
             } else if (this.mcpConnector?.isTool(toolCall.name)) {
                 // Execute MCP tool
-                console.log(`[ToolExecutor] Executing MCP tool: ${toolCall.name}`);
+                logger.log(this, `Executing MCP tool: ${toolCall.name}`);
                 toolResponse = await this.mcpConnector.executeTool(
                     toolCall.name, 
                     toolCall.parameters
@@ -105,7 +107,7 @@ export class ToolExecutor {
                 executionTime: Date.now()
             };
         } catch (error) {
-            console.error(`[ToolExecutor] Tool ${toolCall.name} execution failed:`, error);
+            logger.error(this, `Tool ${toolCall.name} execution failed:`, error);
             return {
                 callId: toolCall.callId,
                 name: toolCall.name,

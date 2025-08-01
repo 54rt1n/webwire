@@ -1,5 +1,6 @@
 import { initializeContext } from '../context/context-init.js';
 import { MCPConnector } from '../mcp/mcp-connector.js';
+import { logger } from '../core/logging.js';
 
 /**
  * WebWireClientCore
@@ -21,7 +22,7 @@ export class WebWireClientCore {
      * Initializes the core state and services.
      */
     async initialize(initialState = null) {
-        console.log('[WebWireClientCore] Initializing Context...');
+        logger.log(this, 'Initializing Context...');
 
         const { stateService,
             storage,
@@ -37,7 +38,7 @@ export class WebWireClientCore {
         this.mcpConnector = mcpConnector;
         this.dispatcher = dispatcher;
 
-        console.log('[WebWireClientCore] StateService:', this.stateService, 'storage:', this.storage, 'aiClient:', this.aiClient, 'mcpConnector:', this.mcpConnector, 'dispatcher:', this.dispatcher, 'rest:', rest);
+        logger.log(this, 'StateService:', this.stateService, 'storage:', this.storage, 'aiClient:', this.aiClient, 'mcpConnector:', this.mcpConnector, 'dispatcher:', this.dispatcher, 'rest:', rest);
     }
 
     /**
@@ -47,24 +48,24 @@ export class WebWireClientCore {
     async connect() {
         // Check if MCP is enabled in config
         if (this.config && !this.config.get('features.mcp.enabled', false)) {
-            console.log('[WebWireClientCore] MCP is disabled in configuration');
+            logger.log(this, 'MCP is disabled in configuration');
             return false;
         }
 
         // Check if we already have an MCP connector from initialization
         if (!this.mcpConnector) {
-            console.log('[WebWireClientCore] No MCP connector available');
+            logger.log(this, 'No MCP connector available');
             return false;
         }
 
         const serverUrl = this.stateService.mcp.getMcpServerUrl();
         if (!serverUrl) {
-            console.log('[WebWireClientCore] No MCP server URL configured');
+            logger.log(this, 'No MCP server URL configured');
             return false;
         }
 
         try {
-            console.log(`[WebWireClientCore] Attempting to connect to: ${serverUrl}`);
+            logger.log(this, `Attempting to connect to: ${serverUrl}`);
 
             // If we don't already have a connector, create one
             if (!this.mcpConnector) {
@@ -73,15 +74,15 @@ export class WebWireClientCore {
             
             await this.mcpConnector.initialize(this.stateService);
 
-            console.log('[WebWireClientCore] Connection successful.');
+            logger.log(this, 'Connection successful.');
 
             return true;
         } catch (error) {
             if (error.message.includes('MCP server security downgrade')) {
-                console.log('[WebWireClientCore] MCP connection not available due to security constraints');
+                logger.log(this, 'MCP connection not available due to security constraints');
                 return false;
             }
-            console.error('[WebWireClientCore] Connection failed:', error);
+            logger.error(this, 'Connection failed:', error);
             return false;
         }
     }
@@ -112,7 +113,7 @@ export class WebWireClientCore {
             try {
                 this.mcpConnector.disconnect();
             } catch (error) {
-                console.warn('[WebWireClientCore] Error disconnecting MCP connector:', error);
+                logger.warn(this, 'Error disconnecting MCP connector:', error);
             }
         }
         

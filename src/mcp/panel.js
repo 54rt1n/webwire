@@ -4,6 +4,7 @@ import { TextViewModal } from './components/textview-modal.js';
 import { GraphDraw } from './components/graph-draw.js';
 import { StashButton } from './components/stash-button.js';
 import { EVENTS } from '../js/core/events.js';
+import { logger } from '../js/core/logging.js';
 
 /**
  * MCPControlPanel
@@ -322,7 +323,7 @@ export class MCPControlPanel {
         const filePath = treeLine.dataset.path;
         const fileType = treeLine.dataset.type;
         
-        console.log(`[FileTree] Selected: ${filePath} (${fileType})`);
+        logger.log("MCPControlPanel", `Selected: ${filePath} (${fileType})`);
         
         // Update selected file state and button visibility
         if (fileType === 'file') {
@@ -369,7 +370,7 @@ export class MCPControlPanel {
      * @param {object} kbData - Data for the graph visualization.
      */
     renderKbGraph(kbData) {
-        console.log(`[Panel] renderKbGraph called with data:`, kbData);
+        logger.log("MCPControlPanel", `renderKbGraph called with data:`, kbData);
         if (!kbData) {
             this.elements.kbGraphContainer.innerHTML = `<div class="placeholder error">Failed to fetch knowledge base data.</div>`;
             return;
@@ -410,7 +411,7 @@ export class MCPControlPanel {
         
         // Listen for graph ready event to clear loading state
         this.elements.kbGraphContainer.addEventListener('kb-graph-ready', () => {
-            console.log('[Panel] Graph ready, clearing loading state');
+            logger.log('MCPControlPanel', 'Graph ready, clearing loading state');
             // Loading state should already be cleared since we're not in showLoading anymore
         });
         
@@ -464,7 +465,7 @@ export class MCPControlPanel {
         const ul = this._createEl('ul');
         list.items.forEach((item, index) => {
             // Debug: Log the actual status value
-            console.log(`[Lists] Item status: "${item.status}" (type: ${typeof item.status})`);
+            logger.log("MCPControlPanel", `Item status: "${item.status}" (type: ${typeof item.status})`);
             
             // Normalize status to uppercase for CSS class matching
             const normalizedStatus = (item.status || 'NONE').toString().toUpperCase();
@@ -512,7 +513,7 @@ export class MCPControlPanel {
      * @param {string} message - The loading message to display.
      */
     showLoading(widgetName, message = 'Loading...') {
-        console.log(`[Panel] showLoading called for: ${widgetName} with message: ${message}`);
+        logger.log("MCPControlPanel", `showLoading called for: ${widgetName} with message: ${message}`);
         const containers = {
             health: this.elements.healthContent,
             fs: this.elements.fsTreeContainer,
@@ -543,7 +544,7 @@ export class MCPControlPanel {
      */
     openFileViewer(fileName, content) {
         this.textViewModal.open(fileName, content, () => {
-            console.log(`[FileViewer] Closed viewer for: ${fileName}`);
+            logger.log("MCPControlPanel", `Closed viewer for: ${fileName}`);
         });
     }
 
@@ -598,7 +599,7 @@ export class MCPControlPanel {
         
         // Listen for stash updates from other components (modals, etc.)
         this.stateService.eventBus.on(EVENTS.STASH.ADD, async (data) => {
-            console.log('[Panel] Received stash update:', data);
+            logger.log('MCPControlPanel', 'Received stash update:', data);
             
             if (data && data.uri && typeof data.isStashed === 'boolean') {
                 // Handle different types of stash updates
@@ -670,7 +671,7 @@ export class MCPControlPanel {
         const button = this.elements.fileStashButton.create(filePath, 'fs', {
             size: 'icon',
             onToggle: async (stashedUri, isStashed) => {
-                console.log(`[Panel] File ${isStashed ? 'added to' : 'removed from'} stash: ${stashedUri}`);
+                logger.log("MCPControlPanel", `File ${isStashed ? 'added to' : 'removed from'} stash: ${stashedUri}`);
                 // Update the visual state of the file tree
                 this._updateFileStashState(filePath, isStashed);
             }
@@ -713,7 +714,7 @@ export class MCPControlPanel {
         const button = this.elements.kbStashButton.create(uri, 'kb', {
             size: 'icon',
             onToggle: async (stashedUri, isStashed) => {
-                console.log(`[Panel] KB document ${isStashed ? 'added to' : 'removed from'} stash: ${stashedUri}`);
+                logger.log("MCPControlPanel", `KB document ${isStashed ? 'added to' : 'removed from'} stash: ${stashedUri}`);
                 this.eventBus.emit(isStashed ? EVENTS.STASH.ADD : EVENTS.STASH.REMOVE, { uri, isStashed, type: 'kb' });
                 // Update the visual state of the KB node in the graph
                 this._updateKbNodeStashState(uri, isStashed);
@@ -795,7 +796,7 @@ export class MCPControlPanel {
         listItem.classList.add('selected');
         
         const itemUri = listItem.dataset.itemUri;
-        console.log(`[Lists] Selected item: ${itemUri}`);
+        logger.log("MCPControlPanel", `Selected item: ${itemUri}`);
         
         // Update selected item state and show stash button
         this.selectedListItem = {
@@ -827,7 +828,7 @@ export class MCPControlPanel {
         const button = this.elements.listStashButton.create(itemUri, 'list', {
             size: 'icon',
             onToggle: async (stashedUri, isStashed) => {
-                console.log(`[Panel] List item ${isStashed ? 'added to' : 'removed from'} stash: ${stashedUri}`);
+                logger.log("MCPControlPanel", `List item ${isStashed ? 'added to' : 'removed from'} stash: ${stashedUri}`);
                 // Update the visual state of the list item
                 this._updateListItemStashState(itemUri, isStashed);
                 this.eventBus.emit(isStashed ? EVENTS.STASH.ADD : EVENTS.STASH.REMOVE, { uri: itemUri, isStashed, type: 'list' });

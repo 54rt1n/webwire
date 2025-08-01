@@ -1,6 +1,7 @@
 // src/js/client/panel-event-handlers.js
 import { EVENTS } from '../core/events.js';
 import { EventBindableComponent } from '../core/event-bindable-panel.js';
+import { logger } from '../core/logging.js';
 
 export class PanelEventHandlers extends EventBindableComponent {
     constructor(core) {
@@ -32,28 +33,28 @@ export class PanelEventHandlers extends EventBindableComponent {
      * @param {Object} options - { autoSave: boolean }
      */
     async handleStashAdd(data, { autoSave = true, ...options } = {}) {
-        console.log('[PanelEventHandlers] Handling stash add request:', data);
+        logger.log('PanelEventHandlers', 'Handling stash add request:', data);
         if (!this.stateService || !this.stateService.stash) {
-            console.error('[PanelEventHandlers] No stash service available');
+            logger.error('PanelEventHandlers', 'No stash service available');
             return;
         }
 
         const { uri, content } = data;
         if (!uri || !content) {
-            console.error('[PanelEventHandlers] Invalid stash add request:', data);
+            logger.error('PanelEventHandlers', 'Invalid stash add request:', data);
             return;
         }
 
         const added = this.stateService.stash.set(uri, content);
 
         if (added) {
-            console.log(`[PanelEventHandlers] Added ${uri} to stash`);
+            logger.log('PanelEventHandlers', `Added ${uri} to stash`);
             if (autoSave) {
                 await this.handleSaveStash(false);
             }
             this.eventBus.emit(EVENTS.STASH.UPDATED, { uri, added: true, saved: true, ...options });
         } else {
-            console.log(`[PanelEventHandlers] ${uri} was already in stash`);
+            logger.log('PanelEventHandlers', `${uri} was already in stash`);
         }
     }
 
@@ -64,26 +65,26 @@ export class PanelEventHandlers extends EventBindableComponent {
      */
     async handleStashRemove(data, { autoSave = true, ...options } = {}) {
         if (!this.stateService || !this.stateService.stash) {
-            console.error('[PanelEventHandlers] No stash service available', this.stateService, this.stateService?.stash);
+            logger.error('PanelEventHandlers', 'No stash service available', this.stateService, this.stateService?.stash);
             return;
         }
 
         const { uri } = data;
         if (!uri) {
-            console.error('[PanelEventHandlers] Invalid stash remove request:', data);
+            logger.error('PanelEventHandlers', 'Invalid stash remove request:', data);
             return;
         }
 
         const removed = this.stateService.stash.delete(uri);
         
         if (removed) {
-            console.log(`[PanelEventHandlers] Removed ${uri} from stash`);
+            logger.log('PanelEventHandlers', `Removed ${uri} from stash`);
             if (autoSave) {
                 await this.handleSaveStash(false);
             }
             this.eventBus.emit(EVENTS.STASH.UPDATED, { uri, removed: true, saved: true, ...options });
         } else {
-            console.log(`[PanelEventHandlers] ${uri} was not in stash`);
+            logger.log('PanelEventHandlers', `${uri} was not in stash`);
         }
     }
 
@@ -92,12 +93,12 @@ export class PanelEventHandlers extends EventBindableComponent {
      */
     async handleStashClearAll() {
         if (!this.stateService || !this.stateService.stash) {
-            console.error('[PanelEventHandlers] No stash service available');
+            logger.error('PanelEventHandlers', 'No stash service available');
             return;
         }
 
         this.stateService.stash.clearAll();
-        console.log('[PanelEventHandlers] Cleared all stash content');
+        logger.log('PanelEventHandlers', 'Cleared all stash content');
         await this.handleSaveStash(false);
         this.eventBus.emit(EVENTS.STASH.UPDATED, { uri: 'all', cleared: true, saved: true, ...options });
     }
@@ -110,12 +111,12 @@ export class PanelEventHandlers extends EventBindableComponent {
         
         try {
             await this.stateService.stash.saveToStorage();
-            console.log('[PanelEventHandlers] Stash data saved successfully');
+            logger.log('PanelEventHandlers', 'Stash data saved successfully');
             if (announce) {
                 this.eventBus.emit(EVENTS.STASH.SAVED, options);
             }
         } catch (error) {
-            console.error('[PanelEventHandlers] Failed to save stash data:', error);
+            logger.error('PanelEventHandlers', 'Failed to save stash data:', error);
         }
     }
 
@@ -128,7 +129,7 @@ export class PanelEventHandlers extends EventBindableComponent {
             await this.stateService.stash.loadFromStorage();
             this.eventBus.emit(EVENTS.STASH.UPDATED, { uri: 'all', loaded: true, saved: true, ...options });
         } catch (error) {
-            console.error('[PanelEventHandlers] Failed to load stash data:', error);
+            logger.error('PanelEventHandlers', 'Failed to load stash data:', error);
         }
     }
 
@@ -144,14 +145,14 @@ export class PanelEventHandlers extends EventBindableComponent {
      */
     async handleSettingsChange(data) {
         if (!this.stateService || !this.stateService.settings) {
-            console.error('[PanelEventHandlers] No settings service available');
+            logger.error('PanelEventHandlers', 'No settings service available');
             return;
         }
         try {
-            console.log('[PanelEventHandlers] Handling settings changed event:', data);
+            logger.log('PanelEventHandlers', 'Handling settings changed event:', data);
             await this.stateService.settings.saveToStorage();
         } catch (error) {
-            console.error('[PanelEventHandlers] Failed to save settings:', error);
+            logger.error('PanelEventHandlers', 'Failed to save settings:', error);
         }
     }
 
@@ -168,9 +169,9 @@ export class PanelEventHandlers extends EventBindableComponent {
      * Handle create new thread event
      */
     async handleCreateNewThread(data) {
-        console.log('[PanelEventHandlers] Handling create new thread event:', data);
+        logger.log('PanelEventHandlers', 'Handling create new thread event:', data);
         if (!this.stateService || !this.stateService.conversation || !this.stateService.disk) {
-            console.error('[PanelEventHandlers] State service or required plugins missing');
+            logger.error('PanelEventHandlers', 'State service or required plugins missing');
             return;
         }
         const threadId = this.stateService.conversation.createNewConversation();
@@ -194,7 +195,7 @@ export class PanelEventHandlers extends EventBindableComponent {
      * Handle execute tool event
      */
     async handleExecuteTool(data) {
-        console.log('[PanelEventHandlers] Handling execute tool event:', data);
+        logger.log('PanelEventHandlers', 'Handling execute tool event:', data);
         try {
             const { callId, name } = data;
             // We need to look up the threadId and the messageId for the callId
@@ -202,7 +203,7 @@ export class PanelEventHandlers extends EventBindableComponent {
             const toolResult = await this.core.mcpConnector.executeTool(name, {}, {callId});
             // Update the conversation state with the tool result
             this.stateService.conversation.updateToolResult(threadId, messageId, callId, toolResult);
-            console.log('[PanelEventHandlers] Updated tool result (saving to disk):', this.stateService.state.conversation.history[threadId]);
+            logger.log('PanelEventHandlers', 'Updated tool result (saving to disk):', this.stateService.state.conversation.history[threadId]);
             // Save to disk
             await this.stateService.disk.saveToStorage();
 
@@ -216,7 +217,7 @@ export class PanelEventHandlers extends EventBindableComponent {
                 toolResult: toolResult
             };
         } catch (error) {
-            console.error('[PanelEventHandlers] Failed to execute tool:', error);
+            logger.error('PanelEventHandlers', 'Failed to execute tool:', error);
         }
     }
 
@@ -224,7 +225,7 @@ export class PanelEventHandlers extends EventBindableComponent {
      * Handle cancel tool event
      */
     async handleCancelTool(data) {
-        console.log('[PanelEventHandlers] Handling cancel tool event:', data);
+        logger.log('PanelEventHandlers', 'Handling cancel tool event:', data);
         return {
             success: true,
             threadId: data.threadId,

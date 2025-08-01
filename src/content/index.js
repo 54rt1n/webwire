@@ -4,7 +4,7 @@ import { ChatService } from '../chat/chat-service.js';
 import { PageUtils } from '../js/browser/page-utils.js';
 import { DOMAgent } from '../js/browser/dom-agent.js';
 import { WebWireClientCore } from '../js/client/webwire-client-core.js';
-import { setupDebugMethods, setupGlobalDebugAccess } from './debug.js';
+import { setupDebugMethods } from './debug.js';
 import { TabIndicator } from './tab-indicator.js';
 import {
     BACKGROUND_ACTIONS,
@@ -16,6 +16,7 @@ import '../shared/global.scss';
 import '../chat/chat.scss';
 import { ContentEventHandlers, EarlyEventHandlers } from '../js/client/content-event-handlers.js';
 import { BrowserEventHandlers } from '../js/client/browser-event-handlers.js';
+import { logger } from '../js/core/logging.js';
 
 /**
  * WebWire Content Script - Thin Host/Adapter
@@ -61,7 +62,7 @@ class WebWireContentHost {
      * Initialize the content host
      */
     async initialize() {
-        console.log('[WebWireContentHost] Starting initialization...');
+        logger.log(this, 'Starting initialization...');
 
         if (this.initialized) {
             throw new Error('[WebWireContentHost] Already initialized');
@@ -71,32 +72,32 @@ class WebWireContentHost {
         
         // Initialize WebWire core
         await this.core.initialize();
-        console.log('[WebWireContentHost] Core initialized with:', {
+        logger.log(this, 'Core initialized with:', {
             stateService: !!this.core.stateService,
             aiClient: !!this.core.aiClient,
             mcpConnector: !!this.core.mcpConnector
         });
         
-        console.log('[WebWireContentHost] Extension communication ready via EventDispatcher');
+        logger.log(this, 'Extension communication ready via EventDispatcher');
 
         this.eventHandlers = new ContentEventHandlers(this.core);
         this.eventHandlers.setupEventListeners();
 
         // Set up keyboard shortcuts and injection listeners
         this.setupUIListeners();
-        console.log('[WebWireContentHost] UI listeners set up');
+        logger.log(this, 'UI listeners set up');
 
         // Set up content action listeners
         this.setupContentActions();
-        console.log('[WebWireContentHost] Content actions set up');
+        logger.log(this, 'Content actions set up');
 
         // Initialize ChatService with the core services
         await this.chatService.initialize(this.core.mcpConnector, this.core.stateService);
-        console.log('[WebWireContentHost] ChatService initialized');
+        logger.log(this, 'ChatService initialized');
         
         // Initialize browser event handlers for copy/play functionality
         this.browserEventHandlers = new BrowserEventHandlers(this.eventBus, this.core.stateService);
-        console.log('[WebWireContentHost] BrowserEventHandlers initialized');
+        logger.log(this, 'BrowserEventHandlers initialized');
 
         await this.core.connect();
         
@@ -105,30 +106,30 @@ class WebWireContentHost {
         try {
             const shouldInject = await this.shouldAutoInject();
             
-            console.log('[WebWireContentHost] Auto-inject check:', {
+            logger.log(this, 'Auto-inject check:', {
                 shouldInject,
                 autoInjectSetting: this.core.stateService.settings?.getSettings()?.ui?.autoInject,
                 assistantEnabled: this.core.stateService.ui?.getAssistantEnabled()
             });
             
             if (shouldInject) {
-                console.log('[WebWireContentHost] Auto-inject enabled, injecting panel...');
+                logger.log(this, 'Auto-inject enabled, injecting panel...');
                 await this.injectPanel();
                 
                 // After injecting, check if we should also show it
                 const shouldShowPanel = this.core.stateService.ui?.isPanelVisible() || false;
                 if (shouldShowPanel) {
-                    console.log('[WebWireContentHost] Panel was previously visible, showing it...');
+                    logger.log(this, 'Panel was previously visible, showing it...');
                     await this.chatService.showPanel();
                 }
             } else {
-                console.log('[WebWireContentHost] Auto-inject disabled, not injecting panel');
+                logger.log(this, 'Auto-inject disabled, not injecting panel');
             }
         } catch (error) {
-            console.error('[WebWireContentHost] Auto-inject failed:', error);
+            logger.error(this, 'Auto-inject failed:', error);
         }
         
-        console.log('[WebWireContentHost] Initialization complete');
+        logger.log(this, 'Initialization complete');
     }
 
     /**
@@ -163,7 +164,7 @@ class WebWireContentHost {
     setupContentActions() {
         // Handle panel update commands via EventBus
         this.eventBus.onAsync(CONTENT_ACTIONS.UPDATE_PANEL, async (data) => {
-            console.log('[WebWireContentHost] UPDATE_PANEL request:', data);
+            logger.log(this, 'UPDATE_PANEL request:', data);
             
             try {
                 const { action, forceInject = false } = data;
@@ -187,7 +188,7 @@ class WebWireContentHost {
                         if (!forceInject) {
                             const autoInject = this.core.stateService?.ui?.getAutoInject() || false;
                             if (!autoInject && !this.chatService.panel.isReady()) {
-                                console.log('[WebWireContentHost] Auto-inject disabled, not injecting panel');
+                                logger.log(this, 'Auto-inject disabled, not injecting panel');
                                 return { 
                                     success: false, 
                                     error: 'Auto-inject is disabled', 
@@ -233,7 +234,7 @@ class WebWireContentHost {
                         return { success: false, error: `Unknown action: ${action}` };
                 }
             } catch (error) {
-                console.error('[WebWireContentHost] Error updating panel:', error);
+                logger.error(this, 'Error updating panel:', error);
                 return { success: false, error: error.message };
             }
         });
@@ -243,7 +244,7 @@ class WebWireContentHost {
         });
 
         this.eventBus.onAsync(CONTENT_ACTIONS.GET_PANEL_STATE, async () => {
-            console.log('[WebWireContentHost] Getting panel state...', {
+            logger.log(this, 'Getting panel state...', {
                 hasChatService: !!this.chatService,
                 hasPanel: !!this.chatService?.panel,
                 isInjected: this.chatService?.panel?.isInjected,
@@ -256,10 +257,10 @@ class WebWireContentHost {
                     isVisible: this.chatService?.panel?.isVisible || false
                 };
                 
-                console.log('[WebWireContentHost] Returning panel state:', panelState);
+                logger.log(this, 'Returning panel state:', panelState);
                 return { success: true, ...panelState };
             } catch (error) {
-                console.error('[WebWireContentHost] Error getting panel state:', error);
+                logger.error(this, 'Error getting panel state:', error);
                 return { success: false, error: error.message };
             }
         });
@@ -272,10 +273,10 @@ class WebWireContentHost {
         try {
             // Use the accessor method which checks both assistantEnabled and autoInject
             const autoInject = this.core.stateService?.ui?.getAutoInject();
-            console.log('[WebWireContentHost] shouldAutoInject:', autoInject);
+            logger.log(this, 'shouldAutoInject:', autoInject);
             return autoInject || false;
         } catch (error) {
-            console.warn('[WebWireContentHost] Could not check auto-inject setting:', error);
+            logger.warn(this, 'Could not check auto-inject setting:', error);
             return false;
         }
     }
@@ -284,7 +285,7 @@ class WebWireContentHost {
      * Inject the panel
      */
     async injectPanel() {
-        console.log('[WebWireContentHost] Injecting panel...');
+        logger.log(this, 'Injecting panel...');
         
         try {
             // Initialize the panel without showing it
@@ -293,9 +294,9 @@ class WebWireContentHost {
             // Send initial state to the panel now that it's ready
             await this.sendInitialStateToPanel();
             
-            console.log('[WebWireContentHost] Panel injected successfully');
+            logger.log(this, 'Panel injected successfully');
         } catch (error) {
-            console.error('[WebWireContentHost] Failed to inject panel:', error);
+            logger.error(this, 'Failed to inject panel:', error);
         }
     }
 
@@ -311,13 +312,13 @@ class WebWireContentHost {
             
             // If no active thread, try to recover one
             if (!currentThread) {
-                console.log('[WebWireContentHost] No active thread found, attempting to recover...');
+                logger.log(this, 'No active thread found, attempting to recover...');
                 const recoveredThreadId = stateService.conversation.recoverActiveForTab();
                 if (recoveredThreadId) {
                     currentThread = stateService.conversation.getActiveThread();
                 } else {
                     // No conversations to recover, create a new one
-                    console.log('[WebWireContentHost] No conversations to recover, creating new conversation...');
+                    logger.log(this, 'No conversations to recover, creating new conversation...');
                     stateService.conversation.createNewConversation();
                     currentThread = stateService.conversation.getActiveThread();
                 }
@@ -350,9 +351,9 @@ class WebWireContentHost {
             // Send to ChatService
             await this.chatService.sendInitialState(state);
             
-            console.log('[WebWireContentHost] Initial state sent to ChatService');
+            logger.log(this, 'Initial state sent to ChatService');
         } catch (error) {
-            console.error('[WebWireContentHost] Failed to send initial state:', error);
+            logger.error(this, 'Failed to send initial state:', error);
         }
     }
     
@@ -360,7 +361,7 @@ class WebWireContentHost {
      * Clean up before page unload
      */
     cleanup() {
-        console.log('[WebWireContentHost] Cleaning up before page unload...');
+        logger.log(this, 'Cleaning up before page unload...');
 
         if (this.browserEventHandlers) {
             this.browserEventHandlers.cleanup();
@@ -390,8 +391,14 @@ WebWireContentHost.factory = async function(config) {
     if (!config) {
         throw new Error('WebWire config not found');
     }
+
+    // Initialize logger with config
+    // Check if logger is already initialized
+    if (!logger.initialized) {
+        logger.initialize(config);
+    }
     
-    console.log('[WebWireContentHost] Factory creating instance...');
+    logger.log('WebWireContentHost', 'Factory creating instance...');
     
     // Setup debug methods
     setupDebugMethods(WebWireContentHost);
@@ -400,10 +407,7 @@ WebWireContentHost.factory = async function(config) {
     const webwireContentHost = new WebWireContentHost(config);
     await webwireContentHost.initialize();
     
-    // Setup global debug access
-    setupGlobalDebugAccess(webwireContentHost);
-    
-    console.log('[WebWireContentHost] Factory initialization complete');
+    logger.log('WebWireContentHost', 'Factory initialization complete');
     return webwireContentHost;
 };
 

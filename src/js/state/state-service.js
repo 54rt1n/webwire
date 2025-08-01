@@ -10,6 +10,7 @@ import { SettingsStatePlugin } from './plugins/settings-state.js';
 import { StashStatePlugin } from './plugins/stash-state.js';
 import { TabStatePlugin } from './plugins/tab-state.js';
 import { UiStatePlugin } from './plugins/ui-state.js';
+import { logger } from '../core/logging.js';
 
 /**
  * Centralized state management service using a plugin architecture.
@@ -65,7 +66,7 @@ class StateService {
      * Performs any necessary setup operations for the state management system
      */
     initialize() {
-        console.log('[StateService]', 'StateService initialized');
+        logger.log(this, 'StateService initialized');
     }
 
     // ==== UTILITY & STATUS METHODS ====
@@ -116,14 +117,14 @@ class ContentStateService {
      * Performs any necessary setup operations for the state management system
      */
     initialize() {
-        console.log('[ContentStateService]', 'ContentStateService initialized');
+        logger.log(this, 'ContentStateService initialized');
     }
 
     /**
      * Set the state
      */
     setState(state, { tabId } = {}) {
-        console.warn('[CrontentStateService] Setting state:', state, 'with tabId:', tabId);
+        logger.warn(this, 'Setting state:', state, 'with tabId:', tabId);
         this.state = state;
         if (!this.state.ui) {
             this.state.ui = createInitialUiState(tabId);

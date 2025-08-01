@@ -3,6 +3,7 @@ import { BasePanelApp } from '../core/base-panel-app.js';
 import { PromptsPanel } from './panel.js';
 import { AppConfig } from '../js/core/app-config.js';
 import { PromptLoader } from '../js/utils/prompt-loader.js';
+import { logger } from '../js/core/logging.js';
 
 /**
  * PromptsPanelApp
@@ -57,19 +58,19 @@ class PromptsPanelApp extends BasePanelApp {
     setupEventListeners() {
         // Listen for prompt updates
         this.on(EVENTS.PROMPT.UPDATED, (payload) => {
-            console.log('[PromptsPanelApp] Prompt updated:', payload);
+            logger.log('PromptsPanelApp', 'Prompt updated:', payload);
             this.refreshPrompts();
         });
 
         // Listen for prompt status changes
         this.on(EVENTS.PROMPT.STATUS_CHANGED, (payload) => {
-            console.log('[PromptsPanelApp] Prompt status changed:', payload);
+            logger.log('PromptsPanelApp', 'Prompt status changed:', payload);
             this.refreshPrompts();
         });
 
         // Listen for prompt deletion
         this.on(EVENTS.PROMPT.DELETED, (payload) => {
-            console.log('[PromptsPanelApp] Prompt deleted:', payload);
+            logger.log('PromptsPanelApp', 'Prompt deleted:', payload);
             this.refreshPrompts();
         });
     }
@@ -79,22 +80,22 @@ class PromptsPanelApp extends BasePanelApp {
      */
     async loadPrompts() {
         if (!this.core.stateService || !this.core.stateService.prompts) {
-            console.error('[PromptsPanelApp] No prompts state service available');
+            logger.error('PromptsPanelApp', 'No prompts state service available');
             this.panel.renderPrompts({});
             return;
         }
 
         try {
-            console.log('[PromptsPanelApp] Loading prompts...');
+            logger.log('PromptsPanelApp', 'Loading prompts...');
             
             // Get all prompts from state
             const prompts = this.core.stateService.prompts.getAllPrompts();
             
-            console.log(`[PromptsPanelApp] Loaded ${Object.keys(prompts).length} prompts`);
+            logger.log("PromptsPanelApp", `Loaded ${Object.keys(prompts).length} prompts`);
             this.panel.renderPrompts(prompts);
             
         } catch (error) {
-            console.error('[PromptsPanelApp] Failed to load prompts:', error);
+            logger.error('PromptsPanelApp', 'Failed to load prompts:', error);
             this.panel.renderPrompts({});
         }
     }
@@ -103,7 +104,7 @@ class PromptsPanelApp extends BasePanelApp {
      * Refresh prompts list
      */
     async refreshPrompts() {
-        console.log('[PromptsPanelApp] Refreshing prompts...');
+        logger.log('PromptsPanelApp', 'Refreshing prompts...');
         await this.loadPrompts();
     }
 
@@ -113,7 +114,7 @@ class PromptsPanelApp extends BasePanelApp {
      */
     async editPrompt(promptId) {
         if (!this.core.stateService || !this.core.stateService.prompts) {
-            console.error('[PromptsPanelApp] No prompts state service available');
+            logger.error('PromptsPanelApp', 'No prompts state service available');
             return;
         }
 
@@ -129,25 +130,25 @@ class PromptsPanelApp extends BasePanelApp {
      */
     async togglePrompt(promptId) {
         if (!this.core.stateService || !this.core.stateService.prompts) {
-            console.error('[PromptsPanelApp] No prompts state service available');
+            logger.error('PromptsPanelApp', 'No prompts state service available');
             return;
         }
 
         try {
-            console.log(`[PromptsPanelApp] Toggling prompt ${promptId}...`);
+            logger.log("PromptsPanelApp", `Toggling prompt ${promptId}...`);
             
             this.core.stateService.prompts.togglePromptStatus(promptId);
             
             // Save state
             await this.core.stateService.prompts.saveToStorage();
             
-            console.log(`[PromptsPanelApp] Prompt ${promptId} toggled`);
+            logger.log("PromptsPanelApp", `Prompt ${promptId} toggled`);
             
             // Emit event for other components
             this.eventBus.emit(EVENTS.PROMPT.STATUS_CHANGED, { promptId });
             
         } catch (error) {
-            console.error(`[PromptsPanelApp] Failed to toggle prompt ${promptId}:`, error);
+            logger.error("PromptsPanelApp", `Failed to toggle prompt ${promptId}:`, error);
         }
     }
 
@@ -157,25 +158,25 @@ class PromptsPanelApp extends BasePanelApp {
      */
     async deletePrompt(promptId) {
         if (!this.core.stateService || !this.core.stateService.prompts) {
-            console.error('[PromptsPanelApp] No prompts state service available');
+            logger.error('PromptsPanelApp', 'No prompts state service available');
             return;
         }
 
         try {
-            console.log(`[PromptsPanelApp] Deleting prompt ${promptId}...`);
+            logger.log("PromptsPanelApp", `Deleting prompt ${promptId}...`);
             
             this.core.stateService.prompts.deletePrompt(promptId);
             
             // Save state
             await this.core.stateService.prompts.saveToStorage();
             
-            console.log(`[PromptsPanelApp] Prompt ${promptId} deleted`);
+            logger.log("PromptsPanelApp", `Prompt ${promptId} deleted`);
             
             // Emit event for other components
             this.eventBus.emit(EVENTS.PROMPT.DELETED, { promptId });
             
         } catch (error) {
-            console.error(`[PromptsPanelApp] Failed to delete prompt ${promptId}:`, error);
+            logger.error("PromptsPanelApp", `Failed to delete prompt ${promptId}:`, error);
         }
     }
 
@@ -194,17 +195,17 @@ class PromptsPanelApp extends BasePanelApp {
      */
     async savePrompt(promptId, promptData) {
         if (!this.core.stateService || !this.core.stateService.prompts) {
-            console.error('[PromptsPanelApp] No prompts state service available');
+            logger.error('PromptsPanelApp', 'No prompts state service available');
             return;
         }
 
         try {
-            console.log(`[PromptsPanelApp] Saving prompt ${promptId}...`);
+            logger.log("PromptsPanelApp", `Saving prompt ${promptId}...`);
             
             // Validate prompt
             const validation = this.core.stateService.prompts.validatePrompt(promptData);
             if (!validation.isValid) {
-                console.error('Prompt validation failed:', validation.errors);
+                logger.error('PromptsPanelApp', 'Prompt validation failed:', validation.errors);
                 alert('Prompt validation failed:\n' + validation.errors.join('\n'));
                 return;
             }
@@ -215,7 +216,7 @@ class PromptsPanelApp extends BasePanelApp {
             // Save state
             await this.core.stateService.prompts.saveToStorage();
             
-            console.log(`[PromptsPanelApp] Prompt ${promptId} saved`);
+            logger.log("PromptsPanelApp", `Prompt ${promptId} saved`);
             
             // Close modal
             this.panel.closePromptModal();
@@ -224,7 +225,7 @@ class PromptsPanelApp extends BasePanelApp {
             await this.refreshPrompts();
             
         } catch (error) {
-            console.error(`[PromptsPanelApp] Failed to save prompt ${promptId}:`, error);
+            logger.error("PromptsPanelApp", `Failed to save prompt ${promptId}:`, error);
             alert('Failed to save prompt. Please try again.');
         }
     }
@@ -264,7 +265,7 @@ class PromptsPanelApp extends BasePanelApp {
                 alert(`Successfully imported ${Object.keys(validation.valid).length} prompts`);
                 
             } catch (error) {
-                console.error('[PromptsPanelApp] Failed to import prompts:', error);
+                logger.error('PromptsPanelApp', 'Failed to import prompts:', error);
                 alert('Failed to import prompts. Please check the file format.');
             }
         };
@@ -279,20 +280,20 @@ class PromptsPanelApp extends BasePanelApp {
      */
     async searchPrompts(query) {
         if (!this.core.stateService || !this.core.stateService.prompts) {
-            console.error('[PromptsPanelApp] No prompts state service available');
+            logger.error('PromptsPanelApp', 'No prompts state service available');
             return {};
         }
 
         try {
-            console.log(`[PromptsPanelApp] Searching prompts with query: "${query}"`);
+            logger.log("PromptsPanelApp", `Searching prompts with query: "${query}"`);
             
             const results = this.core.stateService.prompts.searchPrompts(query);
             
-            console.log(`[PromptsPanelApp] Found ${Object.keys(results).length} matching prompts`);
+            logger.log("PromptsPanelApp", `Found ${Object.keys(results).length} matching prompts`);
             return results;
             
         } catch (error) {
-            console.error('[PromptsPanelApp] Failed to search prompts:', error);
+            logger.error('PromptsPanelApp', 'Failed to search prompts:', error);
             return {};
         }
     }
@@ -303,7 +304,7 @@ class PromptsPanelApp extends BasePanelApp {
      */
     async exportPrompts(promptIds = []) {
         if (!this.core.stateService || !this.core.stateService.prompts) {
-            console.error('[PromptsPanelApp] No prompts state service available');
+            logger.error('PromptsPanelApp', 'No prompts state service available');
             return;
         }
 
@@ -319,10 +320,10 @@ class PromptsPanelApp extends BasePanelApp {
             link.download = `webwire-prompts-${new Date().toISOString().split('T')[0]}.json`;
             link.click();
             
-            console.log(`[PromptsPanelApp] Exported ${Object.keys(exportData).length} prompts`);
+            logger.log("PromptsPanelApp", `Exported ${Object.keys(exportData).length} prompts`);
             
         } catch (error) {
-            console.error('[PromptsPanelApp] Failed to export prompts:', error);
+            logger.error('PromptsPanelApp', 'Failed to export prompts:', error);
             alert('Failed to export prompts. Please try again.');
         }
     }
@@ -338,7 +339,7 @@ class PromptsPanelApp extends BasePanelApp {
             await this.core.stateService.prompts.saveToStorage();
             await this.refreshPrompts();
         } catch (error) {
-            console.error(`Failed to reorder prompt ${promptId}:`, error);
+            logger.error('PromptsPanelApp', `Failed to reorder prompt ${promptId}:`, error);
         }
     }
 }

@@ -1,5 +1,6 @@
 // js/ai/abstract-ai-client.js
 import { EVENTS } from '../core/events.js';
+import { logger } from '../core/logging.js';
 
 /**
  * Abstract base class for AI client implementations providing common functionality
@@ -75,7 +76,7 @@ export class AbstractAIClient {
     setApiKey(apiKey) {
         this.apiKey = apiKey;
         this.state.connected = !!apiKey;
-        console.log(`[AbstractAIClient] API key configured`);
+        logger.log(this, 'API key configured');
     }
 
     /**
@@ -84,7 +85,7 @@ export class AbstractAIClient {
      */
     setModel(model) {
         this.model = model;
-        console.log(`[AbstractAIClient] Model set to: ${model}`);
+        logger.log(this, `Model set to: ${model}`);
     }
 
     /**
@@ -147,14 +148,14 @@ export class AbstractAIClient {
      * @param {Error} error - The error that occurred during a request
      */
     handleError(error) {
-        console.log(`[${this.clientName}]`, `Request error: ${error.message}`);
+        logger.log(this, `Request error: ${error.message}`);
         
         if (error.message.includes('timeout') || error.message.includes('timed out')) {
             this.state.consecutiveTimeouts++;
-            console.log(`[${this.clientName}]`, `Timeout detected! Consecutive timeouts: ${this.state.consecutiveTimeouts}`);
+            logger.log(this, `Timeout detected! Consecutive timeouts: ${this.state.consecutiveTimeouts}`);
             
             if (this.state.consecutiveTimeouts >= 3) {
-                console.log(`[${this.clientName}]`, 'Multiple consecutive timeouts detected, triggering reconnection logic');
+                logger.log(this, 'Multiple consecutive timeouts detected, triggering reconnection logic');
                 this.startReconnection();
             }
         } else {
@@ -177,11 +178,11 @@ export class AbstractAIClient {
             10000
         );
         
-        console.log(`[${this.clientName}]`, `Scheduling reconnection attempt ${this.state.reconnectAttempts} in ${delay}ms`);
+        logger.log(this, `Scheduling reconnection attempt ${this.state.reconnectAttempts} in ${delay}ms`);
         
         setTimeout(() => {
             this.state.reconnecting = false;
-            console.log(`[${this.clientName}]`, 'Reconnection attempt completed, ready for new requests');
+            logger.log(this, 'Reconnection attempt completed, ready for new requests');
         }, delay);
     }
 
@@ -218,7 +219,7 @@ export class AbstractAIClient {
             lastRequestTime: 0,
             reconnectAttempts: 0
         };
-        console.log(`[${this.clientName}]`, 'Client state reset');
+        logger.log(this, 'Client state reset');
     }
 
     /**
@@ -257,7 +258,7 @@ export class AbstractAIClient {
         }
 
         const samplerConfig = this.getSamplerConfig(apiArgs);
-        console.log('[AbstractAIClient]', 'Sampler config:', samplerConfig);
+        logger.log(this, 'Sampler config:', samplerConfig);
 
         try {
             this.state.lastRequestTime = Date.now();
@@ -340,7 +341,7 @@ export class AbstractAIClient {
                                 }
                             }
                         } catch (parseError) {
-                            console.log(`[${this.clientName}]`, `Parse error: ${parseError.message}`);
+                            logger.log(this, `Parse error: ${parseError.message}`);
                         }
                     }
                 }
@@ -362,7 +363,7 @@ export class AbstractAIClient {
                                     fullResponse += content;
                                 }
                             } catch (parseError) {
-                                console.log(`[${this.clientName}]`, `Final parse error: ${parseError.message}`);
+                                logger.log(this, `Final parse error: ${parseError.message}`);
                             }
                         }
                     }
@@ -373,7 +374,7 @@ export class AbstractAIClient {
                 throw new Error('Empty response from AI provider');
             }
             
-            console.log(`[${this.clientName}]`, `Response received: ${fullResponse.length} characters`);
+            logger.log(this, `Response received: ${fullResponse.length} characters`);
             return fullResponse;
             
         } finally {

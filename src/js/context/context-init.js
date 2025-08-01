@@ -1,13 +1,14 @@
 // js/core/context-init.js
 import { EVENT_CONTEXT } from '../core/events.js';
 import { contextFactory } from './context-factory.js';
+import { logger } from '../core/logging.js';
 
 export async function initializeContext(eventBus, context = null, {initialState = null, config = null} = {}) {
   if (context === null) {
     context = detectContext();
   }
 
-  console.log('[ContextInit] Context:', context, config);
+  logger.log('ContextInit', 'Context:', context, config);
   
   // Context-specific setup
   let results = {};
@@ -78,7 +79,7 @@ export async function initializeContext(eventBus, context = null, {initialState 
 function detectContext() {
   if (typeof chrome !== 'undefined' && chrome.runtime?.getBackgroundPage) {
     return EVENT_CONTEXT.PANEL;
-    console.log('[ContextInit] Detected background context', chrome.runtime);
+    logger.log('ContextInit', 'Detected background context', chrome.runtime);
     return EVENT_CONTEXT.BACKGROUND;
   }
   if (typeof chrome !== 'undefined' && chrome.tabs) {

@@ -3,6 +3,7 @@ import { initializeContext } from '../js/context/context-init.js';
 import { EventBus } from '../js/core/event-bus.js';
 import { BACKGROUND_ACTIONS, CONTENT_ACTIONS } from '../js/core/cc-actions.js';
 import { mergeState } from '../js/utils/deep-merge.js';
+import { logger } from '../js/core/logging.js';
 
 /**
  * WebWire Extension Background Script
@@ -23,7 +24,7 @@ class WebWireBackground {
     }
 
     async initialize() {
-        console.log('WebWire background script initializing...');
+        logger.log(this, 'WebWire background script initializing...');
 
         const { dispatcher, errorBoundary, stateService, storage, sentryService } = await initializeContext(this.eventBus, EVENT_CONTEXT.BACKGROUND, {config: this.config});
         this.dispatcher = dispatcher;
@@ -39,7 +40,7 @@ class WebWireBackground {
         // Setup event listeners
         this.setupEventListeners();
         
-        console.log('WebWire background script initialized');
+        logger.log(this, 'WebWire background script initialized');
     }
 
     /**
@@ -82,19 +83,19 @@ class WebWireBackground {
             
             // End the current conversation if there is one
             if (activeThreadId) {
-                console.log('[WebWireBackground] Ending active conversation:', activeThreadId, 'for tab:', tabId);
+                logger.log(this, 'Ending active conversation:', activeThreadId, 'for tab:', tabId);
                 this.stateService.conversation.updateConversationStatus(activeThreadId, 'completed');
             }
             
             // Create a new empty conversation for the tab immediately
             const newThreadId = this.stateService.conversation.createNewConversation({tabId});
-            console.log('[WebWireBackground] Created new empty conversation:', newThreadId, 'for tab:', tabId);
+            logger.log(this, 'Created new empty conversation:', newThreadId, 'for tab:', tabId);
             
             // Update the tab's persistent tracked thread ID
             const tabState = this.stateService.tab.getTabState(tabId);
             if (tabState) {
                 tabState.trackedThreadId = newThreadId;
-                console.log('[WebWireBackground] Updated tab', tabId, 'trackedThreadId to', newThreadId);
+                logger.log(this, 'Updated tab', tabId, 'trackedThreadId to', newThreadId);
             }
             
             await this.stateService.disk.saveToStorage();
@@ -119,7 +120,7 @@ class WebWireBackground {
             if (!tabId) {
                 tabId = await this.resolveTabId(options.sender, data);
             }
-            console.log('[WebWireBackground] GET_OR_CREATE_CURRENT_THREAD', tabId, data, options);
+            logger.log(this, 'GET_OR_CREATE_CURRENT_THREAD', tabId, data, options);
             
             let threadId = null;
             let reason = null;
@@ -133,7 +134,7 @@ class WebWireBackground {
                 const tabState = this.stateService.tab.getTabState(tabId);
                 if (tabState) {
                     tabState.trackedThreadId = threadId;
-                    console.log('[WebWireBackground] Updated tab', tabId, 'trackedThreadId to', threadId);
+                    logger.log(this, 'Updated tab', tabId, 'trackedThreadId to', threadId);
                 }
             } else {
                 // Normal flow: try to get current or recover
@@ -146,7 +147,7 @@ class WebWireBackground {
                     const tabState = this.stateService.tab.getTabState(tabId);
                     if (tabState) {
                         tabState.trackedThreadId = threadId;
-                        console.log('[WebWireBackground] Updated tab', tabId, 'trackedThreadId to', threadId);
+                        logger.log(this, 'Updated tab', tabId, 'trackedThreadId to', threadId);
                     }
                 } else {
                     reason = 'existing_conversation';
@@ -156,7 +157,7 @@ class WebWireBackground {
             // Save tab state if we created a new conversation
             if (reason === 'new_conversation' || reason === 'new_conversation_forced') {
                 await this.stateService.tab.saveToStorage();
-                console.log('[WebWireBackground] Saved tab state after creating new conversation');
+                logger.log(this, 'Saved tab state after creating new conversation');
             }
             
             const messages = this.stateService.conversation.getConversationMessages(threadId);
@@ -166,10 +167,10 @@ class WebWireBackground {
                 messages: messages,
                 reason: reason
             };
-            console.log('[WebWireBackground] GET_OR_CREATE_CURRENT_THREAD', currentThreadData);
+            logger.log(this, 'GET_OR_CREATE_CURRENT_THREAD', currentThreadData);
             return currentThreadData;
         } catch (error) {
-            console.error('[WebWireBackground] Error in GET_OR_CREATE_CURRENT_THREAD:', error);
+            logger.error(this, 'Error in GET_OR_CREATE_CURRENT_THREAD:', error);
             return {
                 success: false,
                 error: error.message
@@ -209,7 +210,7 @@ class WebWireBackground {
             // Auto-save state
             await this.stateService.disk.saveToStorage();
             
-            console.log('[WebWireBackground] SAVE_THREAD_MESSAGE - saved for tab only', data);
+            logger.log(this, 'SAVE_THREAD_MESSAGE - saved for tab only', data);
             
             return { success: true };
         });
@@ -224,7 +225,7 @@ class WebWireBackground {
             // Auto-save state
             await this.stateService.disk.saveToStorage();
             
-            console.log('[WebWireBackground] UPDATE_MESSAGE - marked message', data);
+            logger.log(this, 'UPDATE_MESSAGE - marked message', data);
             
             return { success: true };
         });
@@ -274,7 +275,7 @@ class WebWireBackground {
         
         // Handle settings updates from options page
         this.eventBus.onAsync(EVENTS.SETTINGS.UPDATED, async (data, options) => {
-            console.log('[WebWireBackground] Handling SETTINGS_UPDATED event');
+            logger.log(this, 'Handling SETTINGS_UPDATED event');
             await this.handleSettingsUpdated(data, options.sender);
             return { success: true };
         });
@@ -283,7 +284,7 @@ class WebWireBackground {
         this.eventBus.onAsync(BACKGROUND_ACTIONS.REPORT_ERROR, async (data, options) => {
             try {
                 if (!this.sentryService || !this.sentryService.initialized) {
-                    console.error('[WebWireBackground] Sentry not initialized, logging error locally:', data);
+                    logger.error(this, 'Sentry not initialized, logging error locally:', data);
                     return { success: false, error: 'Sentry not available' };
                 }
 
@@ -306,12 +307,12 @@ class WebWireBackground {
 
                 return { success: true };
             } catch (err) {
-                console.error('[WebWireBackground] Failed to report error to Sentry:', err);
+                logger.error(this, 'Failed to report error to Sentry:', err);
                 return { success: false, error: err.message };
             }
         });
 
-        console.log('[WebWireBackground] EventBus listeners set up');
+        logger.log(this, 'EventBus listeners set up');
     }
 
     async loadSettings() {
@@ -323,7 +324,7 @@ class WebWireBackground {
                 defaultMcpServer: ''
             };
         } catch (error) {
-            console.error('Failed to load extension settings:', error);
+            logger.error(this, 'Failed to load extension settings:', error);
         }
     }
 
@@ -332,7 +333,7 @@ class WebWireBackground {
             this.extensionSettings = { ...this.extensionSettings, ...settings };
             await chrome.storage.sync.set({ webwireSettings: this.extensionSettings });
         } catch (error) {
-            console.error('Failed to save extension settings:', error);
+            logger.error(this, 'Failed to save extension settings:', error);
         }
     }
 
@@ -348,24 +349,24 @@ class WebWireBackground {
 
     async loadState() {
         try {
-            console.log('[WebWireBackground] Loading state...');
-            console.log('[WebWireBackground] State service available:', !!this.stateService);
-            console.log('[WebWireBackground] Settings plugin available:', !!this.stateService?.settings);
+            logger.log(this, 'Loading state...');
+            logger.log(this, 'State service available:', !!this.stateService);
+            logger.log(this, 'Settings plugin available:', !!this.stateService?.settings);
             
             await this.stateService.settings.loadFromStorage();
-            console.log('[WebWireBackground] Settings loaded, current state.settings:', this.stateService.state.settings);
+            logger.log(this, 'Settings loaded, current state.settings:', this.stateService.state.settings);
             
             await this.stateService.tab.loadFromStorage();
-            console.log('[WebWireBackground] Tab state loaded, current state.tabs:', this.stateService.state.tabs);
+            logger.log(this, 'Tab state loaded, current state.tabs:', this.stateService.state.tabs);
             await this.cleanupTabs();
             
             await this.stateService.disk.loadFromStorage();
-            console.log('[WebWireBackground] Disk state loaded');
+            logger.log(this, 'Disk state loaded');
             
-            console.log('[WebWireBackground] Final state after loading:', this.stateService.state);
-            console.log('WebWire state loaded in background');
+            logger.log(this, 'Final state after loading:', this.stateService.state);
+            logger.log(this, 'WebWire state loaded in background');
         } catch (error) {
-            console.error('Failed to load WebWire state:', error);
+            logger.error(this, 'Failed to load WebWire state:', error);
         }
     }
 
@@ -393,7 +394,7 @@ class WebWireBackground {
             await this.stateService.disk.saveToStorage();
             return true;
         } catch (error) {
-            console.error('Failed to save WebWire state:', error);
+            logger.error(this, 'Failed to save WebWire state:', error);
             return false;
         }
     }
@@ -405,10 +406,10 @@ class WebWireBackground {
      */
     async savePanelVisibilityState(visible, tabId) {
         try {
-            console.log(`[WebWireBackground] Saving panel visibility state: ${visible} for tab: ${tabId}`);
+            logger.log(this, `Saving panel visibility state: ${visible} for tab: ${tabId}`);
 
             if (!tabId) {
-                console.warn('[WebWireBackground] No tabId provided for panel visibility state');
+                logger.warn(this, 'No tabId provided for panel visibility state');
                 return false;
             }
 
@@ -421,10 +422,10 @@ class WebWireBackground {
             // Save tab state (this will persist the per-tab visibility)
             await this.stateService.tab.saveToStorage();
             
-            console.log(`[WebWireBackground] Panel visibility state saved successfully: ${visible} for tab: ${tabId}`);
+            logger.log(this, `Panel visibility state saved successfully: ${visible} for tab: ${tabId}`);
             return true;
         } catch (error) {
-            console.error('[WebWireBackground] Failed to save panel visibility state:', error);
+            logger.error(this, 'Failed to save panel visibility state:', error);
             throw error;
         }
     }
@@ -460,7 +461,7 @@ class WebWireBackground {
     }
 
     async handleActionClick(tab) {
-        console.log('Extension icon clicked for tab:', tab.id);
+        logger.log(this, 'Extension icon clicked for tab:', tab.id);
         
         try {
             // Toggle WebWire panel in the active tab
@@ -470,14 +471,14 @@ class WebWireBackground {
                 { target: 'content', tabId: tab.id }
             );
         } catch (error) {
-            console.error('Failed to toggle panel:', error);
+            logger.error(this, 'Failed to toggle panel:', error);
             // If content script isn't loaded, inject it first
             await this.injectContentScript(tab.id);
         }
     }
 
     async handleCommand(command, tab) {
-        console.log('Command received:', command, 'for tab:', tab.id);
+        logger.log(this, 'Command received:', command, 'for tab:', tab.id);
         
         switch (command) {
             case 'toggle-panel':
@@ -554,13 +555,13 @@ class WebWireBackground {
             return { success: true };
         } catch (error) {
             // Content script not loaded, inject panel first
-            console.log('Content script not available for toggle, injecting panel...');
+            logger.log(this, 'Content script not available for toggle, injecting panel...');
             
             try {
                 await this.injectPanel(tabId);
                 return { success: true, injected: true };
             } catch (injectError) {
-                console.error('Failed to inject panel during toggle:', injectError);
+                logger.error(this, 'Failed to inject panel during toggle:', injectError);
                 return { 
                     success: false, 
                     error: 'Failed to inject WebWire panel: ' + injectError.message 
@@ -570,25 +571,25 @@ class WebWireBackground {
     }
 
     async handleSettingsUpdated(message, sender) {
-        console.log('[WebWireBackground] ===== SETTINGS_UPDATED HANDLER =====');
-        console.log('[WebWireBackground] Message:', message);
-        console.log('[WebWireBackground] Sender:', sender);
-        console.log('[WebWireBackground] Current stateService:', !!this.stateService);
-        console.log('[WebWireBackground] Settings in message:', message.settings);
-        console.log('[WebWireBackground] ===============================');
+        logger.log(this, '===== SETTINGS_UPDATED HANDLER =====');
+        logger.log(this, 'Message:', message);
+        logger.log(this, 'Sender:', sender);
+        logger.log(this, 'Current stateService:', !!this.stateService);
+        logger.log(this, 'Settings in message:', message.settings);
+        logger.log(this, '===============================');
         
         try {
             // Reload state service settings
             if (this.stateService) {
-                console.log('[WebWireBackground] Reloading settings from storage...');
+                logger.log(this, 'Reloading settings from storage...');
                 await this.stateService.settings.loadFromStorage();
-                console.log('[WebWireBackground] Settings reloaded from storage:', this.stateService.state.settings);
+                logger.log(this, 'Settings reloaded from storage:', this.stateService.state.settings);
             } else {
-                console.error('[WebWireBackground] No state service available for settings reload!');
+                logger.error(this, 'No state service available for settings reload!');
             }
             
             // Notify all tabs about the settings change
-            console.log('[WebWireBackground] Notifying tabs of settings change...');
+            logger.log(this, 'Notifying tabs of settings change...');
             await this.notifyTabsOfSettingsChange();
             
             const result = { 
@@ -597,12 +598,12 @@ class WebWireBackground {
                 timestamp: Date.now()
             };
             
-            console.log('[WebWireBackground] Settings update handler completed successfully:', result);
+            logger.log(this, 'Settings update handler completed successfully:', result);
             return result;
             
         } catch (error) {
-            console.error('[WebWireBackground] Failed to handle settings update:', error);
-            console.error('[WebWireBackground] Error details:', {
+            logger.error(this, 'Failed to handle settings update:', error);
+            logger.error(this, 'Error details:', {
                 name: error.name,
                 message: error.message,
                 stack: error.stack
@@ -614,7 +615,7 @@ class WebWireBackground {
                 timestamp: Date.now()
             };
             
-            console.log('[WebWireBackground] Settings update handler failed:', errorResult);
+            logger.log(this, 'Settings update handler failed:', errorResult);
             return errorResult;
         }
     }
@@ -631,14 +632,14 @@ class WebWireBackground {
             // Auto-inject if enabled
             if (this.extensionSettings.autoInject) {
                 this.injectPanel(tabId).catch(error => {
-                    console.error('Auto-inject failed:', error);
+                    logger.error(this, 'Auto-inject failed:', error);
                 });
             }
         }
     }
 
     handleInstalled(details) {
-        console.log('WebWire extension installed/updated:', details.reason);
+        logger.log(this, 'WebWire extension installed/updated:', details.reason);
         
         if (details.reason === 'install') {
             // Open options page on first install
@@ -647,15 +648,15 @@ class WebWireBackground {
     }
 
     async handleStorageChanged(changes, areaName) {
-        console.log('[WebWireBackground] ===== STORAGE CHANGED =====');
-        console.log('[WebWireBackground] Area:', areaName);
-        console.log('[WebWireBackground] Changes:', changes);
-        console.log('[WebWireBackground] Change keys:', Object.keys(changes));
-        console.log('[WebWireBackground] ============================');
+        logger.log(this, '===== STORAGE CHANGED =====');
+        logger.log(this, 'Area:', areaName);
+        logger.log(this, 'Changes:', changes);
+        logger.log(this, 'Change keys:', Object.keys(changes));
+        logger.log(this, '============================');
         
         // Handle WebWire settings changes
         if (changes.webwireSettings) {
-            console.log('[WebWireBackground] 🔄 WebWire extension settings changed, reloading...');
+            logger.log(this, '🔄 WebWire extension settings changed, reloading...');
             await this.loadSettings();
         }
         
@@ -676,39 +677,39 @@ class WebWireBackground {
         
         if (this.stateService && (hasSettingsChange || hasTrigger)) {
             if (hasTrigger) {
-                console.log('[WebWireBackground] 📡 Settings trigger detected (fallback mechanism activated)');
-                console.log('[WebWireBackground] Trigger details:', hasTrigger.newValue);
+                logger.log(this, '📡 Settings trigger detected (fallback mechanism activated)');
+                logger.log(this, 'Trigger details:', hasTrigger.newValue);
             }
             
-            console.log('[WebWireBackground] 🔄 WebWire state/settings changed, reloading state...');
+            logger.log(this, '🔄 WebWire state/settings changed, reloading state...');
             try {
                 // Reload specific state based on what changed
                 if (changes['app-settings'] && this.stateService.settings) {
                     await this.stateService.settings.loadFromStorage();
-                    console.log('[WebWireBackground] ✅ Settings state reloaded after storage change');
+                    logger.log(this, '✅ Settings state reloaded after storage change');
                 }
                 
                 if (changes['app-tab'] && this.stateService.tab) {
                     await this.stateService.tab.loadFromStorage();
-                    console.log('[WebWireBackground] ✅ Tab state reloaded after storage change');
+                    logger.log(this, '✅ Tab state reloaded after storage change');
                 }
                 
                 if (changes['app-state'] && this.stateService.disk) {
                     await this.stateService.disk.loadFromStorage();
-                    console.log('[WebWireBackground] ✅ Disk state reloaded after storage change');
+                    logger.log(this, '✅ Disk state reloaded after storage change');
                 }
                 
                 if (changes['app-stash'] && this.stateService.stash) {
                     await this.stateService.stash.loadFromStorage();
-                    console.log('[WebWireBackground] ✅ Stash state reloaded after storage change');
+                    logger.log(this, '✅ Stash state reloaded after storage change');
                 }
                 
                 if (changes['webwire-prompts'] && this.stateService.prompts) {
                     await this.stateService.prompts.loadFromStorage();
-                    console.log('[WebWireBackground] ✅ Prompts state reloaded after storage change');
+                    logger.log(this, '✅ Prompts state reloaded after storage change');
                 }
                 
-                console.log('[WebWireBackground] ✅ WebWire state reloaded after storage change');
+                logger.log(this, '✅ WebWire state reloaded after storage change');
                 
                 // TODO the tabs will need to be updated with the dispatcher
                 // Notify all active tabs about settings change
@@ -718,14 +719,14 @@ class WebWireBackground {
                 if (hasTrigger) {
                     try {
                         await chrome.storage.local.remove('webwire-settings-trigger');
-                        console.log('[WebWireBackground] 🧹 Cleaned up settings trigger');
+                        logger.log(this, '🧹 Cleaned up settings trigger');
                     } catch (error) {
-                        console.warn('[WebWireBackground] Failed to clean up trigger:', error);
+                        logger.warn(this, 'Failed to clean up trigger:', error);
                     }
                 }
                 
             } catch (error) {
-                console.error('[WebWireBackground] ❌ Failed to reload state after storage change:', error);
+                logger.error(this, '❌ Failed to reload state after storage change:', error);
             }
         }
     }
@@ -744,7 +745,7 @@ class WebWireBackground {
                        !tab.url.startsWith('edge://');
             });
             
-            console.log(`Checking ${validTabs.length} valid tabs for settings change notifications (out of ${tabs.length} total tabs)`);
+            logger.log(this, `Checking ${validTabs.length} valid tabs for settings change notifications (out of ${tabs.length} total tabs)`);
             
             let successCount = 0;
             const notifications = validTabs.map(async (tab) => {
@@ -776,9 +777,9 @@ class WebWireBackground {
             const results = await Promise.allSettled(notifications);
             const successful = results.filter(r => r.status === 'fulfilled' && r.value.success).length;
             
-            console.log(`Settings change notifications completed: ${successful} tabs notified successfully out of ${validTabs.length} checked`);
+            logger.log(this, `Settings change notifications completed: ${successful} tabs notified successfully out of ${validTabs.length} checked`);
         } catch (error) {
-            console.error('Failed to notify tabs of settings change:', error);
+            logger.error(this, 'Failed to notify tabs of settings change:', error);
         }
     }
 
@@ -789,9 +790,9 @@ class WebWireBackground {
                 target: { tabId },
                 files: ['content.js']
             });
-            console.log('Content script injected into tab:', tabId);
+            logger.log(this, 'Content script injected into tab:', tabId);
         } catch (error) {
-            console.error('Failed to inject content script:', error);
+            logger.error(this, 'Failed to inject content script:', error);
             throw error;
         }
     }
@@ -814,7 +815,7 @@ class WebWireBackground {
             
         } catch (error) {
             // Content script not available, inject it first
-            console.log('Content script not available, injecting...');
+            logger.log(this, 'Content script not available, injecting...');
             await this.injectContentScript(tabId);
             
             // Wait for content script to initialize with exponential backoff
@@ -838,7 +839,7 @@ class WebWireBackground {
                     {},
                     { target: 'content', tabId: tabId }
                 );
-                console.log(`Content script ready after ${attempt} attempts`);
+                logger.log(this, `Content script ready after ${attempt} attempts`);
                 return;
             } catch (error) {
                 if (attempt === maxAttempts) {
@@ -847,7 +848,7 @@ class WebWireBackground {
                 
                 // Exponential backoff: 100ms, 200ms, 400ms, 800ms, etc.
                 const delay = Math.min(100 * Math.pow(2, attempt - 1), 2000);
-                console.log(`Content script not ready, waiting ${delay}ms (attempt ${attempt}/${maxAttempts})`);
+                logger.log(this, `Content script not ready, waiting ${delay}ms (attempt ${attempt}/${maxAttempts})`);
                 await new Promise(resolve => setTimeout(resolve, delay));
             }
         }
@@ -857,7 +858,7 @@ class WebWireBackground {
         try {
             // Check if state service is available
             if (!this.stateService?.state) {
-                console.warn('State service not available, returning default state');
+                logger.warn(this, 'State service not available, returning default state');
                 return {
                     settings: {},
                     conversation: {},
@@ -896,10 +897,10 @@ class WebWireBackground {
                 await this.stateService.tab.saveToStorage();
             }
 
-            console.log('[WebWireBackground] Returning state:', state);
+            logger.log(this, 'Returning state:', state);
             return state;
         } catch (error) {
-            console.error('Failed to get WebWire state:', error);
+            logger.error(this, 'Failed to get WebWire state:', error);
             return {
                 error: 'Failed to get state',
                 settings: {},
@@ -919,7 +920,7 @@ class WebWireBackground {
         try {
             return await chrome.tabs.query({});
         } catch (error) {
-            console.error('Failed to get tabs:', error);
+            logger.error(this, 'Failed to get tabs:', error);
             return [];
         }
     }
@@ -932,7 +933,7 @@ class WebWireBackground {
             });
             return tab;
         } catch (error) {
-            console.error('Failed to get active tab:', error);
+            logger.error(this, 'Failed to get active tab:', error);
             return null;
         }
     }
@@ -941,7 +942,7 @@ class WebWireBackground {
         try {
             await chrome.runtime.openOptionsPage();
         } catch (error) {
-            console.error('Failed to open options page:', error);
+            logger.error(this, 'Failed to open options page:', error);
         }
     }
 

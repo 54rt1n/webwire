@@ -1,5 +1,6 @@
 import { StorageAdapter } from './storage-adapter.js';
 import { EVENTS } from '../../core/events.js';
+import { logger } from '../../core/logging.js';
 
 /**
  * Settings Adapter - Specialized adapter for settings management
@@ -18,7 +19,7 @@ export class SettingsAdapter {
                                  chrome.storage && 
                                  chrome.storage.local;
         
-        console.log('[SettingsAdapter] Initialized with storage type:', 
+        logger.log('SettingsAdapter', 'Initialized with storage type:', 
                    this.isChromeExtension ? 'Chrome Extension Storage' : 'localStorage');
     }
 
@@ -32,33 +33,33 @@ export class SettingsAdapter {
             
             // Use Chrome extension storage if available (for extension contexts)
             if (this.isChromeExtension) {
-                console.log('[SettingsAdapter] Using Chrome extension storage');
+                logger.log('SettingsAdapter', 'Using Chrome extension storage');
                 const result = await chrome.storage.local.get(this.storageKey);
                 data = result[this.storageKey] || null;
             } else {
                 // Fallback to localStorage for non-extension contexts
-                console.log('[SettingsAdapter] Using localStorage fallback');
+                logger.log('SettingsAdapter', 'Using localStorage fallback');
                 data = this.storage.get(this.storageKey);
             }
             
             if (!data) {
-                console.log('[SettingsAdapter] No settings found');
+                logger.log('SettingsAdapter', 'No settings found');
                 return null;
             }
             
             // Handle version migration
             if (data.version !== this.version) {
-                console.log('[SettingsAdapter] Version mismatch, migrating...');
+                logger.log('SettingsAdapter', 'Version mismatch, migrating...');
                 const migrated = this._migrate(data);
                 await this.setAll(migrated);
                 return migrated;
             }
 
-            console.log('[SettingsAdapter] Settings read:', data);
+            logger.log('SettingsAdapter', 'Settings read:', data);
             return data;
             
         } catch (error) {
-            console.error('[SettingsAdapter] Error reading settings:', error);
+            logger.error('SettingsAdapter', 'Error reading settings:', error);
             return null;
         }
     }
@@ -80,12 +81,12 @@ export class SettingsAdapter {
             
             // Use Chrome extension storage if available (for extension contexts)
             if (this.isChromeExtension) {
-                console.log('[SettingsAdapter] Saving to Chrome extension storage');
+                logger.log('SettingsAdapter', 'Saving to Chrome extension storage');
                 await chrome.storage.local.set({ [this.storageKey]: data });
                 success = true;
             } else {
                 // Fallback to localStorage for non-extension contexts
-                console.log('[SettingsAdapter] Saving to localStorage fallback');
+                logger.log('SettingsAdapter', 'Saving to localStorage fallback');
                 success = this.storage.set(this.storageKey, data);
             }
             
@@ -93,11 +94,11 @@ export class SettingsAdapter {
                 this.eventBus.emit(EVENTS.SETTINGS.CHANGED, data);
             }
 
-            console.log('[SettingsAdapter] Settings saved:', data);
+            logger.log('SettingsAdapter', 'Settings saved:', data);
             return success;
             
         } catch (error) {
-            console.error('[SettingsAdapter] Error saving settings:', error);
+            logger.error('SettingsAdapter', 'Error saving settings:', error);
             return false;
         }
     }
@@ -154,12 +155,12 @@ export class SettingsAdapter {
             
             // Use Chrome extension storage if available (for extension contexts)
             if (this.isChromeExtension) {
-                console.log('[SettingsAdapter] Clearing from Chrome extension storage');
+                logger.log('SettingsAdapter', 'Clearing from Chrome extension storage');
                 await chrome.storage.local.remove(this.storageKey);
                 success = true;
             } else {
                 // Fallback to localStorage for non-extension contexts
-                console.log('[SettingsAdapter] Clearing from localStorage fallback');
+                logger.log('SettingsAdapter', 'Clearing from localStorage fallback');
                 success = this.storage.remove(this.storageKey);
             }
             
@@ -170,7 +171,7 @@ export class SettingsAdapter {
             return success;
             
         } catch (error) {
-            console.error('[SettingsAdapter] Error clearing settings:', error);
+            logger.error('SettingsAdapter', 'Error clearing settings:', error);
             return false;
         }
     }
@@ -184,7 +185,7 @@ export class SettingsAdapter {
             const settings = await this.getAll();
             return settings !== null && typeof settings === 'object';
         } catch (error) {
-            console.error('[SettingsAdapter] Error checking if settings exist:', error);
+            logger.error('SettingsAdapter', 'Error checking if settings exist:', error);
             return false;
         }
     }
@@ -196,7 +197,7 @@ export class SettingsAdapter {
      * @private
      */
     _migrate(oldData) {
-        console.log(`[SettingsAdapter] Migrating from ${oldData.version} to ${this.version}`);
+        logger.log("SettingsAdapter", `Migrating from ${oldData.version} to ${this.version}`);
         
         return {
             ...oldData,
