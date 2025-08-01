@@ -381,7 +381,8 @@ export class ChatService extends EventBindableComponent {
                 timestamp: userMessage.timestamp + 1,
                 toolCalls,
                 toolResults,
-                parseErrors
+                parseErrors,
+                model: aiClient.model
             };
 
             // Finalize the thinking message with the complete response
@@ -422,7 +423,8 @@ export class ChatService extends EventBindableComponent {
                         role: MESSAGE_ROLES.ASSISTANT, 
                         content: cancelledContent,
                         timestamp: Date.now(),
-                        cancelled: true  // Mark as cancelled
+                        cancelled: true,  // Mark as cancelled
+                        model: aiClient.model
                     };
                     
                     this.stateService.conversation.storeAssistantMessage(threadId, assistantMsg, {
@@ -451,6 +453,7 @@ export class ChatService extends EventBindableComponent {
                 content: error.message,
                 timestamp: Date.now(),
                 error: true,
+                model: aiClient.model
             };
                     
             this.stateService.conversation.storeAssistantMessage(threadId, assistantMsg, {
