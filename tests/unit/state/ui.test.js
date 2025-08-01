@@ -30,7 +30,7 @@ describe('UiStatePlugin', () => {
 
         it('should return initial UI state structure', () => {
             const result = plugin.getUiState();
-            expect(result).toHaveProperty('panelVisible');
+            expect(result).toHaveProperty('tabId');
         });
     });
 
@@ -295,31 +295,31 @@ describe('UiStatePlugin', () => {
 
     describe('voice settings', () => {
         it('should get voice settings', () => {
-            const voiceSettings = { enabled: true, voice: 'alloy', speed: 1.0 };
-            stateService.state.ui.voice = voiceSettings;
+            const voiceSettings = { rate: 1.0, pitch: 1.0, volume: 1.0, lang: 'en-US', voice: 'alloy' };
+            stateService.state.settings.ui.voice = voiceSettings;
             
             expect(plugin.getVoiceSettings()).toEqual(voiceSettings);
         });
 
         it('should set voice settings', () => {
-            const voiceSettings = { enabled: false, voice: 'echo', speed: 1.2 };
+            const voiceSettings = { rate: 1.2, pitch: 1.0, volume: 1.0, lang: 'en-US', voice: 'echo' };
             plugin.setVoiceSettings(voiceSettings);
             
-            expect(stateService.state.ui.voice).toEqual(voiceSettings);
+            expect(stateService.state.settings.ui.voice).toEqual(voiceSettings);
         });
 
         it('should handle undefined voice settings', () => {
-            stateService.state.ui.voice = undefined;
+            stateService.state.settings.ui.voice = undefined;
             expect(plugin.getVoiceSettings()).toBeUndefined();
         });
 
         it('should overwrite existing voice settings', () => {
-            stateService.state.ui.voice = { enabled: true, voice: 'alloy' };
+            stateService.state.settings.ui.voice = { rate: 1.0, pitch: 1.0, volume: 1.0, lang: 'en-US', voice: 'alloy' };
             
-            const newSettings = { enabled: false, voice: 'echo', speed: 1.5 };
+            const newSettings = { rate: 1.5, pitch: 1.0, volume: 1.0, lang: 'en-US', voice: 'echo' };
             plugin.setVoiceSettings(newSettings);
             
-            expect(stateService.state.ui.voice).toEqual(newSettings);
+            expect(stateService.state.settings.ui.voice).toEqual(newSettings);
         });
     });
 
@@ -412,7 +412,7 @@ describe('UiStatePlugin', () => {
             
             // Should not throw
             plugin.setAutoInject(true);
-            expect(plugin.getAutoInject()).toBeUndefined();
+            expect(plugin.getAutoInject()).toBe(false);
         });
 
         it('should handle all tab operations with consistent behavior when no tab', () => {

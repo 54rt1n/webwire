@@ -108,7 +108,6 @@ describe('StateContainer', () => {
             const ui = createInitialUiState();
             
             expect(ui.tabId).toBeUndefined();
-            expect(ui.panelVisible).toBe(false);
         });
 
         it('should create UI state with custom tabId', () => {
@@ -116,7 +115,6 @@ describe('StateContainer', () => {
             const ui = createInitialUiState(tabId);
             
             expect(ui.tabId).toBe(tabId);
-            expect(ui.panelVisible).toBe(false);
         });
     });
 
@@ -130,6 +128,7 @@ describe('StateContainer', () => {
             expect(tab.useMCP).toBe(false);
             expect(tab.useBrowserTools).toBe(false);
             expect(tab.autoExecuteTools).toBe(false);
+            expect(tab.panelVisible).toBe(false);
         });
     });
 
