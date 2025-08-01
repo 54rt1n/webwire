@@ -226,12 +226,16 @@ export class ConversationsPanel {
                     <div class="ww-conversation-title">${this._escapeHtml(title)}</div>
                     <div class="ww-conversation-meta">
                         <div class="ww-meta-item">
-                            <span class="ww-meta-icon">👤</span>
-                            <span>${this._escapeHtml(conversation.userName || 'User')} & ${this._escapeHtml(conversation.personaName || 'Assistant')}</span>
+                            <span class="ww-meta-icon">🌐</span>
+                            <span class="ww-conversation-url">${this._getDisplayUrl(conversation.pageUrl)}</span>
                         </div>
                         <div class="ww-meta-item">
                             <span class="ww-meta-icon">🕐</span>
-                            <span>${lastUpdate}</span>
+                            <span class="ww-conversation-datetime">${this._formatFullDateTime(conversation.endTime || conversation.startTime)}</span>
+                        </div>
+                        <div class="ww-meta-item">
+                            <span class="ww-meta-icon">👤</span>
+                            <span>${this._escapeHtml(conversation.userName || 'User')} & ${this._escapeHtml(conversation.personaName || 'Assistant')}</span>
                         </div>
                     </div>
                 </div>
@@ -260,7 +264,7 @@ export class ConversationsPanel {
                     <span class="ww-stat-icon">📌</span>
                     <span>${status}</span>
                 </div>
-                <div class="ww-debug-info" title="threadId: ${conversation.threadId}, title: ${conversation.title || 'none'}, location: ${conversation.location || 'none'}">
+                <div class="ww-debug-info" title="threadId: ${conversation.threadId}, title: ${conversation.title || 'none'}, pageUrl: ${conversation.pageUrl || 'none'}">
                     <span class="ww-debug-icon">ℹ️</span>
                 </div>
             </div>
@@ -365,13 +369,13 @@ export class ConversationsPanel {
             return conversation.title;
         }
         
-        // Generate title from location or timestamp
-        if (conversation.location) {
+        // Generate title from pageUrl or timestamp
+        if (conversation.pageUrl) {
             try {
-                const url = new URL(conversation.location);
+                const url = new URL(conversation.pageUrl);
                 return `Conversation on ${url.hostname}`;
             } catch {
-                return conversation.location;
+                return conversation.pageUrl;
             }
         }
         
@@ -417,6 +421,39 @@ export class ConversationsPanel {
             return `${Math.floor(diffDays)}d ago`;
         } else {
             return date.toLocaleDateString();
+        }
+    }
+
+    /**
+     * Formats a timestamp for full date/time display
+     * @param {number} timestamp - Unix timestamp
+     * @returns {string} Formatted full date/time string
+     * @private
+     */
+    _formatFullDateTime(timestamp) {
+        if (!timestamp) return 'Unknown';
+        
+        const date = new Date(timestamp);
+        return date.toLocaleString();
+    }
+
+    /**
+     * Gets a display-friendly URL from a pageUrl string
+     * @param {string} pageUrl - Full URL or pageUrl string
+     * @returns {string} Formatted URL for display
+     * @private
+     */
+    _getDisplayUrl(pageUrl) {
+        if (!pageUrl) return 'No URL';
+        
+        try {
+            const url = new URL(pageUrl);
+            // Show hostname + pathname, truncate if too long
+            const displayUrl = url.hostname + url.pathname;
+            return displayUrl.length > 50 ? displayUrl.substring(0, 47) + '...' : displayUrl;
+        } catch {
+            // If not a valid URL, return as-is but truncated
+            return pageUrl.length > 50 ? pageUrl.substring(0, 47) + '...' : pageUrl;
         }
     }
 

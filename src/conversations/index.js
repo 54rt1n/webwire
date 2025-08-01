@@ -214,8 +214,7 @@ class ConversationsPanelApp extends BasePanelApp {
             // Create new conversation
             const threadId = this.core.stateService.conversation.createNewConversation({
                 title: `New Conversation - ${new Date().toLocaleString()}`,
-                url: window.location.href,
-                location: window.location.href
+                pageUrl: window.location.href
             });
             
             // Set as active

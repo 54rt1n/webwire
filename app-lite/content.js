@@ -27,3 +27,11 @@ if (document.readyState === DOM_READY_STATES.LOADING) {
 } else {
     initializeContent();
 }
+
+// Handle page restoration from back/forward cache
+window.addEventListener('pageshow', (event) => {
+    if (event.persisted) {
+        console.log('[WebWire Lite] Page restored from cache, re-initializing...');
+        initializeContent();
+    }
+});

@@ -223,9 +223,9 @@ export class ChatUIRenderer {
             const icon = prompt.buttonIcon || '📖';
             
             return `
-                <button class="ww-btn" data-prompt-id="${promptId}">
-                    <span class="ww-btn-icon">${icon}</span>
-                    ${prompt.buttonText}
+                <button class="ww-action-card" data-prompt-id="${promptId}">
+                    <div class="ww-card-icon">${icon}</div>
+                    <div class="ww-card-text">${prompt.buttonText}</div>
                 </button>
             `;
         }).join('');

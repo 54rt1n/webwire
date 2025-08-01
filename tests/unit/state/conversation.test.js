@@ -103,7 +103,7 @@ describe('ConversationStatePlugin', () => {
                 userName: 'John',
                 personaName: 'Assistant',
                 mood: 'helpful',
-                location: 'home'
+                pageUrl: 'home'
             });
             
             // Check message was stored
@@ -123,7 +123,7 @@ describe('ConversationStatePlugin', () => {
             expect(metadata.userName).toBe('John');
             expect(metadata.personaName).toBe('Assistant');
             expect(metadata.mood).toBe('helpful');
-            expect(metadata.location).toBe('home');
+            expect(metadata.pageUrl).toBe('home');
             expect(metadata.status).toBe('active');
             expect(metadata.startTime).toBe(messages[0].timestamp);
             
@@ -289,11 +289,11 @@ describe('ConversationStatePlugin', () => {
             plugin.storeMessage(threadId, 
                 { content: 'Another question' }, 
                 { content: 'Another answer' },
-                { location: 'home' }
+                { pageUrl: 'home' }
             );
             
             const metadata = stateService.state.conversation.metadata[threadId];
-            expect(metadata.location).toBe('home');
+            expect(metadata.pageUrl).toBe('home');
         });
     });
 

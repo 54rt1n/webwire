@@ -402,8 +402,7 @@ class MCPControlPanelApp extends EventBindableComponent {
                     userName: currentUser,
                     personaName: currentPersona,
                     title: `Page: ${document.title}`,
-                    url: window.location.href,
-                    location: window.location.href
+                    pageUrl: window.location.href
                 }
             );
 
@@ -497,8 +496,7 @@ class MCPControlPanelApp extends EventBindableComponent {
             if (!threadId) {
                 threadId = this.core.stateService.conversation.createNewConversation({
                     title: options.title || `Page: ${options.url || 'Unknown'}`,
-                    url: options.url,
-                    location: options.location
+                    pageUrl: options.pageUrl || options.url
                 });
             }
 
@@ -511,7 +509,7 @@ class MCPControlPanelApp extends EventBindableComponent {
                     userName: options.userName || 'User',
                     personaName: options.personaName || 'WebWire Assistant',
                     mood: options.mood,
-                    location: options.location,
+                    pageUrl: options.pageUrl,
                     timestamp: options.timestamp || Date.now(),
                     toolResults: options.toolResults || [],
                     toolCalls: options.toolCalls || [],

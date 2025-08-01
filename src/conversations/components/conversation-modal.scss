@@ -37,6 +37,25 @@
       .ww-conversation-meta {
         font-size: var(--font-size-sm);
         color: var(--color-text-secondary);
+        
+        .ww-conversation-url {
+          margin-top: var(--space-1);
+          display: block;
+          
+          .ww-url-link {
+            color: var(--color-primary);
+            text-decoration: none;
+            
+            &:hover {
+              text-decoration: underline;
+              color: var(--color-primary-hover);
+            }
+            
+            &:visited {
+              color: var(--color-primary-dark);
+            }
+          }
+        }
       }
     }
     

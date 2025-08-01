@@ -230,13 +230,13 @@ export class MessageBuilder {
      * Cleanup resources
      */
     destroy() {
-        if (this.encoder) {
+        if (this.encoder && typeof this.encoder.free === 'function') {
             try {
                 this.encoder.free();
             } catch (error) {
                 console.warn('[MessageBuilder] Error freeing encoder:', error);
             }
-            this.encoder = null;
         }
+        this.encoder = null;
     }
 }

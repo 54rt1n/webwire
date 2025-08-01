@@ -125,6 +125,7 @@ export class ConversationModal extends EventBindableComponent {
         const title = this._getConversationTitle(conversationData);
         const messageCount = this._getMessageCount(conversationData.threadId);
         const participantsText = `${conversationData.userName || 'User'} & ${conversationData.personaName || 'Assistant'}`;
+        const urlDisplay = this._getUrlDisplay(conversationData.pageUrl);
         const status = this._getConversationStatus(conversationData.threadId);
         const isActive = status === 'active';
         
@@ -135,6 +136,7 @@ export class ConversationModal extends EventBindableComponent {
                         <h2>${this._escapeHtml(title)}</h2>
                         <div class="ww-conversation-meta">
                             ${this._escapeHtml(participantsText)} • ${messageCount} messages
+                            ${urlDisplay ? `<br><span class="ww-conversation-url">${urlDisplay}</span>` : ''}
                         </div>
                     </div>
                     <div class="ww-modal-header-actions">
@@ -371,17 +373,39 @@ export class ConversationModal extends EventBindableComponent {
             return conversation.title;
         }
         
-        // Generate title from location or timestamp
-        if (conversation.location) {
+        // Generate title from pageUrl or timestamp
+        if (conversation.pageUrl) {
             try {
-                const url = new URL(conversation.location);
+                const url = new URL(conversation.pageUrl);
                 return `Conversation on ${url.hostname}`;
             } catch {
-                return conversation.location;
+                return conversation.pageUrl;
             }
         }
         
         return `Conversation ${new Date(conversation.startTime).toLocaleDateString()}`;
+    }
+
+    /**
+     * Gets a clickable URL display for the conversation
+     * @param {string} pageUrl - The page URL
+     * @returns {string} HTML for clickable URL or empty string
+     * @private
+     */
+    _getUrlDisplay(pageUrl) {
+        if (!pageUrl) return '';
+        
+        try {
+            const url = new URL(pageUrl);
+            const displayUrl = url.hostname + url.pathname;
+            const truncatedUrl = displayUrl.length > 40 ? displayUrl.substring(0, 37) + '...' : displayUrl;
+            
+            return `🌐 <a href="${this._escapeHtml(pageUrl)}" target="_blank" rel="noopener noreferrer" class="ww-url-link" title="${this._escapeHtml(pageUrl)}">${this._escapeHtml(truncatedUrl)}</a>`;
+        } catch {
+            // If not a valid URL, return as plain text
+            const truncatedUrl = pageUrl.length > 40 ? pageUrl.substring(0, 37) + '...' : pageUrl;
+            return `🌐 ${this._escapeHtml(truncatedUrl)}`;
+        }
     }
 
     /**

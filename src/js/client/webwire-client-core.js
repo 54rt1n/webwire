@@ -104,4 +104,24 @@ export class WebWireClientCore {
         }
     }
 
+    /**
+     * Clean up resources and connections
+     */
+    disconnect() {
+        if (this.mcpConnector) {
+            try {
+                this.mcpConnector.disconnect();
+            } catch (error) {
+                console.warn('[WebWireClientCore] Error disconnecting MCP connector:', error);
+            }
+        }
+        
+        // Clear references
+        this.stateService = null;
+        this.mcpConnector = null;
+        this.aiClient = null;
+        this.storage = null;
+        this.dispatcher = null;
+    }
+
 }

@@ -102,9 +102,9 @@ export class ConversationStatePlugin {
      * Stores a partial user message in the state (first part of two-part message creation).
      * @param {string} threadId
      * @param {object} userMessage - { role, content, timestamp, title?, url?, model?, saved? }
-     * @param {object} options - { userName?, personaName?, mood?, location?, timestamp? }
+     * @param {object} options - { userName?, personaName?, mood?, pageUrl?, timestamp? }
      */
-    storePartialUserMessage(threadId, userMessage, { userName, personaName, mood, location, timestamp, ...options } = {}) {
+    storePartialUserMessage(threadId, userMessage, { userName, personaName, mood, pageUrl, timestamp, ...options } = {}) {
         const state = this._safeConversationState();
 
         if (!timestamp) {
@@ -133,7 +133,7 @@ export class ConversationStatePlugin {
                 userName: userName || 'User',
                 personaName: personaName || 'Default',
                 mood: mood,
-                location: location,
+                pageUrl: pageUrl,
                 title: userMessage.title, // Include title from user message
                 startTime: timestamp,
                 endTime: undefined,
@@ -145,9 +145,9 @@ export class ConversationStatePlugin {
             };
         } else {
             // Update existing metadata
-            const currentLocation = state.metadata[threadId].location;
-            if (location && currentLocation !== location) {
-                state.metadata[threadId].location = location;
+            const currentPageUrl = state.metadata[threadId].pageUrl;
+            if (pageUrl && currentPageUrl !== pageUrl) {
+                state.metadata[threadId].pageUrl = pageUrl;
             }
             const currentTitle = state.metadata[threadId].title;
             if (userMessage.title && currentTitle !== userMessage.title) {
@@ -163,9 +163,9 @@ export class ConversationStatePlugin {
      * Stores an assistant message to complete the two-part message creation.
      * @param {string} threadId
      * @param {object} assistantMessage - { role, content, think?, timestamp, url?, title?, model?, saved? }
-     * @param {object} options - { userName?, personaName?, mood?, location?, timestamp?, toolResults?, toolCalls?, parseErrors? }
+     * @param {object} options - { userName?, personaName?, mood?, pageUrl?, timestamp?, toolResults?, toolCalls?, parseErrors? }
      */
-    storeAssistantMessage(threadId, assistantMessage, { userName, personaName, mood, location, timestamp,
+    storeAssistantMessage(threadId, assistantMessage, { userName, personaName, mood, pageUrl, timestamp,
         toolResults = [], toolCalls = [], parseErrors = [], ...options } = {}) {
         const state = this._safeConversationState();
 
@@ -198,7 +198,7 @@ export class ConversationStatePlugin {
             state.metadata[threadId].endTime = timestamp;
             state.metadata[threadId].duration = timestamp - state.metadata[threadId].startTime;
             
-            // Update title/location from assistant message if provided
+            // Update title/pageUrl from assistant message if provided
             const currentTitle = state.metadata[threadId].title;
             if (assistantMessage.title && currentTitle !== assistantMessage.title) {
                 state.metadata[threadId].title = assistantMessage.title;
@@ -214,9 +214,9 @@ export class ConversationStatePlugin {
      * @param {string} threadId
      * @param {object} userMessage - { role, content, timestamp, title?, url?, model?, saved? }
      * @param {object} assistantMessage - { role, content, think?, timestamp, url?, title?, model?, saved? }
-     * @param {object} options - { userName?, personaName?, mood?, location?, timestamp?, toolResults?, toolCalls?, parseErrors? }
+     * @param {object} options - { userName?, personaName?, mood?, pageUrl?, timestamp?, toolResults?, toolCalls?, parseErrors? }
      */
-    storeMessage(threadId, userMessage, assistantMessage, { userName, personaName, mood, location, timestamp,
+    storeMessage(threadId, userMessage, assistantMessage, { userName, personaName, mood, pageUrl, timestamp,
         toolResults = [], toolCalls = [], parseErrors = [], ...options } = {}) {
         const state = this._safeConversationState();
 
@@ -262,7 +262,7 @@ export class ConversationStatePlugin {
                 userName: userName || 'User',
                 personaName: personaName || 'Default',
                 mood: mood,
-                location: location,
+                pageUrl: pageUrl,
                 title: initialTitle, // Include title from either message
                 startTime: timestamp,
                 endTime: undefined,
@@ -274,9 +274,9 @@ export class ConversationStatePlugin {
             };
         } else {
             // Update existing metadata
-            const currentLocation = state.metadata[threadId].location;
-            if (location && currentLocation !== location) {
-                state.metadata[threadId].location = location;
+            const currentPageUrl = state.metadata[threadId].pageUrl;
+            if (pageUrl && currentPageUrl !== pageUrl) {
+                state.metadata[threadId].pageUrl = pageUrl;
             }
             // Title can come from userMessage or assistantMessage
             const title = userMessage.title || assistantMessage?.title;
@@ -845,7 +845,7 @@ export class ConversationStatePlugin {
             const searchableMetadata = [
                 conversation.userName || '',
                 conversation.personaName || '',
-                conversation.location || '',
+                conversation.pageUrl || '',
                 threadId
             ];
 

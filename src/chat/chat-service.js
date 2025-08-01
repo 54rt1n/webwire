@@ -274,7 +274,7 @@ export class ChatService extends EventBindableComponent {
         this.panel.removeThinkingMessages();
 
         const threadId = this.stateService.conversation.getActiveThreadId();
-        const location = typeof window !== 'undefined' ? window.location.href : undefined;
+        const pageUrl = typeof window !== 'undefined' ? window.location.href : undefined;
         const persona = this.stateService.aim.getAimMessageOptions();
 
         // Declare these outside try block so they're accessible in finally
@@ -337,10 +337,12 @@ export class ChatService extends EventBindableComponent {
             // Store user message immediately in conversation state (part 1 of 2-part creation)
             this.stateService.conversation.storePartialUserMessage(threadId, {
                 ...userMessage,
-                url: location,
+                pageUrl: pageUrl,
                 title: document.title
             }, {
-                ...persona
+                ...persona,
+                pageUrl: pageUrl,
+                title: document.title
             });
 
             // Prepare user message for storage (we have all info at this point)
@@ -348,7 +350,7 @@ export class ChatService extends EventBindableComponent {
                 role: MESSAGE_ROLES.USER, 
                 content: message,
                 timestamp: userMessage.timestamp,
-                url: location,
+                pageUrl: pageUrl,
                 title: document.title
             };
 
@@ -387,7 +389,7 @@ export class ChatService extends EventBindableComponent {
 
             this.stateService.conversation.storeAssistantMessage(threadId, assistantMsg, {
                 ...persona,
-                url: location,
+                pageUrl: pageUrl,
                 title: document.title,
             });
 
@@ -425,7 +427,7 @@ export class ChatService extends EventBindableComponent {
                     
                     this.stateService.conversation.storeAssistantMessage(threadId, assistantMsg, {
                         ...persona,
-                        url: location,
+                        pageUrl: pageUrl,
                         title: document.title,
                     });
                 }
@@ -453,7 +455,7 @@ export class ChatService extends EventBindableComponent {
                     
             this.stateService.conversation.storeAssistantMessage(threadId, assistantMsg, {
                 ...persona,
-                url: location,
+                pageUrl: pageUrl,
                 title: document.title,
             });
             
@@ -471,7 +473,7 @@ export class ChatService extends EventBindableComponent {
                     assistantMessage: assistantMsg,
                     options: {
                         ...persona,
-                        url: location,
+                        pageUrl: pageUrl,
                         title: document.title,
                         isRetry: isRetry,
                         error: assistantMsg.error,
@@ -628,6 +630,12 @@ export class ChatService extends EventBindableComponent {
     async handleNewConversationRequest(payload) {
         console.log('[ChatService] Handling new conversation request');
         
+        // Cancel any active streaming first to prevent orphaned streams
+        if (this.responseHandler) {
+            this.responseHandler.cancelStreaming();
+            console.log('[ChatService] Cancelled active streaming before new conversation');
+        }
+        
         try {
             // End the current conversation via backend (which will create a new empty one)
             const result = await this.eventBus.emitAsync(EVENTS.CHAT.END_CONVERSATION, {}, { target: EVENT_CONTEXT.BACKGROUND });
@@ -669,6 +677,12 @@ export class ChatService extends EventBindableComponent {
      */
     async handleSwapConversation(payload) {
         console.log('[ChatService] Handling swap conversation request');
+        
+        // Cancel any active streaming first to prevent orphaned streams
+        if (this.responseHandler) {
+            this.responseHandler.cancelStreaming();
+            console.log('[ChatService] Cancelled active streaming before conversation swap');
+        }
         
         try {
             // Open the modal and wait for user selection

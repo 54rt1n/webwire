@@ -368,7 +368,7 @@ class WebWireContentHost {
             this.tabIndicator.destroy();
         }
         
-        if (this.core) {
+        if (this.core && typeof this.core.disconnect === 'function') {
             this.core.disconnect();
         }
     }
