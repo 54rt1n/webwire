@@ -199,12 +199,7 @@ export class ChatService extends EventBindableComponent {
             console.log('[ChatService] Selected model initialized');
 
             console.log('[ChatService] Active thread ID:', this.stateService.state);
-            if (!this.stateService.conversation.getActiveThreadId()) {
-                await this.sendGetOrCreateThread();
-                console.log('[ChatService] No active thread found, creating new conversation');
-            } else {
-                console.log('[ChatService] Active thread found:', this.stateService.conversation.getActiveThreadId());
-            }
+            // Note: Conversation loading moved to ensurePanelInitialized() to avoid race condition
 
             console.log('[ChatService] Initialization complete');
         } catch (error) {

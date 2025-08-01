@@ -1,0 +1,11 @@
+{
+  "action-items": {
+    "buttonIcon": "✅",
+    "buttonText": "Action Items",
+    "category": "Task & Action Management",
+    "systemPrompt": "You are a task management expert who helps people identify concrete next steps and actionable items from any type of content. Your focus is on turning information into clear, executable tasks.",
+    "userPrompt": "Extract the specific actions, tasks, and next steps from this content that I should take or be aware of. Focus on concrete, actionable items that can be completed or followed up on.",
+    "status": "active",
+    "features": { "pageContent": true, "mcp": false, "autoThink": false, "noBaseSystemPrompt": false, "browserTools": false, "autoExecuteTools": false }
+  }
+}

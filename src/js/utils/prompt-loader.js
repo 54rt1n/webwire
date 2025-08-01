@@ -13,7 +13,20 @@ export class PromptLoader {
     static async loadPrompts() {
         const promptFiles = [
             'summarize-page.json',
-            'timeline-analysis.json'
+            'timeline-analysis.json',
+            'quick-article-summary.json',
+            'key-takeaways.json',
+            'simplify-content.json',
+            'study-notes.json',
+            'pros-cons.json',
+            'review-synthesis.json',
+            'deal-analysis.json',
+            'meeting-prep.json',
+            'action-items.json',
+            'tutorial-breakdown.json',
+            'recipe-simplify.json',
+            'language-help.json',
+            'event-details.json'
         ];
         
         const prompts = {};
@@ -59,7 +72,20 @@ export class PromptLoader {
         if (typeof chrome !== 'undefined' && chrome.runtime) {
             const promptFiles = [
                 'summarize-page.json',
-                'timeline-analysis.json'
+                'timeline-analysis.json',
+                'quick-article-summary.json',
+                'key-takeaways.json',
+                'simplify-content.json',
+                'study-notes.json',
+                'pros-cons.json',
+                'review-synthesis.json',
+                'deal-analysis.json',
+                'meeting-prep.json',
+                'action-items.json',
+                'tutorial-breakdown.json',
+                'recipe-simplify.json',
+                'language-help.json',
+                'event-details.json'
             ];
             
             for (const file of promptFiles) {
@@ -306,7 +332,20 @@ export class PromptLoader {
     static getAvailablePromptFiles() {
         return [
             'summarize-page.json',
-            'timeline-analysis.json'
+            'timeline-analysis.json',
+            'quick-article-summary.json',
+            'key-takeaways.json',
+            'simplify-content.json',
+            'study-notes.json',
+            'pros-cons.json',
+            'review-synthesis.json',
+            'deal-analysis.json',
+            'meeting-prep.json',
+            'action-items.json',
+            'tutorial-breakdown.json',
+            'recipe-simplify.json',
+            'language-help.json',
+            'event-details.json'
         ];
     }
 

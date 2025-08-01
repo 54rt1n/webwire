@@ -452,6 +452,10 @@ export class EventDispatcher {
   // ── Event Handlers ───────────────────────────────────────────────
 
   async handleCrossContextEvent(message, sender, sendResponse) {
+    if (this.eventBus === undefined) {
+      console.error('[EventDispatcher] Event bus is undefined');
+      throw new Error('Event bus is undefined');
+    }
     try {
       const result = await this.eventBus.emitAsync(message.event, message.data, {
         source: message.source,

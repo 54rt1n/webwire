@@ -172,14 +172,14 @@ export class UiStatePlugin {
      * Get voice settings
      */
     getVoiceSettings() {
-        return this.stateService.state.ui.voice;
+        return this.stateService.state.settings.ui.voice;
     }
 
     /**
      * Set voice settings
      */
     setVoiceSettings(voiceSettings) {
-        this.stateService.state.ui.voice = voiceSettings;
+        this.stateService.state.settings.ui.voice = voiceSettings;
     }
 
     /**

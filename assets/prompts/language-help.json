@@ -1,0 +1,11 @@
+{
+  "language-help": {
+    "buttonIcon": "🌐",
+    "buttonText": "Language Help",
+    "category": "Education & Learning",
+    "systemPrompt": "You are a language assistant who helps people understand content in foreign languages or complex terminology. Your role is to translate, explain, and make content accessible regardless of language barriers.",
+    "userPrompt": "Help me understand this content by translating any foreign language text and explaining complex terms or cultural references that might not be clear to someone unfamiliar with the language or context.",
+    "status": "active",
+    "features": { "pageContent": true, "mcp": false, "autoThink": false, "noBaseSystemPrompt": false, "browserTools": false, "autoExecuteTools": false }
+  }
+}

@@ -58,6 +58,8 @@ export class PromptsPanel {
             promptModalTitle: document.getElementById('prompt-modal-title'),
             promptModalCloseBtn: document.getElementById('prompt-modal-close-btn'),
             promptModalSaveBtn: document.getElementById('prompt-modal-save-btn'),
+            promptModalSaveAsBtn: document.getElementById('prompt-modal-save-as-btn'),
+            promptModalDeleteBtn: document.getElementById('prompt-modal-delete-btn'),
             promptModalCancelBtn: document.getElementById('prompt-modal-cancel-btn'),
             
             // Form fields
@@ -155,6 +157,14 @@ export class PromptsPanel {
         // Prompt edit modal
         this.elements.promptModalSaveBtn.addEventListener('click', () => {
             this._handleSavePrompt();
+        });
+
+        this.elements.promptModalSaveAsBtn.addEventListener('click', () => {
+            this._handleSaveAsPrompt();
+        });
+
+        this.elements.promptModalDeleteBtn.addEventListener('click', () => {
+            this._handleDeleteFromModal();
         });
 
         this.elements.promptModalCancelBtn.addEventListener('click', () => {
@@ -346,6 +356,13 @@ export class PromptsPanel {
         // Update modal title
         this.elements.promptModalTitle.textContent = promptId ? 'Edit Prompt' : 'New Prompt';
         
+        // Show/hide delete button (only for existing prompts)
+        if (promptId) {
+            this.elements.promptModalDeleteBtn.style.display = 'block';
+        } else {
+            this.elements.promptModalDeleteBtn.style.display = 'none';
+        }
+        
         // Fill form with data
         if (promptData) {
             this.elements.promptId.value = promptId || '';
@@ -395,14 +412,105 @@ export class PromptsPanel {
     }
 
     /**
-     * Handles saving a prompt from the modal
+     * Handles delete from modal with confirmation
      * @private
      */
-    _handleSavePrompt() {
+    _handleDeleteFromModal() {
+        if (!this.currentEditingPromptId) {
+            console.warn('[PromptsPanel] No prompt ID to delete');
+            return;
+        }
+
+        const promptData = this.stateService?.prompts?.getPrompt(this.currentEditingPromptId);
+        const promptName = promptData?.buttonText || this.currentEditingPromptId;
+        
+        if (confirm(`Are you sure you want to delete the prompt "${promptName}"?\n\nThis action cannot be undone.`)) {
+            // Close the modal first
+            this.closePromptModal();
+            
+            // Call the delete handler
+            if (this.handlers.onDeletePrompt) {
+                this.handlers.onDeletePrompt(this.currentEditingPromptId);
+            }
+        }
+    }
+
+    /**
+     * Validates prompt ID (lowercase, numbers, dash only)
+     * @param {string} id - The ID to validate
+     * @returns {boolean} Whether the ID is valid
+     * @private
+     */
+    _validatePromptId(id) {
+        // Allow lowercase letters, numbers, and dashes only
+        const validPattern = /^[a-z0-9-]+$/;
+        return validPattern.test(id);
+    }
+
+    /**
+     * Handles Save As functionality - prompts for new ID
+     * @private
+     */
+    _handleSaveAsPrompt() {
+        const currentId = this.elements.promptId.value.trim() || this.currentEditingPromptId;
+        const suggestedId = currentId ? `${currentId}-copy` : 'new-prompt';
+        
+        let newId = prompt(`Enter new prompt ID (lowercase, numbers, dash only):`, suggestedId);
+        
+        if (newId === null) {
+            return; // User cancelled
+        }
+        
+        newId = newId.trim().toLowerCase();
+        
+        if (!newId) {
+            alert('Please enter a valid ID');
+            return;
+        }
+        
+        if (!this._validatePromptId(newId)) {
+            alert('ID must contain only lowercase letters, numbers, and dashes');
+            return;
+        }
+        
+        // Check if prompt already exists
+        if (this.stateService && this.stateService.prompts && this.stateService.prompts.getPrompt(newId)) {
+            if (!confirm(`A prompt with ID "${newId}" already exists. Do you want to overwrite it?`)) {
+                return;
+            }
+        }
+        
+        // Temporarily set the ID and save
+        const originalId = this.elements.promptId.value;
+        const originalDisabled = this.elements.promptId.disabled;
+        
+        this.elements.promptId.value = newId;
+        this.elements.promptId.disabled = false;
+        
+        // Save with new ID
+        this._handleSavePrompt(true);
+        
+        // Restore original ID field state if save failed
+        // Note: If save succeeds, the modal will close and this won't matter
+    }
+
+    /**
+     * Handles saving a prompt from the modal
+     * @param {boolean} isSaveAs - Whether this is a "Save As" operation
+     * @private
+     */
+    _handleSavePrompt(isSaveAs = false) {
         // Get form data
         const promptId = this.elements.promptId.value.trim() || this.currentEditingPromptId;
         if (!promptId) {
             alert('Please enter a Prompt ID');
+            this.elements.promptId.focus();
+            return;
+        }
+
+        // Validate prompt ID format
+        if (!this._validatePromptId(promptId)) {
+            alert('Prompt ID must contain only lowercase letters, numbers, and dashes');
             this.elements.promptId.focus();
             return;
         }
@@ -455,8 +563,6 @@ export class PromptsPanel {
      * @private
      */
     _showDeleteConfirmation(promptId, prompt) {
-        this.pendingDeletePromptId = promptId;
-        
         this.elements.deletePromptDetails.innerHTML = `
             <div class="prompt-info">
                 <strong>${prompt.buttonIcon} ${this._escapeHtml(prompt.buttonText)}</strong>
@@ -464,6 +570,8 @@ export class PromptsPanel {
             <div class="prompt-id-small">ID: ${promptId}</div>
         `;
         
+        // Store promptId in the modal itself for the confirmation handler
+        this.elements.deleteModal.dataset.promptId = promptId;
         this.elements.deleteModal.classList.add('show');
     }
 
@@ -473,7 +581,7 @@ export class PromptsPanel {
      */
     _hideDeleteModal() {
         this.elements.deleteModal.classList.remove('show');
-        this.pendingDeletePromptId = null;
+        delete this.elements.deleteModal.dataset.promptId;
     }
 
     /**
@@ -481,10 +589,12 @@ export class PromptsPanel {
      * @private
      */
     _handleConfirmDelete() {
-        if (this.pendingDeletePromptId && this.handlers.onDeletePrompt) {
-            this.handlers.onDeletePrompt(this.pendingDeletePromptId);
-        }
+        const promptId = this.elements.deleteModal.dataset.promptId;
         this._hideDeleteModal();
+        
+        if (promptId && this.handlers.onDeletePrompt) {
+            this.handlers.onDeletePrompt(promptId);
+        }
     }
 
     /**

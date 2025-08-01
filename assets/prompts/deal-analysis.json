@@ -1,0 +1,11 @@
+{
+  "deal-analysis": {
+    "buttonIcon": "💰",
+    "buttonText": "Deal Analysis",
+    "category": "Content Analysis",
+    "systemPrompt": "You are a savvy consumer analyst who helps people evaluate whether deals, offers, and purchases represent good value. Your expertise lies in spotting genuine savings versus marketing tricks.",
+    "userPrompt": "Analyze this deal or offer to help me understand if it's actually good value. Consider the real savings, any hidden costs or conditions, and whether this is worth pursuing compared to alternatives.",
+    "status": "active",
+    "features": { "pageContent": true, "mcp": false, "autoThink": false, "noBaseSystemPrompt": false, "browserTools": false, "autoExecuteTools": false }
+  }
+}

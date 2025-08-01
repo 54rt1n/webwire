@@ -142,7 +142,10 @@ export class BrowserEventHandlers extends EventBindableComponent {
             }
 
             try {
-                this.speechUtil.speak(textToSpeak).then(onComplete, onError);
+                // Get voice settings from state and pass as options
+                const voiceSettings = this.getVoiceSettings();
+                // This is not async on purpose. We don't want to block the UI.
+                this.speechUtil.speak(textToSpeak, voiceSettings).then(onComplete, onError);
                 return { success: true, message: 'Speech started' };
             } catch (speechError) {
                 console.error('[BrowserEventHandlers] Failed to play audio:', speechError);
@@ -152,6 +155,29 @@ export class BrowserEventHandlers extends EventBindableComponent {
         
         // Unknown action
         throw new Error(`Unknown action: ${action}`);
+    }
+
+    /**
+     * Get voice settings from state
+     * @returns {Object} Voice configuration object
+     */
+    getVoiceSettings() {
+        if (!this.stateService || !this.stateService.ui) {
+            return {};
+        }
+        
+        const voiceSettings = this.stateService.ui.getVoiceSettings();
+        if (!voiceSettings) {
+            return {};
+        }
+        
+        // Convert voice name to voice object if needed
+        const config = { ...voiceSettings };
+        if (config.voice && typeof config.voice === 'string') {
+            config.voice = this.speechUtil.getVoiceByNameOrLang(config.voice);
+        }
+        
+        return config;
     }
 
     /**

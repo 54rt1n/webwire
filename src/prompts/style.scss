@@ -288,7 +288,7 @@
         .ww-prompt-actions {
           display: flex;
           gap: var(--space-2);
-          opacity: 0;
+          opacity: 1;
           transition: opacity var(--transition-fast);
 
           .ww-action-btn {
@@ -587,13 +587,11 @@
         .ww-btn-cancel {
           @include common.ww-button-base;
           @include common.ww-button-variant-secondary;
-          padding: var(--space-2) var(--space-4);
         }
 
         .ww-btn-save {
           @include common.ww-button-base;
           @include common.ww-button-variant-success;
-          padding: var(--space-2) var(--space-4);
         }
       }
     }

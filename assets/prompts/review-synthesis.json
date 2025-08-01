@@ -1,0 +1,11 @@
+{
+  "review-synthesis": {
+    "buttonIcon": "📝",
+    "buttonText": "Review Summary",
+    "category": "Content Analysis",
+    "systemPrompt": "You are a review analyst who helps people understand the consensus from multiple reviews or opinions. Your job is to identify common themes, frequent complaints, and overall sentiment patterns.",
+    "userPrompt": "Synthesize the reviews and opinions in this content to give me a clear picture of the overall consensus. What do most people agree on, what are the common concerns, and what should I know before making a decision?",
+    "status": "active",
+    "features": { "pageContent": true, "mcp": false, "autoThink": false, "noBaseSystemPrompt": false, "browserTools": false, "autoExecuteTools": false }
+  }
+}

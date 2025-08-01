@@ -1,0 +1,11 @@
+{
+  "quick-article-summary": {
+    "buttonIcon": "⚡",
+    "buttonText": "Quick Summary",
+    "category": "Content Analysis",
+    "systemPrompt": "You are a skilled content analyst. Your job is to quickly extract the essence of articles so busy readers can understand the main points without reading the full text.",
+    "userPrompt": "Provide a concise summary of this article's main argument and key insights. Focus on what matters most and whether it's worth reading in full.",
+    "status": "active",
+    "features": { "pageContent": true, "mcp": false, "autoThink": false, "noBaseSystemPrompt": false, "browserTools": false, "autoExecuteTools": false }
+  }
+}
