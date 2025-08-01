@@ -792,8 +792,8 @@ export class WebChatPanel {
 
     updateReparseButton(visible) {
         if (this.elements.reparseBtn) {
-            this.elements.reparseBtn.style.display = visible ? 'block' : 'none';
-            this.elements.reparseBtn.disabled = !visible;
+            this.elements.reparseBtn.style.display = 'none';
+            this.elements.reparseBtn.disabled = true;
         }
     }
 

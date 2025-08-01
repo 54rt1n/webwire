@@ -247,35 +247,43 @@ export class ConversationModal extends EventBindableComponent {
      */
     _renderMessageMetadata(message) {
         const metadataItems = [];
+
+        const { model, pageUrl, title, parseErrors, saved, content, messageId, timestamp, role,
+            toolCalls, toolResults, think, ...rest } = message;
         
         // Show model if available
-        if (message.model) {
-            metadataItems.push(`<span class="ww-meta-item"><strong>Model:</strong> ${this._escapeHtml(message.model)}</span>`);
+        if (model) {
+            metadataItems.push(`<span class="ww-meta-item"><strong>Model:</strong> ${this._escapeHtml(model)}</span>`);
         }
         
         // Show page URL if available
-        if (message.url) {
-            const truncatedUrl = message.url.length > 50 ? message.url.substring(0, 47) + '...' : message.url;
-            metadataItems.push(`<span class="ww-meta-item"><strong>URL:</strong> <a href="${this._escapeHtml(message.url)}" target="_blank" rel="noopener noreferrer" title="${this._escapeHtml(message.url)}">${this._escapeHtml(truncatedUrl)}</a></span>`);
+        if (pageUrl) {
+            const truncatedUrl = pageUrl.length > 50 ? pageUrl.substring(0, 47) + '...' : pageUrl;
+            metadataItems.push(`<span class="ww-meta-item"><strong>URL:</strong> <a href="${this._escapeHtml(pageUrl)}" target="_blank" rel="noopener noreferrer" title="${this._escapeHtml(pageUrl)}">${this._escapeHtml(truncatedUrl)}</a></span>`);
         }
         
         // Show page title if available
-        if (message.title && message.title !== message.url) {
-            const truncatedTitle = message.title.length > 50 ? message.title.substring(0, 47) + '...' : message.title;
+        if (title && title !== pageUrl) {
+            const truncatedTitle = title.length > 50 ? title.substring(0, 47) + '...' : title;
             metadataItems.push(`<span class="ww-meta-item"><strong>Page:</strong> ${this._escapeHtml(truncatedTitle)}</span>`);
         }
         
         // Show parse errors if any
-        if (message.parseErrors && message.parseErrors.length > 0) {
-            metadataItems.push(`<span class="ww-meta-item ww-meta-error"><strong>Parse Errors:</strong> ${message.parseErrors.length}</span>`);
+        if (parseErrors && parseErrors.length > 0) {
+            metadataItems.push(`<span class="ww-meta-item ww-meta-error"><strong>Parse Errors:</strong> ${parseErrors.length}</span>`);
         }
         
         // Show saved status
-        if (message.saved !== undefined) {
-            const savedStatus = message.saved ? '✓ Saved' : '✗ Not saved';
-            const savedClass = message.saved ? 'ww-meta-success' : 'ww-meta-warning';
+        if (saved !== undefined) {
+            const savedStatus = saved ? '✓ Saved' : '✗ Not saved';
+            const savedClass = saved ? 'ww-meta-success' : 'ww-meta-warning';
             metadataItems.push(`<span class="ww-meta-item ${savedClass}"><strong>Status:</strong> ${savedStatus}</span>`);
         }
+
+        // Show rest of the message metadata
+        Object.entries(rest).forEach(([key, value]) => {
+            metadataItems.push(`<span class="ww-meta-item"><strong>${key}:</strong> ${this._escapeHtml(value)}</span>`);
+        });
         
         // Only return metadata panel if there are items to show
         if (metadataItems.length === 0) {
