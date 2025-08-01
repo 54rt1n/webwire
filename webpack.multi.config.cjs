@@ -80,7 +80,8 @@ const createConfig = (env, argv, variant) => {
           },
           { from: `./assets/icons/${variant}`, to: 'icons' },
           { from: './assets/tokenizers', to: 'tokenizers' },
-          { from: './assets/prompts', to: 'prompts' }
+          { from: './assets/prompts', to: 'prompts' },
+          { from: './assets/terms', to: 'terms' }
         ]
       }),
       new HtmlWebpackPlugin({

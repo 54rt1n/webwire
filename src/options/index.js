@@ -293,8 +293,8 @@ class OptionsApp extends BaseSimpleApp {
             }
 
             logger.log('OptionsApp', '2. Validation passed, saving to state service...');
-            await this.stateService.settings.setSettings(settings);
-            logger.log('OptionsApp', '3. Settings set in state service');
+            await this.stateService.settings.setSettings(settings, { autoEncrypt: true });
+            logger.log('OptionsApp', '3. Settings set in state service with encryption enabled');
             
             await this.stateService.settings.saveToStorage();
             logger.log('OptionsApp', '4. Settings saved to storage');

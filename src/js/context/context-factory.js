@@ -65,7 +65,7 @@ export async function contextFactory(eventBus, context,
     }
 
     if (state) {
-        results.stateService = new StateService(results.eventBus, results.storage.storage);
+        results.stateService = new StateService(results.eventBus, results.storage.storage, config);
         if (loadSettings) {
             await results.stateService.settings.loadFromStorage();
             // Initialize Sentry after settings are loaded

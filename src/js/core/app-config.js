@@ -107,6 +107,10 @@ export class AppConfig {
                         defaultTheme: 'light'
                     }
                 },
+                security: {
+                    salt: '95v3r53cr37',
+                    method: 'AES-GCM',
+                },
                 sentry: {
                     enabled: true,
                     environment: 'production',
@@ -145,6 +149,10 @@ export class AppConfig {
                         themes: ['light'],
                         defaultTheme: 'light'
                     }
+                },
+                security: {
+                    salt: 'u7c0m353cr37',
+                    method: 'AES-GCM',
                 },
                 sentry: {
                     enabled: true,

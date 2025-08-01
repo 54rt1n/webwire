@@ -36,13 +36,14 @@ class StateService {
      * @param {Object} storage - Storage adapter for persistence operations
      * @throws {Error} If eventBus or storage are not provided
      */
-    constructor(eventBus, storage) {
+    constructor(eventBus, storage, config = null) {
         if (!eventBus || !storage) {
             throw new Error('Event bus and storage are required');
         }
 
         this.eventBus = eventBus;
         this.storage = storage;
+        this.config = config;
         this.isBackend = true;
 
         // Initialize state with default structure
@@ -54,7 +55,7 @@ class StateService {
         this.disk = new DiskStatePlugin(this);
         this.mcp = new MCPStatePlugin(this);
         this.prompts = new PromptStatePlugin(this);
-        this.settings = new SettingsStatePlugin(this);
+        this.settings = new SettingsStatePlugin(this, config);
         this.stash = new StashStatePlugin(this);
         this.tab = new TabStatePlugin(this);
         this.ui = new UiStatePlugin(this);

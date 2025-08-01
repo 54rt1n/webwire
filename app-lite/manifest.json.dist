@@ -58,6 +58,7 @@
         "conversations/*.html",
         "main/*.js",
         "tokenizers/*.json",
+        "terms/*.txt",
         "prompts/*.json"
       ],
       "matches": ["<all_urls>"]

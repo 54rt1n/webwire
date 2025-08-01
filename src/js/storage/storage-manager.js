@@ -30,36 +30,36 @@ export class StorageManager {
         }
 
         this.eventBus = eventBus;
-        this.config = config.storage || {};
+        this.storageConfig = config.storage || {};
         this.version = config.version || '1.0.0';
 
         // Clean interface - specialized adapters
         this.storage = {
             settings: new SettingsAdapter({
-                storageKey: this.config.keys?.settings || 'app-settings',
+                storageKey: this.storageConfig.keys?.settings || 'app-settings',
                 version: this.version
             }, eventBus),
             
             state: new StateAdapter({
-                storageKey: this.config.keys?.state || 'app-state',
-                dbName: this.config.db?.state || 'app-db',
+                storageKey: this.storageConfig.keys?.state || 'app-state',
+                dbName: this.storageConfig.db?.state || 'app-db',
                 storeName: 'saves',
                 version: this.version,
-                maxSize: this.config.maxSaveSize || 5 * 1024 * 1024
+                maxSize: this.storageConfig.maxSaveSize || 5 * 1024 * 1024
             }, new StateValidator(['session']), eventBus),
 
             tab: new TabAdapter({
-                storageKey: this.config.keys?.tab || 'app-tab',
+                storageKey: this.storageConfig.keys?.tab || 'app-tab',
                 version: this.version
             }, eventBus),
 
             stash: new StashAdapter({
-                storageKey: this.config.keys?.stash || 'app-stash',
+                storageKey: this.storageConfig.keys?.stash || 'app-stash',
                 version: this.version
             }, eventBus),
 
             prompts: new PromptAdapter({
-                storageKey: this.config.keys?.prompts || 'webwire-prompts',
+                storageKey: this.storageConfig.keys?.prompts || 'webwire-prompts',
                 version: this.version
             }, eventBus)
         };
@@ -72,7 +72,7 @@ export class StorageManager {
      * Most configuration is now done in constructor
      */
     initialize() {
-        if (!this.config.keys) {
+        if (!this.storageConfig.keys) {
             logger.warn('StorageManager', 'No storage keys provided in config');
         }
         logger.log('StorageManager', 'Storage adapters ready');

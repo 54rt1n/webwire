@@ -161,7 +161,7 @@ export class ChatService extends EventBindableComponent {
         // Initialize message builder with model configuration TODO this should be provided by the model provider
         // instead of the chat service
         const currentModel = this.stateService.ui.getSelectedModel() || 'chat';
-        const currentConfig = this.stateService.settings.getModelConfig(currentModel);
+        const currentConfig = await this.stateService.settings.getModelConfig(currentModel);
         const encodingOptions = this.getEncodingOptions(currentConfig);
         this.messageBuilder = new MessageBuilder(this.pageUtils, encodingOptions);
         logger.log(this, 'Message builder initialized');
@@ -214,14 +214,14 @@ export class ChatService extends EventBindableComponent {
      * @returns {Object} AI client instance
      * @throws {Error} If no model configuration or client creation fails
      */
-    getAiClient() {
+    async getAiClient() {
         const selectedModel = this.stateService.ui.getSelectedModel();
         if (!selectedModel) {
             throw new Error('[ChatService] No model selected');
         }
         logger.log(this, 'getAiClient() called for model type:', selectedModel);
         
-        const currentConfig = this.stateService.settings.getModelConfig(selectedModel);
+        const currentConfig = await this.stateService.settings.getModelConfig(selectedModel);
         logger.log(this, 'Current config retrieved:', currentConfig);
         
         if (!currentConfig) {
@@ -265,7 +265,7 @@ export class ChatService extends EventBindableComponent {
         
         let aiClient;
         try {
-            aiClient = this.getAiClient();
+            aiClient = await this.getAiClient();
         } catch (error) {
             logger.error(this, 'Failed to get AI client:', error);
             this.panel.displayError(error.message);
@@ -300,7 +300,7 @@ export class ChatService extends EventBindableComponent {
 
             // Get available tools and build system prompt
             const tools = this.toolExecutor.getAvailableTools();
-            const systemMessage = this.stateService.aim.getSystemMessage();
+            const systemMessage = await this.stateService.aim.getSystemMessage();
             const systemPrompts = this.buildSystemPrompts(tools, systemMessage, customSystemPrompt);
 
             // Build page context and prepare m
@@ -577,7 +577,7 @@ export class ChatService extends EventBindableComponent {
 
         if ('selectedModel' in data) {
             this.stateService.ui.setSelectedModel(data.selectedModel);
-            const currentConfig = this.stateService.settings.getModelConfig(data.selectedModel);
+            const currentConfig = await this.stateService.settings.getModelConfig(data.selectedModel);
             this.panel.updateSelectedModelSetting(data.selectedModel, currentConfig?.model, currentConfig);
             
             // Clear the AI client to force rebuild with new model on next message
@@ -611,7 +611,7 @@ export class ChatService extends EventBindableComponent {
         logger.log(this, 'Handling MCP status update:', payload);
         
         // Update local state and UI
-        this.updateConnectionStatus();
+        await this.updateConnectionStatus();
     }
 
     /**
@@ -941,9 +941,9 @@ export class ChatService extends EventBindableComponent {
     /**
      * Update connection status and notify panel
      */
-    updateConnectionStatus() {
+    async updateConnectionStatus() {
         // Check AI configuration status
-        const modelConfig = this.stateService.settings.getModelConfig(this.stateService.ui.getSelectedModel() || 'chat');
+        const modelConfig = await this.stateService.settings.getModelConfig(this.stateService.ui.getSelectedModel() || 'chat');
         const hasAiConfig = modelConfig && modelConfig.provider && modelConfig.model;
 
         // Build AI status object
@@ -1079,7 +1079,7 @@ export class ChatService extends EventBindableComponent {
     async ensurePanelInitialized() {
         if (!this.panel.isReady()) {
             await this.panel.initialize();
-            this.updateConnectionStatus();
+            await this.updateConnectionStatus();
             if (this.stateService.prompts) {
                 const activePrompts = this.stateService.prompts.getActivePrompts();
                 // Sort by display order in the client

@@ -1,11 +1,12 @@
 import { generateSessionId } from '../utils/id-generator.js';
 import { logger } from '../core/logging.js';
+import { generateEncryptionKey } from '../utils/encryption-util.js';
 
 /**
  * Creates the initial state structure for the app.
  * @returns {Object} The initial state object.
  */
-export function createInitialState(tabId = undefined) {
+export function createInitialState(tabId = undefined, options = {}) {
     return {
         session: {
             sessionId: generateSessionId(),
@@ -16,10 +17,10 @@ export function createInitialState(tabId = undefined) {
         },
 
         tabs: {
-            default: createInitialTabState(),
+            default: createInitialTabState(options),
         },
 
-        settings: createInitialSettingsState(),
+        settings: createInitialSettingsState(options),
 
         aim: {
             pinnedMessages: [],
@@ -108,7 +109,7 @@ export function createInitialState(tabId = undefined) {
             metadata: {}, // key is conversation_id, value is the current metadata for the conversation
         },
 
-        ui: createInitialUiState(tabId),
+        ui: createInitialUiState(tabId, options),
 
         stash: {
             // Stash state - persists across browser sessions
@@ -137,7 +138,9 @@ export function createInitialState(tabId = undefined) {
     };
 }
 
-export function createInitialSettingsState() {
+export function createInitialSettingsState(options = {}) {
+    const { createKey = true } = options;
+    const encryptionKey = createKey ? generateEncryptionKey(options) : undefined;
     return {
         ai: {
             models: {
@@ -207,6 +210,9 @@ export function createInitialSettingsState() {
         reporting: {
             crashReportingEnabled: false,
         },
+        security: {
+            encryptionKey: encryptionKey,
+        },
         ui: {
             autoInject: false,
             voice: {
@@ -220,13 +226,13 @@ export function createInitialSettingsState() {
     };
 }
 
-export function createInitialUiState(tabId = undefined) {
+export function createInitialUiState(tabId = undefined, options = {}) {
     return {
         tabId: tabId,
     };
 }
 
-export function createInitialTabState() {
+export function createInitialTabState(options = {}) {
     return {
         trackedThreadId: undefined,
         selectedModel: 'chat',
@@ -243,7 +249,7 @@ export function createInitialTabState() {
  * @param {Object} state - The current state object
  * @returns {Object} Serialized state
  */
-export function serializeState(state) {
+export function serializeState(state, options = {}) {
     return {
         version: state.version,
         session: state.session,

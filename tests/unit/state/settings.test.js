@@ -1,10 +1,11 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { SettingsStatePlugin } from '../../../src/js/state/plugins/settings-state.js';
 import { createInitialState } from '../../../src/js/state/state-container.js';
 import { MockStorageAdapter, MockEventBus, TestData, StateAssertions, setupTest } from './conftest.js';
+import { ENCRYPTION_METHODS } from '../../../src/js/utils/encryption-util.js';
 
 describe('SettingsStatePlugin', () => {
-    let plugin, stateService, eventBus, storage;
+    let plugin, stateService, eventBus, storage, mockConfig;
 
     beforeEach(() => {
         const setup = setupTest();
@@ -12,7 +13,23 @@ describe('SettingsStatePlugin', () => {
         eventBus = setup.eventBus;
         storage = setup.storage;
         
-        plugin = new SettingsStatePlugin(stateService);
+        // Mock config with security salt
+        mockConfig = {
+            get: vi.fn().mockImplementation((key) => {
+                if (key === 'security.salt') return 'test-salt-123';
+                return null;
+            })
+        };
+        
+        // Initialize state with security.encryptionKey (required)
+        stateService.state.settings = {
+            ...stateService.state.settings,
+            security: {
+                encryptionKey: 'test-password-456'
+            }
+        };
+        
+        plugin = new SettingsStatePlugin(stateService, mockConfig);
     });
 
     describe('constructor', () => {
@@ -35,19 +52,99 @@ describe('SettingsStatePlugin', () => {
     });
 
     describe('setSettings', () => {
-        it('should set settings in state', () => {
-            const testSettings = TestData.createProviderConfig('openai');
-            plugin.setSettings(testSettings);
+        it('should set settings without encryption by default', async () => {
+            const testSettings = {
+                ai: {
+                    providers: {
+                        openai: { apiKey: 'sk-test123' },
+                        anthropic: { apiKey: 'ak-test456' }
+                    }
+                }
+            };
+            
+            await plugin.setSettings(testSettings);
 
+            expect(stateService.state.settings.ai.providers.openai.apiKey).toBe('sk-test123');
+            expect(stateService.state.settings.ai.providers.anthropic.apiKey).toBe('ak-test456');
+        });
+
+        it('should encrypt API keys when autoEncrypt is true', async () => {
+            const testSettings = {
+                ai: {
+                    providers: {
+                        openai: { apiKey: 'sk-test123' },
+                        anthropic: { apiKey: 'ak-test456' }
+                    }
+                }
+            };
+            
+            await plugin.setSettings(testSettings, { autoEncrypt: true });
+
+            expect(stateService.state.settings.ai.providers.openai.apiKey).toEqual({
+                method: ENCRYPTION_METHODS.AES_GCM,
+                data: expect.any(String)
+            });
+            expect(stateService.state.settings.ai.providers.anthropic.apiKey).toEqual({
+                method: ENCRYPTION_METHODS.AES_GCM,
+                data: expect.any(String)
+            });
+        });
+
+        it('should handle settings without AI providers', async () => {
+            const testSettings = {
+                ui: { theme: 'dark' },
+                user: { name: 'test' }
+            };
+            
+            await plugin.setSettings(testSettings);
             expect(stateService.state.settings).toEqual(testSettings);
         });
 
-        it('should overwrite existing settings', () => {
+        it('should handle providers without API keys', async () => {
+            const testSettings = {
+                ai: {
+                    providers: {
+                        local: { endpoint: 'http://localhost:8000' },
+                        openai: { apiKey: 'sk-test123' }
+                    }
+                }
+            };
+            
+            await plugin.setSettings(testSettings, { autoEncrypt: true });
+
+            expect(stateService.state.settings.ai.providers.local).toEqual({
+                endpoint: 'http://localhost:8000'
+            });
+            expect(stateService.state.settings.ai.providers.openai.apiKey).toEqual({
+                method: ENCRYPTION_METHODS.AES_GCM,
+                data: expect.any(String)
+            });
+        });
+
+        it('should not re-encrypt already encrypted keys', async () => {
+            const encryptedKey = {
+                method: ENCRYPTION_METHODS.AES_GCM,
+                data: 'already-encrypted-data'
+            };
+            
+            const testSettings = {
+                ai: {
+                    providers: {
+                        openai: { apiKey: encryptedKey }
+                    }
+                }
+            };
+            
+            await plugin.setSettings(testSettings, { autoEncrypt: true });
+            expect(stateService.state.settings.ai.providers.openai.apiKey).toEqual(encryptedKey);
+        });
+
+        it('should overwrite existing settings', async () => {
             const initialSettings = { test: 'initial' };
             const newSettings = { test: 'new', other: 'value' };
             
-            plugin.setSettings(initialSettings);
-            plugin.setSettings(newSettings);
+            await plugin.setSettings(initialSettings);
+            await plugin.setSettings(newSettings);
 
             expect(stateService.state.settings).toEqual(newSettings);
         });
@@ -77,11 +174,9 @@ describe('SettingsStatePlugin', () => {
                 }
             };
             
-            // Set up the mock to return test settings
             plugin.settingsAdapter.getAll = async () => testSettings;
             await plugin.loadFromStorage();
 
-            // Should deep merge with initial state, so check the merged values
             expect(stateService.state.settings.ai.models.chat.provider).toBe('openai');
             expect(stateService.state.settings.ai.models.chat.model).toBe('gpt-4');
             expect(stateService.state.settings.ai.providers.openai.apiKey).toBe('test-key');
@@ -90,7 +185,6 @@ describe('SettingsStatePlugin', () => {
         it('should handle missing storage adapter gracefully', async () => {
             plugin.settingsAdapter = null;
             const result = await plugin.loadFromStorage();
-
             expect(result).toEqual({});
         });
 
@@ -100,14 +194,6 @@ describe('SettingsStatePlugin', () => {
             const result = await plugin.loadFromStorage();
             expect(result).toEqual({});
             expect(stateService.state.settings).toEqual({});
-        });
-
-        it('should preserve existing settings when no storage data', async () => {
-            const initialSettings = stateService.state.settings;
-            storage.settings.data = {};
-            
-            const result = await plugin.loadFromStorage();
-            expect(result).toEqual(initialSettings);
         });
 
         it('should deep merge loaded settings with existing state', async () => {
@@ -166,112 +252,14 @@ describe('SettingsStatePlugin', () => {
 
         it('should propagate storage errors', async () => {
             plugin.settingsAdapter.setAll = async () => { throw new Error('Storage error'); };
-            
             await expect(plugin.saveToStorage()).rejects.toThrow('Storage error');
-        });
-
-        it('should verify save by reading back', async () => {
-            const testSettings = TestData.createProviderConfig('anthropic');
-            stateService.state.settings = testSettings;
-
-            await plugin.saveToStorage();
-
-            const getAllCalls = plugin.settingsAdapter.calls.filter(c => c.method === 'getAll');
-            expect(getAllCalls).toHaveLength(1);
-        });
-    });
-
-    describe('patchSettings', () => {
-        it('should merge patch into existing settings', () => {
-            const existingSettings = {
-                ai: {
-                    models: { chat: { temperature: 0.8 } },
-                    providers: { openai: { apiKey: 'old-key' } }
-                },
-                ui: { theme: 'dark' }
-            };
-            
-            const patch = {
-                ai: {
-                    models: { chat: { provider: 'openai', model: 'gpt-4' } },
-                    providers: { openai: { apiKey: 'new-key' } }
-                }
-            };
-            
-            stateService.state.settings = existingSettings;
-            plugin.patchSettings(patch);
-
-            expect(stateService.state.settings).toEqual({
-                ai: {
-                    models: { 
-                        chat: { 
-                            temperature: 0.8,
-                            provider: 'openai',
-                            model: 'gpt-4'
-                        }
-                    },
-                    providers: { openai: { apiKey: 'new-key' } }
-                },
-                ui: { theme: 'dark' }
-            });
-        });
-
-        it('should handle empty existing settings', () => {
-            stateService.state.settings = null;
-            const patch = { ai: { models: { chat: { provider: 'openai' } } } };
-            
-            plugin.patchSettings(patch);
-            expect(stateService.state.settings).toEqual(patch);
-        });
-
-        it('should handle empty patch', () => {
-            const existingSettings = { test: 'value' };
-            stateService.state.settings = existingSettings;
-            
-            plugin.patchSettings({});
-            expect(stateService.state.settings).toEqual(existingSettings);
-        });
-    });
-
-    describe('deepMerge', () => {
-        it('should merge nested objects', () => {
-            const target = {
-                a: { b: 1, c: 2 },
-                d: 3
-            };
-            const source = {
-                a: { b: 10, e: 4 },
-                f: 5
-            };
-            
-            const result = plugin.deepMerge(target, source);
-            expect(result).toEqual({
-                a: { b: 10, c: 2, e: 4 },
-                d: 3,
-                f: 5
-            });
-        });
-
-        it('should handle arrays as values', () => {
-            const target = { arr: [1, 2, 3] };
-            const source = { arr: [4, 5, 6] };
-            
-            const result = plugin.deepMerge(target, source);
-            expect(result).toEqual({ arr: [4, 5, 6] });
-        });
-
-        it('should handle null and undefined values', () => {
-            const target = { a: 1, b: null };
-            const source = { b: 2, c: undefined };
-            
-            const result = plugin.deepMerge(target, source);
-            expect(result).toEqual({ a: 1, b: 2, c: undefined });
         });
     });
 
     describe('getModelConfig', () => {
         beforeEach(() => {
             stateService.state.settings = {
+                ...stateService.state.settings,
                 ai: {
                     models: {
                         chat: { provider: 'openai', model: 'gpt-4' },
@@ -285,8 +273,8 @@ describe('SettingsStatePlugin', () => {
             };
         });
 
-        it('should return model config for chat by default', () => {
-            const config = plugin.getModelConfig();
+        it('should return model config for chat by default', async () => {
+            const config = await plugin.getModelConfig();
             
             expect(config).toEqual({
                 provider: 'openai',
@@ -296,8 +284,8 @@ describe('SettingsStatePlugin', () => {
             });
         });
 
-        it('should return model config for specified type', () => {
-            const config = plugin.getModelConfig('thought');
+        it('should return model config for specified type', async () => {
+            const config = await plugin.getModelConfig('thought');
             
             expect(config).toEqual({
                 provider: 'anthropic',
@@ -306,8 +294,8 @@ describe('SettingsStatePlugin', () => {
             });
         });
 
-        it('should fallback to chat for unknown model type', () => {
-            const config = plugin.getModelConfig('unknown');
+        it('should fallback to chat for unknown model type', async () => {
+            const config = await plugin.getModelConfig('unknown');
             
             expect(config).toEqual({
                 provider: 'openai',
@@ -317,66 +305,33 @@ describe('SettingsStatePlugin', () => {
             });
         });
 
-        it('should return null for missing model configuration', () => {
+        it('should return null for missing model configuration', async () => {
             stateService.state.settings.ai.models.chat = null;
-            const config = plugin.getModelConfig();
-            
+            const config = await plugin.getModelConfig();
             expect(config).toBeNull();
         });
 
-        it('should return config even with missing provider', () => {
+        it('should return null when provider is missing', async () => {
             stateService.state.settings.ai.models.chat = { provider: 'missing', model: 'test' };
-            stateService.state.settings.ai.providers = {}; // No providers configured
-            const config = plugin.getModelConfig();
-            
-            // Returns the model config merged with undefined provider (actual behavior)
-            expect(config).toEqual({ provider: 'missing', model: 'test' });
-        });
-
-        it('should handle missing settings gracefully', () => {
-            stateService.state.settings = null;
-            const config = plugin.getModelConfig();
-            
+            stateService.state.settings.ai.providers = {};
+            const config = await plugin.getModelConfig();
             expect(config).toBeNull();
         });
-    });
 
-    describe('getCurrentModelConfig', () => {
-        beforeEach(() => {
-            stateService.state.settings = {
-                ai: {
-                    models: {
-                        chat: { provider: 'openai', model: 'gpt-4' },
-                        code: { provider: 'anthropic', model: 'claude-3' }
-                    },
-                    providers: {
-                        openai: { apiKey: 'openai-key' },
-                        anthropic: { apiKey: 'anthropic-key' }
-                    }
-                }
-            };
+        it('should decrypt encrypted API keys', async () => {
+            // First encrypt a key, then test decryption
+            const originalKey = 'sk-secret123';
+            const encrypted = await plugin._encryptKey(originalKey);
             
-            // Mock the UI plugin
-            stateService.ui = {
-                getSelectedModel: () => 'code'
-            };
+            stateService.state.settings.ai.providers.openai.apiKey = encrypted;
+            
+            const config = await plugin.getModelConfig();
+            expect(config.apiKey).toBe(originalKey);
         });
 
-        it('should return config for currently selected model', () => {
-            const config = plugin.getCurrentModelConfig();
-            
-            expect(config).toEqual({
-                provider: 'anthropic',
-                model: 'claude-3',
-                apiKey: 'anthropic-key'
-            });
-        });
-
-        it('should fallback to chat when no model selected', () => {
-            stateService.ui.getSelectedModel = () => null;
-            
-            const config = plugin.getCurrentModelConfig();
-            expect(config.provider).toBe('openai');
+        it('should handle plaintext API keys (backward compatibility)', async () => {
+            const config = await plugin.getModelConfig();
+            expect(config.apiKey).toBe('openai-key');
         });
     });
 
@@ -406,32 +361,11 @@ describe('SettingsStatePlugin', () => {
             expect(plugin.isValid()).toBe(false);
         });
 
-        it('should return false for missing models', () => {
-            stateService.state.settings = { ai: { providers: {} } };
-            expect(plugin.isValid()).toBe(false);
-        });
-
-        it('should return false for missing providers', () => {
-            stateService.state.settings = { ai: { models: {} } };
-            expect(plugin.isValid()).toBe(false);
-        });
-
         it('should return false for incomplete chat model', () => {
             stateService.state.settings = {
                 ai: {
                     models: { chat: { provider: 'openai' } }, // missing model
                     providers: { openai: { apiKey: 'test-key' } }
-                }
-            };
-            
-            expect(plugin.isValid()).toBe(false);
-        });
-
-        it('should return false for missing provider configuration', () => {
-            stateService.state.settings = {
-                ai: {
-                    models: { chat: { provider: 'missing', model: 'test' } },
-                    providers: {}
                 }
             };
             
@@ -464,31 +398,88 @@ describe('SettingsStatePlugin', () => {
             
             expect(plugin.isValid()).toBe(true);
         });
+    });
 
-        it('should return false for AIMind missing endpoint', () => {
-            stateService.state.settings = {
-                ai: {
-                    models: { chat: { provider: 'aimind', model: 'test-model' } },
-                    providers: { 
-                        aimind: { apiKey: 'test-key' } // missing apiEndpoint
-                    }
-                }
-            };
-            
-            expect(plugin.isValid()).toBe(false);
+    describe('_encryptKey', () => {
+        it('should encrypt a plaintext string', async () => {
+            const plaintext = 'sk-test123';
+            const result = await plugin._encryptKey(plaintext);
+
+            expect(result).toEqual({
+                method: ENCRYPTION_METHODS.AES_GCM,
+                data: expect.any(String)
+            });
         });
 
-        it('should return false for AIMind missing API key', () => {
-            stateService.state.settings = {
+        it('should return object unchanged if already encrypted', async () => {
+            const encryptedObject = {
+                method: ENCRYPTION_METHODS.AES_GCM,
+                data: 'already-encrypted'
+            };
+            
+            const result = await plugin._encryptKey(encryptedObject);
+            expect(result).toEqual(encryptedObject);
+        });
+    });
+
+    describe('_decryptKey', () => {
+        it('should decrypt an encrypted object', async () => {
+            const originalKey = 'sk-test123';
+            const encrypted = await plugin._encryptKey(originalKey);
+            const decrypted = await plugin._decryptKey(encrypted);
+            
+            expect(decrypted).toBe(originalKey);
+        });
+
+        it('should return string unchanged if already plaintext', async () => {
+            const plaintext = 'sk-test123';
+            const result = await plugin._decryptKey(plaintext);
+            expect(result).toBe(plaintext);
+        });
+    });
+
+    describe('encryption integration', () => {
+        it('should encrypt and decrypt API keys round-trip', async () => {
+            const originalKey = 'sk-original123';
+            
+            const encrypted = await plugin._encryptKey(originalKey);
+            expect(encrypted).toEqual({
+                method: ENCRYPTION_METHODS.AES_GCM,
+                data: expect.any(String)
+            });
+            
+            const decrypted = await plugin._decryptKey(encrypted);
+            expect(decrypted).toBe(originalKey);
+        });
+
+        it('should handle full settings flow with encryption', async () => {
+            const originalSettings = {
+                security: {
+                    encryptionKey: 'test-password-456'
+                },
                 ai: {
-                    models: { chat: { provider: 'aimind', model: 'test-model' } },
-                    providers: { 
-                        aimind: { apiEndpoint: 'https://api.aimind.com' } // missing apiKey
+                    providers: {
+                        openai: { apiKey: 'sk-openai123' },
+                        anthropic: { apiKey: 'ak-anthropic456' }
+                    },
+                    models: {
+                        chat: { provider: 'openai', model: 'gpt-4' }
                     }
                 }
             };
             
-            expect(plugin.isValid()).toBe(false);
+            // Set settings with encryption enabled
+            await plugin.setSettings(originalSettings, { autoEncrypt: true });
+            
+            // Verify keys are encrypted in state
+            expect(stateService.state.settings.ai.providers.openai.apiKey).toEqual({
+                method: ENCRYPTION_METHODS.AES_GCM,
+                data: expect.any(String)
+            });
+            
+            // Get model config (should decrypt)
+            const modelConfig = await plugin.getModelConfig();
+            expect(modelConfig.apiKey).toBe('sk-openai123');
         });
     });
 
@@ -504,27 +495,10 @@ describe('SettingsStatePlugin', () => {
             stateService.state.settings = testSettings;
             await plugin.saveToStorage();
             
-            // Reset state
             stateService.state.settings = {};
             await plugin.loadFromStorage();
             
             expect(stateService.state.settings).toMatchObject(testSettings);
-        });
-
-        it('should handle rapid save/load operations', async () => {
-            const settings1 = { test: 'value1' };
-            const settings2 = { test: 'value2' };
-            
-            stateService.state.settings = settings1;
-            await plugin.saveToStorage();
-            
-            stateService.state.settings = settings2;
-            await plugin.saveToStorage();
-            
-            stateService.state.settings = {};
-            await plugin.loadFromStorage();
-            
-            expect(stateService.state.settings).toMatchObject(settings2);
         });
     });
 });

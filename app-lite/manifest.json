@@ -57,6 +57,7 @@
         "guide/*.html",
         "conversations/*.js",
         "conversations/*.html",
+        "terms/*.txt",
         "main/*.js"
       ],
       "matches": ["<all_urls>"]

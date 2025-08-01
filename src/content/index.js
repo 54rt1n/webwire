@@ -331,7 +331,7 @@ class WebWireContentHost {
             
             // Get selected model and config
             const selectedModel = stateService.ui.getSelectedModel() || 'chat';
-            const modelConfig = stateService.settings.getModelConfig(selectedModel);
+            const modelConfig = await stateService.settings.getModelConfig(selectedModel);
             
             // Get connection states directly from services
             const state = {

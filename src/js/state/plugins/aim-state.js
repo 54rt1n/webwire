@@ -181,10 +181,11 @@ export class AIMStatePlugin {
      * Gets the system message.
      * @returns {string|undefined} The current system message
      */
-    getSystemMessage() {
+    async getSystemMessage() {
         // Check if the current model is in minimal mode, if so use the minimal system message
         const currentModel = this.stateService.ui.getSelectedModel();
-        const minimalMode = this.stateService.settings.getModelConfig(currentModel)?.minimalMode;
+        const modelConfig = await this.stateService.settings.getModelConfig(currentModel);
+        const minimalMode = modelConfig?.minimalMode;
         if (minimalMode) {
             return this.stateService.state.settings.aim.minimalSystemMessage;
         }

@@ -296,35 +296,35 @@ describe('AIMStatePlugin', () => {
             };
         });
 
-        it('should get regular system message when not in minimal mode', () => {
+        it('should get regular system message when not in minimal mode', async () => {
             stateService.state.settings.aim.systemMessage = 'regular system message';
             stateService.settings.getModelConfig = () => ({ minimalMode: false });
 
-            const result = plugin.getSystemMessage();
+            const result = await plugin.getSystemMessage();
 
             expect(result).toBe('regular system message');
         });
 
-        it('should get minimal system message when in minimal mode', () => {
+        it('should get minimal system message when in minimal mode', async () => {
             stateService.state.settings.aim.systemMessage = 'regular system message';
             stateService.state.settings.aim.minimalSystemMessage = 'minimal system message';
             stateService.settings.getModelConfig = () => ({ minimalMode: true });
 
-            const result = plugin.getSystemMessage();
+            const result = await plugin.getSystemMessage();
 
             expect(result).toBe('minimal system message');
         });
 
-        it('should handle undefined model config', () => {
+        it('should handle undefined model config', async () => {
             stateService.state.settings.aim.systemMessage = 'regular system message';
             stateService.settings.getModelConfig = () => undefined;
 
-            const result = plugin.getSystemMessage();
+            const result = await plugin.getSystemMessage();
 
             expect(result).toBe('regular system message');
         });
 
-        it('should set system message', () => {
+        it('should set system message', async () => {
             const message = 'new system message';
 
             plugin.setSystemMessage(message);
@@ -334,7 +334,7 @@ describe('AIMStatePlugin', () => {
     });
 
     describe('User Header/Footer Management', () => {
-        it('should get and set user header', () => {
+        it('should get and set user header', async () => {
             const header = 'User: ';
 
             plugin.setUserHeader(header);

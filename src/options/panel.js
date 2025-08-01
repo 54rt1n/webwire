@@ -267,7 +267,18 @@ export class OptionsPanel {
                 if (providerConfig) {
                     for (const key in this.elements.providerInputs[provider]) {
                         if (this.elements.providerInputs[provider][key]) {
-                            this.elements.providerInputs[provider][key].value = providerConfig[key] || '';
+                            const value = providerConfig[key];
+                            
+                            // Handle encrypted API keys
+                            if (key === 'apiKey' && value && typeof value === 'object' && value.method === 'AES-GCM') {
+                                // Show placeholder for encrypted keys
+                                this.elements.providerInputs[provider][key].value = '';
+                                this.elements.providerInputs[provider][key].placeholder = '(Encrypted - enter new key to change)';
+                                // Store reference to encrypted value for later comparison
+                                this.elements.providerInputs[provider][key].dataset.encryptedValue = JSON.stringify(value);
+                            } else {
+                                this.elements.providerInputs[provider][key].value = value || '';
+                            }
                         }
                     }
                 }
@@ -339,9 +350,26 @@ export class OptionsPanel {
         for (const provider in this.elements.providerInputs) {
             settings.ai.providers[provider] = {};
             for (const key in this.elements.providerInputs[provider]) {
-                const value = this.elements.providerInputs[provider][key].value.trim();
-                if (value) {
-                    settings.ai.providers[provider][key] = value;
+                const element = this.elements.providerInputs[provider][key];
+                const value = element.value.trim();
+                
+                if (key === 'apiKey') {
+                    // Check if this is an encrypted key that hasn't been changed
+                    const encryptedValue = element.dataset.encryptedValue;
+                    
+                    if (value === '' && encryptedValue) {
+                        // User left the field empty, keep the existing encrypted value
+                        settings.ai.providers[provider][key] = JSON.parse(encryptedValue);
+                    } else if (value) {
+                        // User entered a new plaintext key
+                        settings.ai.providers[provider][key] = value;
+                    }
+                    // If value is empty and no encrypted value, leave it undefined
+                } else {
+                    // Non-API key fields
+                    if (value) {
+                        settings.ai.providers[provider][key] = value;
+                    }
                 }
             }
         }
