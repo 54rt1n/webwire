@@ -372,7 +372,7 @@ export class ChatService extends EventBindableComponent {
                 this.panel.displayMessage(userMessage, { autoScroll: true, ...persona });
             }
 
-            const apiArgs = this.stateService.settings.getCurrentModelConfig();
+            const apiArgs = await this.stateService.settings.getCurrentModelConfig();
 
             // Generate AI response with streaming
             const { response, thinkingMessage } = await this.responseHandler.generateAIResponse(

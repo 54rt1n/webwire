@@ -83,3 +83,21 @@ export function generateToolCallId() {
 export function generateMessageId() {
     return 'message-' + generateRawUUID({dashes: false}).slice(0, 9);
 }
+
+/**
+ * Generate a random encryption key string
+ * @returns {string} A random 32-character hex encryption key
+ */
+export function generateEncryptionKey() {
+    // Use crypto.getRandomValues for cryptographically secure random values
+    const array = new Uint8Array(32);
+    if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
+        crypto.getRandomValues(array);
+    } else {
+        // Fallback for environments without crypto
+        for (let i = 0; i < array.length; i++) {
+            array[i] = Math.floor(Math.random() * 256);
+        }
+    }
+    return Array.from(array, byte => byte.toString(16).padStart(2, '0')).join('');
+}

@@ -38,7 +38,8 @@ export class BaseSimpleApp extends EventBindableComponent {
         // 1. Initialize context with minimal services (invariant)
         const { dispatcher, stateService, storage } = await initializeContext(
             this.eventBus, 
-            EVENT_CONTEXT.SIMPLE
+            EVENT_CONTEXT.SIMPLE,
+            {config: this.config}
         );
         this.dispatcher = dispatcher;
         this.stateService = stateService;

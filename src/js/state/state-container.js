@@ -1,6 +1,5 @@
-import { generateSessionId } from '../utils/id-generator.js';
+import { generateSessionId, generateEncryptionKey } from '../utils/id-generator.js';
 import { logger } from '../core/logging.js';
-import { generateEncryptionKey } from '../utils/encryption-util.js';
 
 /**
  * Creates the initial state structure for the app.
@@ -140,7 +139,7 @@ export function createInitialState(tabId = undefined, options = {}) {
 
 export function createInitialSettingsState(options = {}) {
     const { createKey = true } = options;
-    const encryptionKey = createKey ? generateEncryptionKey(options) : undefined;
+    const encryptionKey = createKey ? generateEncryptionKey() : undefined;
     return {
         ai: {
             models: {

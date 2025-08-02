@@ -34,11 +34,12 @@ class StateService {
      * Create a StateService instance with required dependencies
      * @param {Object} eventBus - Event bus instance for inter-component communication
      * @param {Object} storage - Storage adapter for persistence operations
+     * @param {Object} config - Configuration object
      * @throws {Error} If eventBus or storage are not provided
      */
     constructor(eventBus, storage, config = null) {
-        if (!eventBus || !storage) {
-            throw new Error('Event bus and storage are required');
+        if (!eventBus || !storage || !config) {
+            throw new Error('Event bus, storage, and config are required');
         }
 
         this.eventBus = eventBus;
@@ -89,9 +90,9 @@ class ContentStateService {
      * @param {Object} eventBus - Event bus instance for inter-component communication
      * @throws {Error} If eventBus or initial state are not provided
      */
-    constructor(initialState, eventBus) {
-        if (!eventBus || !initialState) {
-            throw new Error('Event bus and initial state are required');
+    constructor(initialState, eventBus, config = null) {
+        if (!eventBus || !initialState || !config) {
+            throw new Error('Event bus, initial state, and config are required');
         }
 
         this.eventBus = eventBus;
@@ -101,7 +102,7 @@ class ContentStateService {
         this.isFrontend = true;
 
         // Initialize plugins
-        this.settings = new SettingsStatePlugin(this);
+        this.settings = new SettingsStatePlugin(this, config);
         this.aim = new AIMStatePlugin(this);
         this.conversation = new ConversationStatePlugin(this);
         this.mcp = new MCPStatePlugin(this);

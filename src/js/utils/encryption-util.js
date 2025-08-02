@@ -1,3 +1,4 @@
+import { logger } from '../core/logging.js';
 
 /**
  * Encryption utilities using Web Crypto API
@@ -65,22 +66,44 @@ export async function encrypt(plaintext, key, { method = ENCRYPTION_METHODS.AES_
 }
 
 export async function decrypt(encryptedBase64, key, { method = ENCRYPTION_METHODS.AES_GCM } = {}) {
-    const combined = Uint8Array.from(atob(encryptedBase64), c => c.charCodeAt(0));
-    
-    const iv = combined.slice(0, 12);
-    const encryptedData = combined.slice(12);
-    
-    const decryptedData = await crypto.subtle.decrypt(
-        {
-            name: method,
-            iv: iv
-        },
-        key,
-        encryptedData
-    );
-    
-    const decoder = new TextDecoder();
-    return decoder.decode(decryptedData);
+    try {
+        logger.log('EncryptionUtil', 'Decrypting', encryptedBase64, key, method);
+        
+        // Validate input
+        if (!encryptedBase64 || typeof encryptedBase64 !== 'string') {
+            throw new Error('Invalid encrypted data: must be a non-empty string');
+        }
+        
+        // Check if the data is valid base64
+        if (!/^[A-Za-z0-9+/]*={0,2}$/.test(encryptedBase64)) {
+            throw new Error('Invalid base64 format');
+        }
+        
+        const combined = Uint8Array.from(atob(encryptedBase64), c => c.charCodeAt(0));
+        
+        // Validate minimum length (12 bytes for IV + at least 1 byte of data)
+        if (combined.length < 13) {
+            throw new Error('Encrypted data too short');
+        }
+        
+        const iv = combined.slice(0, 12);
+        const encryptedData = combined.slice(12);
+        
+        const decryptedData = await crypto.subtle.decrypt(
+            {
+                name: method,
+                iv: iv
+            },
+            key,
+            encryptedData
+        );
+        
+        const decoder = new TextDecoder();
+        return decoder.decode(decryptedData);
+    } catch (error) {
+        logger.error('EncryptionUtil', 'Decryption failed', error);
+        throw new Error(`Decryption failed: ${error.message}`);
+    }
 }
 
 export async function encryptWithSalt(plaintext, salt, password = '', { method = ENCRYPTION_METHODS.AES_GCM } = {}) {
@@ -89,8 +112,17 @@ export async function encryptWithSalt(plaintext, salt, password = '', { method =
 }
 
 export async function decryptWithSalt(encryptedBase64, salt, password = '', { method = ENCRYPTION_METHODS.AES_GCM } = {}) {
-    const key = await generateEncryptionKey(salt, password, { method });
-    return await decrypt(encryptedBase64, key, { method });
+    try {
+        if (!salt || typeof salt !== 'string') {
+            throw new Error('Invalid salt: must be a non-empty string');
+        }
+        
+        const key = await generateEncryptionKey(salt, password, { method });
+        return await decrypt(encryptedBase64, key, { method });
+    } catch (error) {
+        logger.error('EncryptionUtil', 'DecryptWithSalt failed', error);
+        throw new Error(`DecryptWithSalt failed: ${error.message}`);
+    }
 }
 
 /**

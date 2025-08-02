@@ -185,7 +185,12 @@ class OptionsApp extends BaseSimpleApp {
             const settings = await this.stateService.settings.loadFromStorage();
             const defaultSettings = settings || createInitialSettingsState();
             const hydratedSettings = this.hydrateSettings(defaultSettings);
-            this.panel.setAllSettings(hydratedSettings);
+            
+            // Get encryption status for all providers
+            const encryptionStatuses = await this.stateService.settings.getAllProvidersEncryptionStatus();
+            
+            // Pass both settings and statuses to the panel
+            this.panel.setAllSettings(hydratedSettings, encryptionStatuses);
         } catch (error) {
             logger.error('OptionsApp', 'Error loading settings:', error);
             this.panel.showStatus('Error loading settings: ' + error.message, true);
@@ -298,6 +303,10 @@ class OptionsApp extends BaseSimpleApp {
             
             await this.stateService.settings.saveToStorage();
             logger.log('OptionsApp', '4. Settings saved to storage');
+            
+            // Update encryption status indicators after save
+            const encryptionStatuses = await this.stateService.settings.getAllProvidersEncryptionStatus();
+            this.panel.setAllSettings(await this.stateService.settings.getSettings(), encryptionStatuses);
             
             // No need to notify background - it will detect the storage change automatically
             this.panel.showStatus('Saved', false);

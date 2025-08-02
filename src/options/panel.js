@@ -233,8 +233,10 @@ export class OptionsPanel {
 
     /**
      * Set all settings fields from a settings object
+     * @param {Object} settings - The settings object
+     * @param {Object} encryptionStatuses - Map of provider names to encryption status
      */
-    setAllSettings(settings) {
+    setAllSettings(settings, encryptionStatuses = {}) {
         if (!settings) return;
 
         // General settings
@@ -279,6 +281,33 @@ export class OptionsPanel {
                             } else {
                                 this.elements.providerInputs[provider][key].value = value || '';
                             }
+                        }
+                    }
+                }
+                
+                // Update status indicator if we have encryption status
+                const status = encryptionStatuses[provider];
+                if (status) {
+                    const statusElement = document.getElementById(`${provider}ApiKeyStatus`);
+                    if (statusElement) {
+                        statusElement.className = 'ww-api-key-status';
+                        
+                        switch (status) {
+                            case 'valid':
+                                statusElement.classList.add('status-valid');
+                                statusElement.innerHTML = '●';
+                                statusElement.title = 'API key is encrypted and valid';
+                                break;
+                            case 'missing':
+                                statusElement.classList.add('status-missing');
+                                statusElement.innerHTML = '●';
+                                statusElement.title = 'API key not set';
+                                break;
+                            case 'invalid':
+                                statusElement.classList.add('status-invalid');
+                                statusElement.innerHTML = '●';
+                                statusElement.title = 'API key decryption failed';
+                                break;
                         }
                     }
                 }
@@ -575,6 +604,7 @@ export class OptionsPanel {
                 <label class="ww-form-label" for="${provider.id}ApiKey">
                     ${provider.name} API Key:
                     <a href="${provider.url}" target="_blank" class="ww-label-help">🔗</a>
+                    <span id="${provider.id}ApiKeyStatus" class="ww-api-key-status" title="API key status"></span>
                 </label>
                 <input type="password" id="${provider.id}ApiKey" class="ww-form-input" placeholder="Enter ${provider.name} API key" data-depends-on="chatProvider" data-provider="${provider.id}">
             `;

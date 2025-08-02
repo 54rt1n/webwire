@@ -1,6 +1,7 @@
 import { EVENTS } from '../../core/events.js';
 import { logger } from '../../core/logging.js';
 import { encryptWithSalt, decryptWithSalt, ENCRYPTION_METHODS } from '../../utils/encryption-util.js';
+import { generateEncryptionKey } from '../../utils/id-generator.js';
 
 /**
  * Plugin for handling settings state
@@ -36,11 +37,13 @@ export class SettingsStatePlugin {
             return value;
         }
 
+        const { data, method } = value;
+
         // take the encrypted object and return our decrypted value
-        const salt = this.config?.get('security.salt');
+        const salt = this.config.get('security.salt');
         const password = this.stateService.state.settings.security.encryptionKey;
 
-        const decrypted = await decryptWithSalt(value.data, salt, password, { method: value.method });
+        const decrypted = await decryptWithSalt(data, salt, password, { method });
         return decrypted;
     }
 
@@ -86,6 +89,18 @@ export class SettingsStatePlugin {
             
             // Deep merge loaded settings with existing settings to preserve structure
             const mergedSettings = this.deepMerge(this.stateService.state.settings || {}, settings);
+            
+            // Check if encryption key is missing and generate one if needed
+            if (!mergedSettings.security || !mergedSettings.security.encryptionKey) {
+                logger.log('StateService::SettingsState', 'Missing encryption key, generating new one');
+                if (!mergedSettings.security) {
+                    mergedSettings.security = {};
+                }
+                mergedSettings.security.encryptionKey = generateEncryptionKey();
+                // Save the new key immediately
+                this.stateService.state.settings = mergedSettings;
+                await this.saveToStorage();
+            }
             
             this.stateService.state.settings = mergedSettings;
             logger.log('StateService::SettingsState', 'Settings loaded and merged with initial state:', mergedSettings);
@@ -167,6 +182,28 @@ export class SettingsStatePlugin {
     }
 
     /**
+     * Get provider config
+     */
+    async getProviderConfig(providerName) {
+        const provider = this.stateService.state.settings?.ai?.providers[providerName];
+        if (!provider) {
+            logger.warn('StateService::SettingsState', 'No provider configuration found for model:', providerName);
+            return null;
+        }
+        const { apiKey } = provider;
+
+        logger.log('StateService::SettingsState', 'Provider config for', providerName, ':', provider);
+
+        // Decrypt the encrypted key
+        try {
+            return await this._decryptKey(apiKey);
+        } catch (error) {
+            logger.error('StateService::SettingsState', 'Failed to decrypt API key:', error, 'provider:', provider);
+            return null;
+        }
+    }
+
+    /**
      * Get model config
      */
     async getModelConfig(type = null) {
@@ -189,24 +226,10 @@ export class SettingsStatePlugin {
         }
 
         logger.log('StateService::SettingsState', 'Model for type', type, ':', model);
-        
-        const provider = this.stateService.state.settings?.ai?.providers[model.provider];
-        if (!provider) {
-            logger.warn('StateService::SettingsState', 'No provider configuration found for model:', model);
-            return null;
-        }
 
-        logger.log('StateService::SettingsState', 'Provider config for', model.provider, ':', provider);
-
-        // Decrypt the encrypted key
-        try {
-            provider.apiKey = await this._decryptKey(provider.apiKey);
-        } catch (error) {
-            logger.error('StateService::SettingsState', 'Failed to decrypt API key:', error);
-            provider.apiKey = '';
-        }
+        const apiKey = await this.getProviderConfig(model.provider);
         
-        const config = {...model, ...provider};
+        const config = {...model, apiKey};
         logger.log('StateService::SettingsState', 'Final model config:', config);
         return config;
     }
@@ -274,5 +297,45 @@ export class SettingsStatePlugin {
      */
     setCrashReportingEnabled(enabled) {
         this.stateService.state.settings.reporting.crashReportingEnabled = enabled;
+    }
+
+    /**
+     * Validate API key encryption status for a provider
+     * @param {string} providerName - The provider name
+     * @returns {Promise<'valid'|'missing'|'invalid'>} The encryption status
+     */
+    async validateApiKeyEncryption(providerName) {
+        try {
+            const provider = this.stateService.state.settings?.ai?.providers[providerName];
+            if (!provider || !provider.apiKey) {
+                return 'missing';
+            }
+
+            // Try to decrypt the key
+            const decryptedKey = await this.getProviderConfig(providerName);
+            if (decryptedKey) {
+                return 'valid';
+            } else {
+                return 'invalid';
+            }
+        } catch (error) {
+            logger.error('StateService::SettingsState', 'Failed to validate API key encryption:', error);
+            return 'invalid';
+        }
+    }
+
+    /**
+     * Get encryption status for all providers
+     * @returns {Promise<Object>} Map of provider name to status
+     */
+    async getAllProvidersEncryptionStatus() {
+        const providers = this.stateService.state.settings?.ai?.providers || {};
+        const status = {};
+        
+        for (const providerName of Object.keys(providers)) {
+            status[providerName] = await this.validateApiKeyEncryption(providerName);
+        }
+        
+        return status;
     }
 } 

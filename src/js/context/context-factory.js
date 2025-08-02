@@ -125,7 +125,7 @@ export async function contextFactory(eventBus, context,
             throw new Error('Initial state is required for content state');
         }
         logger.log('ContextFactory', 'Creating content state service with initial state:', initialState);
-        results.stateService = new ContentStateService(initialState, results.eventBus);
+        results.stateService = new ContentStateService(initialState, results.eventBus, config);
     }
 
     // AI client creation removed - now handled lazily by ChatService.getAiClient()
