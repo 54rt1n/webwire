@@ -2,6 +2,7 @@ import { EVENTS } from '../../core/events.js';
 import { logger } from '../../core/logging.js';
 import { encryptWithSalt, decryptWithSalt, ENCRYPTION_METHODS } from '../../utils/encryption-util.js';
 import { generateEncryptionKey } from '../../utils/id-generator.js';
+import { deepClone } from '../../utils/deep-merge.js';
 
 /**
  * Plugin for handling settings state
@@ -156,7 +157,24 @@ export class SettingsStatePlugin {
      * @returns {Object}
      */
     getSettings() {
-        return this.stateService.state.settings;
+        return deepClone(this.stateService.state.settings);
+    }
+
+
+    /**
+     * Get settings
+     * @returns {Object}
+     */
+    async getSettingsAsync( { decrypt = false } = {} ) {
+        const settings = deepClone(this.stateService.state.settings);
+        if (decrypt) {
+            for (const provider of Object.values(settings?.ai?.providers)) {
+                if (provider.apiKey) {
+                    provider.apiKey = await this._decryptKey(provider.apiKey);
+                }
+            }
+        } else {}
+        return settings;
     }
 
     /**

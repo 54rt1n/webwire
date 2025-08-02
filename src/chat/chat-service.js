@@ -322,7 +322,7 @@ export class ChatService extends EventBindableComponent {
             }))).reduce((total, msg) => total + msg, 0);
             const userMessageTokens = await this.messageBuilder.countTokens(userMessage.content) + wrapperTokens;
             const maxContentTokens = this.aiClient.samplerConfig?.maxContentTokens || 16384;
-            const paddingTokens = 256;
+            const paddingTokens = 384;
             const maxTextTokens = maxContentTokens - aiResponseTokens - conversationTokens - systemPromptTokens - userMessageTokens - paddingTokens;
             logger.log(this, 'Max text tokens:', maxTextTokens, 'aiResponseTokens:', aiResponseTokens, 'conversationTokens:', conversationTokens, 'systemPromptTokens:', systemPromptTokens, 'userMessageTokens:', userMessageTokens);
             

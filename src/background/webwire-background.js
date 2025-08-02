@@ -877,7 +877,7 @@ class WebWireBackground {
 
             // Get state from our state service
             let state = {
-                settings: this.stateService.state.settings || {},
+                settings: await this.stateService.settings.getSettingsAsync({ decrypt: true }) || {},
                 conversation: this.stateService.state.conversation || {}, // TODO: tabs don't need all conversations
                 prompts: this.stateService.state.prompts || {},
                 tabs: {
