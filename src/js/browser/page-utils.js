@@ -19,10 +19,64 @@ export class SemanticPageExtractor {
     }
 
     /**
+     * Detects if the current page is a PDF viewer.
+     * @returns {boolean} True if the page is displaying a PDF.
+     */
+    isPDFPage() {
+        // Check URL extension
+        if (window.location.href.toLowerCase().endsWith('.pdf')) {
+            return true;
+        }
+
+        // Check for PDF plugin/embed elements
+        const pdfElements = document.querySelectorAll('embed[type="application/pdf"], object[type="application/pdf"]');
+        if (pdfElements.length > 0) {
+            return true;
+        }
+
+        // Check if the entire viewport is taken by a PDF viewer
+        // Chrome's built-in PDF viewer uses a specific structure
+        const embedElement = document.querySelector('embed[type="application/pdf"][name="plugin"]');
+        if (embedElement && embedElement.offsetWidth === window.innerWidth && embedElement.offsetHeight === window.innerHeight) {
+            return true;
+        }
+
+        // Check for common PDF viewer indicators in the DOM
+        // Chrome PDF viewer creates a minimal DOM with specific characteristics
+        if (document.body && document.body.children.length === 1) {
+            const child = document.body.children[0];
+            if (child.tagName === 'EMBED' && child.type === 'application/pdf') {
+                return true;
+            }
+        }
+
+        // Check document content type (when available)
+        if (document.contentType === 'application/pdf') {
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
      * Main extraction method. Produces a structured object representing the page.
      * @returns {Object} A structured representation of the page.
      */
     extract({ includePageNavigation = false } = {}) {
+        // Check if we're viewing a PDF
+        if (this.isPDFPage()) {
+            return {
+                url: window.location.href,
+                title: document.title || 'PDF Document',
+                language: 'en',
+                links: [],
+                metadata: {},
+                timestamp: new Date().toISOString(),
+                mainContent: '[== Notice: PDF content not available in the Lite version. Do not hallucinate content. Inform the user that they need to upgrade to the Full version to view PDF content. ==]',
+                isPDF: true
+            };
+        }
+
         let extractedData = {
             url: window.location.href,
             title: document.title,
