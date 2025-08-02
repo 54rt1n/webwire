@@ -61,8 +61,16 @@ export class SettingsStatePlugin {
             }
         }
 
-        this.stateService.state.settings = settings;
-        logger.debug('StateService::SettingsState', 'Settings set:', settings);
+        // Preserve the security section which contains the encryption key
+        const currentSecurity = this.stateService.state.settings?.security;
+        
+        // Merge the new settings with the existing state, preserving security
+        this.stateService.state.settings = {
+            ...settings,
+            security: currentSecurity || {}
+        };
+        
+        logger.debug('StateService::SettingsState', 'Settings set:', this.stateService.state.settings);
     }
 
     /**
@@ -271,12 +279,18 @@ export class SettingsStatePlugin {
         }
         
         // Check for API key if required by provider
-        if (chatModel.provider !== 'aimind' && !provider.apiKey) {
+        // API key can be either a string (plaintext) or an object (encrypted)
+        const hasApiKey = provider.apiKey && (
+            typeof provider.apiKey === 'string' || 
+            (typeof provider.apiKey === 'object' && provider.apiKey.data)
+        );
+        
+        if (chatModel.provider !== 'aimind' && !hasApiKey) {
             return false;
         }
         
         // For AIMind, check for both endpoint and key
-        if (chatModel.provider === 'aimind' && (!provider.apiEndpoint || !provider.apiKey)) {
+        if (chatModel.provider === 'aimind' && (!provider.apiEndpoint || !hasApiKey)) {
             return false;
         }
         

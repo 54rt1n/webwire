@@ -80,8 +80,10 @@ class OptionsApp extends BaseSimpleApp {
     validateSingleField(field) {
         const value = field.value.trim();
         const isRequired = this.isFieldRequired(field);
+        const hasEncryptedValue = field.dataset.encryptedValue ? true : false;
         
-        if (isRequired && !value) {
+        // Field is invalid only if required AND empty AND no encrypted value
+        if (isRequired && !value && !hasEncryptedValue) {
             field.style.border = '2px solid #ef4444';
             field.style.backgroundColor = '#fef2f2';
             
@@ -218,8 +220,10 @@ class OptionsApp extends BaseSimpleApp {
         fieldsToValidate.forEach(field => {
             if (this.isFieldRequired(field)) {
                 const value = field.value?.trim() || '';
+                const hasEncryptedValue = field.dataset.encryptedValue ? true : false;
                 
-                if (!value) {
+                // Field is valid if it has a value OR has an encrypted value stored
+                if (!value && !hasEncryptedValue) {
                     const fieldLabel = this.getFieldLabel(field.id);
                     errors.push(`${fieldLabel} is required`);
                     missingFields.push(field.id);
