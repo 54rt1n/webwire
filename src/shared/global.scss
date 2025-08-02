@@ -35,10 +35,10 @@
   box-sizing: border-box;
   
   /* Typography scoped to extension containers */
-  font-family: var(--font-family-base);
-  font-size: var(--font-size-base);
-  line-height: var(--line-height-normal);
-  color: var(--color-text-primary);
+  font-family: var(--font-family-base) !important;
+  font-size: var(--font-size-base) !important;
+  line-height: var(--line-height-normal) !important;
+  color: var(--color-text-primary) !important;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   
@@ -50,9 +50,9 @@
   
   /* Scoped typography elements */
   h1, h2, h3, h4, h5, h6 {
-    font-weight: var(--font-weight-semibold);
-    line-height: var(--line-height-tight);
-    color: var(--color-text-primary);
+    font-weight: var(--font-weight-semibold) !important;
+    line-height: var(--line-height-tight) !important;
+    color: var(--color-text-primary) !important;
     margin: 0 0 var(--space-4) 0;
   }
   
@@ -294,10 +294,10 @@
         }
         
         .ww-drawer-toggle {
-          background: var(--color-gray-0);
-          border: 1px solid var(--color-border);
+          background: var(--color-gray-0) !important;
+          border: 1px solid var(--color-border) !important;
           border-radius: var(--radius-sm);
-          padding: var(--space-1);
+          padding: var(--space-1) !important;
           cursor: pointer;
           color: var(--color-text-secondary);
           display: flex;
@@ -857,12 +857,12 @@
       }
       
       .ww-close {
-        background: none;
-        border: none;
-        font-size: var(--font-size-xl);
-        color: var(--color-text-secondary);
+        background: none !important;
+        border: none !important;
+        font-size: var(--font-size-xl) !important;
+        color: var(--color-text-secondary) !important;
         cursor: pointer;
-        padding: var(--space-1);
+        padding: var(--space-1) !important;
         
         &:hover {
           color: var(--color-text-primary);
@@ -1018,42 +1018,42 @@
     position: relative;
     
     &.ww-user {
-      background: var(--color-primary-100);
+      background: var(--color-primary-100) !important;
       align-self: flex-end;
       border-bottom-right-radius: var(--radius-sm);
-      color: var(--color-text-primary);
+      color: var(--color-text-primary) !important;
       box-shadow: inset 3px 0 0 var(--color-primary-300), inset 0 1px 0 var(--color-primary-300);
     }
     
     &.ww-assistant {
-      background: var(--color-gray-50);
+      background: var(--color-gray-50) !important;
       align-self: flex-start;
       border-bottom-left-radius: var(--radius-sm);
-      color: var(--color-text-primary);
+      color: var(--color-text-primary) !important;
       box-shadow: inset -3px 0 0 var(--color-gray-300), inset 0 -1px 0 var(--color-gray-300);
     }
     
     &.ww-thinking {
-      background: var(--color-gray-100);
+      background: var(--color-gray-100) !important;
       border: 1px dashed var(--color-gray-400);
       align-self: flex-start;
       opacity: 0.8;
-      color: var(--color-gray-700);
+      color: var(--color-gray-700) !important;
       box-shadow: inset -3px 0 0 var(--color-gray-300), inset 0 -1px 0 var(--color-gray-300);
     }
     
     &.ww-error {
-      background: var(--color-error-50);
+      background: var(--color-error-50) !important;
       border: 1px solid var(--color-error-200);
-      color: var(--color-error-600);
+      color: var(--color-error-600) !important;
       align-self: flex-start;
       box-shadow: inset -3px 0 0 var(--color-error-300), inset 0 -1px 0 var(--color-error-300);
     }
 
     .ww-sender {
-      font-size: var(--font-size-xs);
-      font-weight: var(--font-weight-semibold);
-      color: var(--color-text-secondary);
+      font-size: var(--font-size-xs) !important;
+      font-weight: var(--font-weight-semibold) !important;
+      color: var(--color-text-secondary) !important;
       margin-bottom: var(--space-1);
       text-transform: uppercase;
       letter-spacing: 0.5px;
@@ -1061,14 +1061,14 @@
     
     .ww-content {
       margin-bottom: var(--space-1);
-      color: inherit;
-      font-weight: var(--font-weight-normal);
-      line-height: var(--line-height-relaxed);
+      color: inherit !important;
+      font-weight: var(--font-weight-normal) !important;
+      line-height: var(--line-height-relaxed) !important;
     }
     
     .ww-time {
-      font-size: var(--font-size-xs);
-      color: var(--color-text-muted);
+      font-size: var(--font-size-xs) !important;
+      color: var(--color-text-muted) !important;
       align-self: flex-end;
       margin-top: var(--space-1);
     }
@@ -1348,6 +1348,7 @@
     gap: var(--space-2);
     padding: var(--space-3) var(--space-4);
     border: 1px solid var(--color-border);
+    margin: 0;
     border-radius: var(--radius-lg);
     font-size: var(--font-size-sm);
     font-weight: var(--font-weight-medium);
@@ -1356,11 +1357,12 @@
     text-decoration: none;
     transition: all var(--transition-normal);
     background-color: var(--color-surface);
-    color: var(--color-text-primary);
+    color: var(--color-text-primary) !important;
     
     &:hover:not(:disabled) {
       background-color: var(--color-gray-100);
       border-color: var(--color-gray-300);
+      color: var(--color-text-primary) !important;
       transform: translateY(-1px);
     }
     
@@ -1370,52 +1372,52 @@
     
     &:disabled {
       background-color: var(--color-gray-200);
-      color: var(--color-text-muted);
+      color: var(--color-text-muted) !important;
       cursor: not-allowed;
       transform: none;
     }
     
     &.ww-primary {
-      background-color: var(--color-primary-500);
-      color: white;
-      border-color: var(--color-primary-500);
+      background-color: var(--color-primary-500) !important;
+      color: white !important;
+      border-color: var(--color-primary-500) !important;
       
       &:hover:not(:disabled) {
-        background-color: var(--color-primary-600);
-        border-color: var(--color-primary-600);
+        background-color: var(--color-primary-600) !important;
+        border-color: var(--color-primary-600) !important;
       }
     }
     
     &.ww-success {
-      background-color: var(--color-success-500);
-      color: white;
-      border-color: var(--color-success-500);
+      background-color: var(--color-success-500) !important;
+      color: white !important;
+      border-color: var(--color-success-500) !important;
       
       &:hover:not(:disabled) {
-        background-color: var(--color-success-600);
-        border-color: var(--color-success-600);
+        background-color: var(--color-success-600) !important;
+        border-color: var(--color-success-600) !important;
       }
     }
     
     &.ww-danger {
-      background-color: var(--color-error-500);
-      color: white;
-      border-color: var(--color-error-500);
+      background-color: var(--color-error-500) !important;
+      color: white !important;
+      border-color: var(--color-error-500) !important;
       
       &:hover:not(:disabled) {
-        background-color: var(--color-error-600);
-        border-color: var(--color-error-600);
+        background-color: var(--color-error-600) !important;
+        border-color: var(--color-error-600) !important;
       }
     }
     
     &.ww-secondary {
-      background-color: var(--color-gray-600);
-      color: white;
-      border-color: var(--color-gray-600);
+      background-color: var(--color-gray-600) !important;
+      color: white !important;
+      border-color: var(--color-gray-600) !important;
       
       &:hover:not(:disabled) {
-        background-color: var(--color-gray-700);
-        border-color: var(--color-gray-700);
+        background-color: var(--color-gray-700) !important;
+        border-color: var(--color-gray-700) !important;
       }
     }
     

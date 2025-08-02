@@ -167,7 +167,7 @@ export class ConversationStatePlugin {
      * @param {object} options - { userName?, personaName?, mood?, pageUrl?, timestamp?, toolResults?, toolCalls?, parseErrors? }
      */
     storeAssistantMessage(threadId, assistantMessage, { userName, personaName, mood, pageUrl, timestamp,
-        toolResults = [], toolCalls = [], parseErrors = [], ...options } = {}) {
+        toolResults = [], toolCalls = [], parseErrors = [], ...options } = {}, crossApply = {}) {
         const state = this._safeConversationState();
 
         if (!timestamp) {
@@ -186,12 +186,24 @@ export class ConversationStatePlugin {
                 role: 'assistant',
                 content: assistantMessage.content,
                 timestamp: timestamp,
-                think: assistantMessage.think, // optional extracted thought content
                 toolResults: toolResults,
                 toolCalls: toolCalls,
                 parseErrors: parseErrors,
-                ...assistantMessage
+                ...assistantMessage,
+                ...crossApply
             });
+        }
+
+        // Apply crossApply to the corresponding user message with matching messageId
+        if (Object.keys(crossApply).length > 0 && assistantMessage.messageId) {
+            const messages = state.history[threadId];
+            const userMessage = messages.find(m => m.role === 'user' && m.messageId === assistantMessage.messageId);
+            if (userMessage) {
+                Object.assign(userMessage, crossApply);
+                logger.log(this, `Applied crossApply to user message ${userMessage.messageId}:`, crossApply);
+            } else {
+                logger.warn(this, `Could not find user message with messageId ${assistantMessage.messageId} to apply crossApply`);
+            }
         }
 
         // Update metadata

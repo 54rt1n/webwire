@@ -261,6 +261,8 @@ export class ChatService extends EventBindableComponent {
     async handleUserMessage(payload, { autoExecuteTools = false, silent = false,
         forcePageContent = false, customSystemPrompt = null, isRetry = false } = {}) {
         logger.log(this, 'Handling user message:', payload);
+
+        const messageId = generateMessageId();
         
         const { message } = payload;
         
@@ -280,8 +282,8 @@ export class ChatService extends EventBindableComponent {
         const persona = this.stateService.aim.getAimMessageOptions();
 
         // Declare these outside try block so they're accessible in finally
-        let userMsg = null;
-        let assistantMsg = null;
+        let assistantMessage = null;
+        let userMessage = null;
 
         try {
 
@@ -302,11 +304,21 @@ export class ChatService extends EventBindableComponent {
             // Process variables in the original user message content
             const processedUserContent = PromptVariables.processPromptText(message, this.stateService, pageData);
             
-            let userMessage = {
-                messageId: generateMessageId(),
+            userMessage = {
+                messageId,
                 role: MESSAGE_ROLES.USER,
                 content: processedUserContent,
-                timestamp: Date.now()
+                timestamp: Date.now(),
+                pageUrl: pageUrl,
+                title: document.title
+            };
+
+            assistantMessage = { 
+                messageId,
+                role: MESSAGE_ROLES.ASSISTANT, 
+                timestamp: userMessage.timestamp + 1,
+                model: aiClient.model,
+                status: 'pending'
             };
 
             // Get available tools and build system prompt
@@ -348,24 +360,11 @@ export class ChatService extends EventBindableComponent {
             enhancedUserMessage = PromptVariables.processPromptText(enhancedUserMessage, this.stateService, pageData);
 
             // Store user message immediately in conversation state (part 1 of 2-part creation)
-            this.stateService.conversation.storePartialUserMessage(threadId, {
-                ...userMessage,
-                pageUrl: pageUrl,
-                title: document.title
-            }, {
+            this.stateService.conversation.storePartialUserMessage(threadId, userMessage, {
                 ...persona,
                 pageUrl: pageUrl,
                 title: document.title
             });
-
-            // Prepare user message for storage (we have all info at this point)
-            userMsg = { 
-                role: MESSAGE_ROLES.USER, 
-                content: message,
-                timestamp: userMessage.timestamp,
-                pageUrl: pageUrl,
-                title: document.title
-            };
 
             // Display user message in panel
             if (!silent) {
@@ -388,23 +387,23 @@ export class ChatService extends EventBindableComponent {
             const toolResults = await this.toolExecutor.executeTools(toolCalls, autoExecuteTools);
             
             // TODO separate out think xml tags
-            assistantMsg = { 
-                role: MESSAGE_ROLES.ASSISTANT, 
+            assistantMessage = { 
+                ...assistantMessage,
                 content: response,
-                timestamp: userMessage.timestamp + 1,
                 toolCalls,
                 toolResults,
                 parseErrors,
-                model: aiClient.model
             };
 
             // Finalize the thinking message with the complete response
-            this.responseHandler.finalizeStreamingMessage(thinkingMessage, assistantMsg);
+            this.responseHandler.finalizeStreamingMessage(thinkingMessage, assistantMessage);
 
-            this.stateService.conversation.storeAssistantMessage(threadId, assistantMsg, {
+            this.stateService.conversation.storeAssistantMessage(threadId, assistantMessage, {
                 ...persona,
                 pageUrl: pageUrl,
                 title: document.title,
+            }, {
+                status: 'success'
             });
 
             logger.log(this, 'Message processing complete');
@@ -432,18 +431,18 @@ export class ChatService extends EventBindableComponent {
                     );
                     
                     // Store the cancelled message in conversation state
-                    assistantMsg = { 
-                        role: MESSAGE_ROLES.ASSISTANT, 
+                    assistantMessage = { 
+                        ...assistantMessage,
                         content: cancelledContent,
-                        timestamp: Date.now(),
-                        cancelled: true,  // Mark as cancelled
-                        model: aiClient.model
                     };
                     
-                    this.stateService.conversation.storeAssistantMessage(threadId, assistantMsg, {
+                    this.stateService.conversation.storeAssistantMessage(threadId, assistantMessage, {
                         ...persona,
                         pageUrl: pageUrl,
-                        title: document.title,
+                        title: document.title
+                    }, {
+                        cancelled: true,
+                        status: 'cancelled'
                     });
                 }
                 // Re-enable retry button after cancellation
@@ -461,18 +460,18 @@ export class ChatService extends EventBindableComponent {
             }
 
             // Store the error message in conversation state
-            assistantMsg = { 
-                role: MESSAGE_ROLES.ASSISTANT, 
+            assistantMessage = { 
+                ...assistantMessage,
                 content: error.message,
-                timestamp: Date.now(),
-                error: true,
-                model: aiClient.model
             };
                     
-            this.stateService.conversation.storeAssistantMessage(threadId, assistantMsg, {
+            this.stateService.conversation.storeAssistantMessage(threadId, assistantMessage, {
                 ...persona,
                 pageUrl: pageUrl,
                 title: document.title,
+            }, {
+                error: true,
+                status: 'error'
             });
             
             // Re-enable retry button after error
@@ -480,20 +479,20 @@ export class ChatService extends EventBindableComponent {
         } finally {
             // Always save the conversation to persistent storage
             // This ensures error/cancelled messages are persisted
-            if (userMsg && assistantMsg) {
+            if (userMessage && assistantMessage) {
                 logger.log(this, 'Persisting conversation (including errors/cancellations)');
                 
                 this.eventBus.emit(EVENTS.CHAT.SAVE_MESSAGE, {
                     threadId: threadId,
-                    userMessage: userMsg,
-                    assistantMessage: assistantMsg,
+                    userMessage: userMessage,
+                    assistantMessage: assistantMessage,
                     options: {
                         ...persona,
                         pageUrl: pageUrl,
                         title: document.title,
                         isRetry: isRetry,
-                        error: assistantMsg.error,
-                        cancelled: assistantMsg.cancelled
+                        error: assistantMessage.error,
+                        cancelled: assistantMessage.cancelled
                     }
                 }, { target: EVENT_CONTEXT.BACKGROUND });
             }
@@ -776,15 +775,16 @@ export class ChatService extends EventBindableComponent {
             return;
         }
 
+        // Mark the user message as retried
         this.stateService.conversation.markMessage(threadId, lastUserMessage.messageId, 'retried');
 
         // Check if the last message in the panel is an AI message before removing
         const messages = this.stateService.conversation.getConversationMessages(threadId);
         const lastMessage = messages[messages.length - 1];
         
-        // Only remove the last message from the panel if it's an AI message
-        // This prevents removing the user message when retry is clicked after using the back button
+        // Mark the last assistant message as retried too
         if (lastMessage && lastMessage.role === 'assistant') {
+            this.stateService.conversation.markMessage(threadId, lastMessage.messageId, 'retried');
             this.panel.removeLastMessage();
         }
         
