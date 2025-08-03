@@ -528,6 +528,7 @@
     .ww-retry-button {
       align-self: center;
       margin-top: var(--space-2);
+      margin-right: var(--space-6); // Prevent overlap with drawer toggle
       padding: 2px 12px;
       font-size: var(--font-size-xs);
       color: var(--color-gray-600);
