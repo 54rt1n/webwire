@@ -37,7 +37,7 @@ export class EmojiBrowser {
      */
     _createBrowser() {
         this.container = document.createElement('div');
-        this.container.className = 'emoji-browser-modal';
+        this.container.className = 'emoji-browser-modal ww-modal';
         this.container.style.display = 'none';
         
         this.container.innerHTML = `

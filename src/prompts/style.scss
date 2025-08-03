@@ -59,6 +59,13 @@
         font-size: var(--font-size-sm);
       }
 
+      .ww-btn-warning {
+        @include common.ww-button-base;
+        @include common.ww-button-variant-warning;
+        padding: var(--space-2) var(--space-4);
+        font-size: var(--font-size-sm);
+      }
+
       .ww-btn-primary {
         @include common.ww-button-base;
         @include common.ww-button-variant-primary;
@@ -617,10 +624,18 @@
             font-size: var(--font-size-sm);
           }
 
-          .ww-form-input,
+          .ww-form-input {
+            @include common.ww-form-input-base;
+            width: 100%;
+          }
+
           .ww-form-select {
             @include common.ww-form-input-base;
             width: 100%;
+            cursor: pointer;
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            appearance: none;
           }
 
           .ww-form-textarea {
