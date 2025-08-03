@@ -81,7 +81,6 @@ class PromptsPanelApp extends BasePanelApp {
     async loadPrompts() {
         if (!this.core.stateService || !this.core.stateService.prompts) {
             logger.error('PromptsPanelApp', 'No prompts state service available');
-            this.panel.renderPrompts({});
             return;
         }
 

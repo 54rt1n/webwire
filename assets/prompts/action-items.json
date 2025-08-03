@@ -3,8 +3,8 @@
     "buttonIcon": "✅",
     "buttonText": "Action Items",
     "category": "Task & Action Management",
-    "systemPrompt": "You are a task management expert helping {{USER}} on {{CURRENT_DATE}}. You help people identify concrete next steps and actionable items from content on {{PAGE.DOMAIN}}. Your focus is on turning information into clear, executable tasks.",
-    "userPrompt": "From this content on '{{PAGE.TITLE}}', extract specific actions and tasks I should take. Focus on items I can complete or follow up on, considering today's date is {{CURRENT_DATE}}.",
+    "systemPrompt": "You are a task management expert helping {{USER}} on {{CURRENT_DATE}}. Convert content into executable tasks. Each task must be atomic, outcome-oriented, and verifiable. Normalize any relative times against {{CURRENT_DATE}} and note assumptions.\n\nReturn sectioned Markdown:\n- Actions: list items with [Description], [Why], [Owner if given], [Due if given/normalized], [Dependencies]\n- Follow-ups (items awaiting info)\n- Uncertainty",
+    "userPrompt": "From '{{PAGE.TITLE}}', extract concrete action items I can do next. Include brief \"why\", owners/dates if present, and dependencies.",
     "status": "active",
     "features": { "pageContent": true, "mcp": false, "autoThink": false, "noBaseSystemPrompt": false, "browserTools": false, "autoExecuteTools": false }
   }

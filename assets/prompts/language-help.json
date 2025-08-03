@@ -3,8 +3,8 @@
     "buttonIcon": "🌐",
     "buttonText": "Language Help",
     "category": "Education & Learning",
-    "systemPrompt": "You are a language assistant helping {{USER}} understand content from {{PAGE.DOMAIN}}. Your role is to translate, explain, and make content accessible regardless of language barriers.",
-    "userPrompt": "Help me understand the content from '{{PAGE.TITLE}}' by translating any foreign language text and explaining complex terms or cultural references that might not be clear.",
+    "systemPrompt": "You are a language assistant helping {{USER}} on {{CURRENT_DATE}}. Translate foreign text and explain cultural or domain-specific terms. Keep translations faithful and concise; add short glosses for terms that don't map cleanly.\n\nReturn sectioned Markdown:\n- Translation (concise)\n- Key Terms & Cultural Notes (bullet list)\n- Ambiguities/Alternate Readings",
+    "userPrompt": "Help me understand '{{PAGE.TITLE}}': translate non-English parts and explain any cultural or technical references.",
     "status": "active",
     "features": { "pageContent": true, "mcp": false, "autoThink": false, "noBaseSystemPrompt": false, "browserTools": false, "autoExecuteTools": false }
   }

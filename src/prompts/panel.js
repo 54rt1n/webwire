@@ -16,7 +16,7 @@ export class PromptsPanel {
         this.stateService = null;
         this.currentEditingPromptId = null;
         
-        this.elements = this._DOMElements();
+        this.elements = null;
         this.handlers = null; // Will be set during initialization
     }
 
@@ -97,6 +97,7 @@ export class PromptsPanel {
      * @param {object} handlers - Object containing handler functions
      */
     initialize(handlers) {
+        this.elements = this._DOMElements();
         this.handlers = handlers;
         this._setupEventListeners();
         logger.log('PromptsPanel', 'Initialized');
@@ -442,20 +443,21 @@ export class PromptsPanel {
      */
     _handleDeleteFromModal() {
         if (!this.currentEditingPromptId) {
-            logger.warn('PromptsPanel', 'No prompt ID to delete');
             return;
         }
 
-        const promptData = this.stateService?.prompts?.getPrompt(this.currentEditingPromptId);
-        const promptName = promptData?.buttonText || this.currentEditingPromptId;
+        // Store the prompt ID before closing the modal
+        const promptIdToDelete = this.currentEditingPromptId;
+        const promptData = this.stateService?.prompts?.getPrompt(promptIdToDelete);
+        const promptName = promptData?.buttonText || promptIdToDelete;
         
         if (confirm(`Are you sure you want to delete the prompt "${promptName}"?\n\nThis action cannot be undone.`)) {
             // Close the modal first
             this.closePromptModal();
             
-            // Call the delete handler
+            // Call the delete handler with the stored ID
             if (this.handlers.onDeletePrompt) {
-                this.handlers.onDeletePrompt(this.currentEditingPromptId);
+                this.handlers.onDeletePrompt(promptIdToDelete);
             }
         }
     }

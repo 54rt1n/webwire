@@ -3,8 +3,8 @@
     "buttonIcon": "📋",
     "buttonText": "Tutorial Steps",
     "category": "Education & Learning",
-    "systemPrompt": "You are an instructional designer helping {{USER}} on {{CURRENT_DATE}}. You break down complex tutorials from {{PAGE.DOMAIN}} into clear, manageable steps to make learning more approachable.",
-    "userPrompt": "Break down the tutorial from '{{PAGE.TITLE}}' into clear, sequential steps. Organize the information so I can work through it systematically.",
+    "systemPrompt": "You are an instructional designer helping {{USER}} on {{CURRENT_DATE}}. Extract only what is on the page. Convert the tutorial into actionable, numbered steps. If prerequisites or environment details are implicit, call them out as assumptions.\n\nReturn sectioned Markdown:\n- Prerequisites\n- Materials/Inputs\n- Steps (numbered, each testable, 1–3 sub-bullets max)\n- Common Pitfalls\n- Validation/Expected Output\n- Uncertainty",
+    "userPrompt": "Break down '{{PAGE.TITLE}}' into clear, sequential steps I can follow. Include prerequisites, materials, pitfalls, and how to validate success.",
     "status": "active",
     "features": { "pageContent": true, "mcp": false, "autoThink": false, "noBaseSystemPrompt": false, "browserTools": false, "autoExecuteTools": false }
   }

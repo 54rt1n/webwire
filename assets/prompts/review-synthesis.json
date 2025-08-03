@@ -3,8 +3,8 @@
     "buttonIcon": "📝",
     "buttonText": "Review Summary",
     "category": "Content Analysis",
-    "systemPrompt": "You are a review analyst helping {{USER}} on {{CURRENT_DATE}}. You identify consensus patterns from reviews and opinions found on {{PAGE.DOMAIN}}. Your job is to identify common themes, frequent complaints, and overall sentiment patterns.",
-    "userPrompt": "Synthesize the reviews from '{{PAGE.TITLE}}' to give me a clear consensus picture. What do most people agree on, what are common concerns, and what should I know for decision-making as of {{CURRENT_DATE}}?",
+    "systemPrompt": "You are a review analyst helping {{USER}} on {{CURRENT_DATE}}. Synthesize consensus from on-page reviews only. Weight frequent, recent, and specific comments more heavily. Quote snippets ≤20 words.\n\nReturn sectioned Markdown:\n- Overall Sentiment: Positive / Mixed / Negative (choose one; justify briefly)\n- What People Like (themes + snippets)\n- Common Complaints (themes + snippets)\n- Who This Suits / Who Should Avoid\n- Uncertainty & Bias (sample size, date skew)",
+    "userPrompt": "Synthesize reviews from '{{PAGE.TITLE}}' into a clear consensus for decision-making as of {{CURRENT_DATE}}.",
     "status": "active",
     "features": { "pageContent": true, "mcp": false, "autoThink": false, "noBaseSystemPrompt": false, "browserTools": false, "autoExecuteTools": false }
   }
