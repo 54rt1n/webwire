@@ -28,14 +28,14 @@ export class AIResponseHandler {
      */
     addThinkingMessage(message = 'Thinking...') {
         const messageId = generateMessageId();
-        
+
         // Display thinking message in panel
         this.panel.displayThinkingMessage({
             messageId: messageId,
             content: message,
             role: 'assistant'
         }, this.stateService.aim.getAimMessageOptions());
-        
+
         return { messageId };
     }
 
@@ -45,12 +45,12 @@ export class AIResponseHandler {
     setupStreaming(thinkingMessage) {
         this.streamingState.currentMessage = thinkingMessage;
         this.streamingState.streamingText = '';
-        
+
         // Set up exclusive stream handler for this request
         const unsubscribeStream = this.eventBus.onExclusive(EVENTS.AI.STREAM_CHUNK, (data) => {
             this.handleStreamingChunk(data.chunk, thinkingMessage);
         });
-        
+
         return unsubscribeStream;
     }
 
@@ -62,13 +62,13 @@ export class AIResponseHandler {
             this.streamingState.isActive = true;
             this.streamingState.streamingText = '';
             this.streamingState.currentMessage = messageHandle;
-            
+
             // Emit stream started event
             this.eventBus.emit(EVENTS.AI.STREAM_STARTED);
         }
-        
+
         this.streamingState.streamingText += chunk;
-        
+
         // Update panel directly
         this.panel.updateStreamingMessage(messageHandle.messageId, this.streamingState.streamingText);
     }
@@ -86,8 +86,8 @@ export class AIResponseHandler {
 
         // Finalize in panel
         this.panel.finalizeThinkingMessage(
-            messageHandle.messageId, 
-            assistantMessage.content, 
+            messageHandle.messageId,
+            assistantMessage.content,
             assistantMessage.toolCalls
         );
     }
@@ -98,17 +98,15 @@ export class AIResponseHandler {
     async generateAIResponse(aiClient, enhancedUserMessage, messagesForAPI, systemPrompt, { apiArgs = {} } = {}) {
         // Create abort controller for this request
         this.streamingState.abortController = new AbortController();
-        
+
         // Create thinking message
         const thinkingMessage = this.addThinkingMessage();
-        
+
         // Set up streaming
         const unsubscribeStream = this.setupStreaming(thinkingMessage);
 
-        logger.log(this, 'API args:', apiArgs);
-        
         try {
-            const response = await aiClient.generateTurn(enhancedUserMessage, messagesForAPI, { 
+            const response = await aiClient.generateTurn(enhancedUserMessage, messagesForAPI, {
                 systemPrompt,
                 maxHistory: 100,
                 abortController: this.streamingState.abortController,
@@ -118,7 +116,7 @@ export class AIResponseHandler {
             if (!response) {
                 throw new Error('No response received from AI client');
             }
-            
+
             return { response, thinkingMessage };
         } finally {
             unsubscribeStream();
@@ -134,7 +132,7 @@ export class AIResponseHandler {
             this.streamingState.abortController.abort();
             this.streamingState.abortController = null;
             this.streamingState.isActive = false;
-            
+
             // Emit stream completed event when cancelled
             this.eventBus.emit(EVENTS.AI.STREAM_COMPLETED);
         }

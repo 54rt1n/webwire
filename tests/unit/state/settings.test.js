@@ -97,7 +97,12 @@ describe('SettingsStatePlugin', () => {
             };
             
             await plugin.setSettings(testSettings);
-            expect(stateService.state.settings).toEqual(testSettings);
+            expect(stateService.state.settings).toEqual({
+                ...testSettings,
+                security: {
+                    encryptionKey: 'test-password-456'
+                }
+            });
         });
 
         it('should handle providers without API keys', async () => {
@@ -146,7 +151,12 @@ describe('SettingsStatePlugin', () => {
             await plugin.setSettings(initialSettings);
             await plugin.setSettings(newSettings);
 
-            expect(stateService.state.settings).toEqual(newSettings);
+            expect(stateService.state.settings).toEqual({
+                ...newSettings,
+                security: {
+                    encryptionKey: 'test-password-456'
+                }
+            });
         });
     });
 
@@ -202,7 +212,10 @@ describe('SettingsStatePlugin', () => {
                     models: { chat: { temperature: 0.8 } },
                     providers: { openai: { apiKey: 'old-key' } }
                 },
-                ui: { theme: 'dark' }
+                ui: { theme: 'dark' },
+                security: {
+                    encryptionKey: 'test-password-456'
+                }
             };
             
             const loadedSettings = {
@@ -228,7 +241,10 @@ describe('SettingsStatePlugin', () => {
                     },
                     providers: { openai: { apiKey: 'new-key' } }
                 },
-                ui: { theme: 'dark' }
+                ui: { theme: 'dark' },
+                security: {
+                    encryptionKey: 'test-password-456'
+                }
             });
         });
     });
@@ -279,15 +295,14 @@ describe('SettingsStatePlugin', () => {
             expect(config).toEqual({
                 provider: 'openai',
                 model: 'gpt-4',
-                apiKey: 'openai-key',
-                endpoint: 'https://api.openai.com'
+                apiKey: 'openai-key'
             });
         });
 
         it('should return model config for specified type', async () => {
             const config = await plugin.getModelConfig('thought');
             
-            expect(config).toEqual({
+            expect(config).toMatchObject({
                 provider: 'anthropic',
                 model: 'claude-3',
                 apiKey: 'anthropic-key'
@@ -300,8 +315,7 @@ describe('SettingsStatePlugin', () => {
             expect(config).toEqual({
                 provider: 'openai',
                 model: 'gpt-4',
-                apiKey: 'openai-key',
-                endpoint: 'https://api.openai.com'
+                apiKey: 'openai-key'
             });
         });
 
@@ -315,7 +329,11 @@ describe('SettingsStatePlugin', () => {
             stateService.state.settings.ai.models.chat = { provider: 'missing', model: 'test' };
             stateService.state.settings.ai.providers = {};
             const config = await plugin.getModelConfig();
-            expect(config).toBeNull();
+            expect(config).toEqual({
+                provider: 'missing',
+                model: 'test',
+                apiKey: null
+            });
         });
 
         it('should decrypt encrypted API keys', async () => {

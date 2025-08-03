@@ -54,8 +54,8 @@
     }
     
     &:hover {
-      background: var(--color-border);
-      color: var(--color-text-primary);
+      background: var(--color-border) !important;
+      color: var(--color-text-primary) !important;
     }
   }
   
@@ -405,7 +405,7 @@
         border: 1px solid var(--color-border);
         border-radius: var(--radius-lg);
         background: var(--color-surface);
-        color: var(--color-text-primary);
+        color: var(--color-text-primary) !important;
         cursor: pointer;
         transition: all var(--transition-normal);
         font-size: var(--font-size-sm);

@@ -46,6 +46,9 @@ describe('Logger', () => {
 
     describe('initialization', () => {
         it('should initialize with app config', () => {
+            // NOTE: If this test is failing, it means the default logging config in app-config.js
+            // is not set correctly for production. The globalLogLevel should be 'error' and
+            // globalDebugEnabled should be false for production builds.
             const config = logger.getLoggingConfig();
             expect(config.hasAppConfig).toBe(true);
             expect(config.globalLogLevel).toBe('error');

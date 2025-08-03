@@ -14,6 +14,7 @@ describe('ConversationStatePlugin', () => {
     let plugin;
     let eventBus;
     let storage;
+    let mockConfig;
 
     beforeEach(() => {
         eventBus = new MockEventBus('test');
@@ -24,8 +25,16 @@ describe('ConversationStatePlugin', () => {
             stash: new MockStorageAdapter(),
         };
         
+        // Mock config with security salt
+        mockConfig = {
+            get: vi.fn().mockImplementation((key) => {
+                if (key === 'security.salt') return 'test-salt-123';
+                return null;
+            })
+        };
+        
         // Create real state service
-        stateService = new StateService(eventBus, storage);
+        stateService = new StateService(eventBus, storage, mockConfig);
         stateService.initialize();
         
         // Get the conversation plugin

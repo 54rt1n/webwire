@@ -123,7 +123,6 @@ export class AbstractAIClient {
             ...samplerConfig
         };
 
-
         // snakcase the keys from the default config
         return Object.fromEntries(
             Object.entries(config).filter(([key]) => validKeys.includes(key)).map(([key, value]) => [key.replace(/([A-Z])/g, '_$1').toLowerCase(), value])
@@ -257,8 +256,7 @@ export class AbstractAIClient {
             apiArgs.tools = tools;
         }
 
-        const samplerConfig = this.getSamplerConfig(apiArgs);
-        logger.log(this, 'Sampler config:', samplerConfig);
+        const samplerConfig = this.getSamplerConfig(apiArgs.samplerConfig);
 
         try {
             this.state.lastRequestTime = Date.now();

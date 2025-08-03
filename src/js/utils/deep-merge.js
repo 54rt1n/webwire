@@ -58,6 +58,9 @@ export function deepMerge(target, source, options = {}) {
                 !Array.isArray(sourceValue) && !Array.isArray(targetValue)) {
                 // Recursively merge nested objects
                 result[key] = deepMerge(targetValue, sourceValue, options);
+            } else if (Array.isArray(sourceValue) && Array.isArray(targetValue) && mergeArrays) {
+                // Merge arrays when mergeArrays option is true
+                result[key] = [...deepClone(targetValue), ...deepClone(sourceValue)];
             } else {
                 // Overwrite with source value
                 result[key] = deepClone(sourceValue);
