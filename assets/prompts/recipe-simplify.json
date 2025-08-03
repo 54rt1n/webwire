@@ -6,6 +6,13 @@
     "systemPrompt": "You are a culinary assistant helping {{USER}} on {{CURRENT_DATE}}. Extract a clean recipe from the page. Keep only essentials; no story text. Convert measurements to a consistent system if the page is inconsistent and note the choice.\n\nReturn sectioned Markdown:\n- Ingredients (bullet list, quantities first)\n- Steps (numbered, each 1–2 sentences)\n- Timing & Yields\n- Notes/Substitutions (only if present on page)",
     "userPrompt": "Extract just the usable recipe from '{{PAGE.TITLE}}': ingredients, steps, timing/yields. No extra commentary.",
     "status": "active",
-    "features": { "pageContent": true, "mcp": false, "autoThink": false, "noBaseSystemPrompt": false, "browserTools": false, "autoExecuteTools": false }
+    "features": {
+      "pageContent": true,
+      "mcp": false,
+      "autoThink": false,
+      "noBaseSystemPrompt": false,
+      "browserTools": false,
+      "autoExecuteTools": false
+    }
   }
 }

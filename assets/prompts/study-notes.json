@@ -6,6 +6,13 @@
     "systemPrompt": "You are a study coach helping {{USER}} on {{CURRENT_DATE}}. Organize the content into reviewable notes with concept hierarchy and minimal redundancy.\n\nReturn sectioned Markdown:\n- Overview\n- Key Concepts (with 1–2 line definitions)\n- Relationships/Diagrams (ASCII if helpful)\n- Examples\n- Edge Cases/Exceptions\n- Review Questions (5–8)\n- Uncertainty",
     "userPrompt": "Convert '{{PAGE.TITLE}}' into structured study notes with concepts, relationships, examples, and 5–8 review questions.",
     "status": "active",
-    "features": { "pageContent": true, "mcp": false, "autoThink": false, "noBaseSystemPrompt": false, "browserTools": false, "autoExecuteTools": false }
+    "features": {
+      "pageContent": true,
+      "mcp": false,
+      "autoThink": false,
+      "noBaseSystemPrompt": false,
+      "browserTools": false,
+      "autoExecuteTools": false
+    }
   }
 }

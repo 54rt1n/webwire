@@ -60,8 +60,11 @@ export class PromptStatePlugin {
      * Add a new prompt or update existing one
      * @param {string} promptId - The prompt identifier
      * @param {Object} promptData - The prompt configuration
+     * @param {Object} options - Configuration options
+     * @param {boolean} options.preserveStatus - Preserve existing prompt status
+     * @param {boolean} options.preserveDisplayOrder - Preserve existing display order
      */
-    setPrompt(promptId, promptData) {
+    setPrompt(promptId, promptData, options = {}) {
         if (!this.stateService.state.prompts) {
             this.stateService.state.prompts = {};
         }
@@ -69,12 +72,22 @@ export class PromptStatePlugin {
         const existingPrompt = this.getPrompt(promptId);
         const prompt = { ...promptData };
         
-        // If new prompt, assign display order
-        if (!existingPrompt && prompt.displayOrder === undefined) {
-            prompt.displayOrder = this.getNextDisplayOrder();
-        } else if (existingPrompt && existingPrompt.displayOrder !== undefined) {
-            // Preserve existing display order if not provided
-            prompt.displayOrder = promptData.displayOrder !== undefined ? promptData.displayOrder : existingPrompt.displayOrder;
+        // Handle preserveStatus option
+        if (options.preserveStatus && existingPrompt && existingPrompt.status !== undefined) {
+            prompt.status = existingPrompt.status;
+        }
+        
+        // Handle preserveDisplayOrder option
+        if (options.preserveDisplayOrder && existingPrompt && existingPrompt.displayOrder !== undefined) {
+            prompt.displayOrder = existingPrompt.displayOrder;
+        } else {
+            // If new prompt, assign display order
+            if (!existingPrompt && prompt.displayOrder === undefined) {
+                prompt.displayOrder = this.getNextDisplayOrder();
+            } else if (existingPrompt && existingPrompt.displayOrder !== undefined) {
+                // Preserve existing display order if not provided
+                prompt.displayOrder = promptData.displayOrder !== undefined ? promptData.displayOrder : existingPrompt.displayOrder;
+            }
         }
         
         this.stateService.state.prompts[promptId] = prompt;
@@ -180,6 +193,9 @@ export class PromptStatePlugin {
         }
 
         delete this.stateService.state.prompts[promptId];
+
+        // Reindex display order after deletion to close gaps
+        this.reindexDisplayOrder();
 
         this.eventBus.emit(EVENTS.PROMPT.DELETED, { promptId, prompt });
         return true;
@@ -385,6 +401,25 @@ export class PromptStatePlugin {
         });
 
         return true;
+    }
+
+    /**
+     * Reindex display order to ensure sequential numbering (1, 2, 3, ...)
+     * This fixes gaps that occur after prompt deletions
+     */
+    reindexDisplayOrder() {
+        const prompts = this.getAllPrompts();
+        const sortedEntries = Object.entries(prompts)
+            .filter(([, prompt]) => prompt.displayOrder !== undefined)
+            .sort(([, a], [, b]) => (a.displayOrder || 0) - (b.displayOrder || 0));
+
+        // Reassign sequential display orders
+        sortedEntries.forEach(([promptId, prompt], index) => {
+            prompt.displayOrder = index + 1;
+        });
+
+        // Return count of reindexed prompts
+        return sortedEntries.length;
     }
 
     /**

@@ -6,6 +6,13 @@
     "systemPrompt": "You are a consumer value analyst helping {{USER}} on {{CURRENT_DATE}}. Use only numbers/terms present on the page. If list prices or comparisons are missing, note the limitation; do not infer market prices. Highlight expirations relative to {{CURRENT_DATE}}.\n\nReturn sectioned Markdown:\n- Headline Deal\n- Value Assessment: Strong / Fair / Poor / Unclear (choose one and justify in 2 bullets)\n- Key Factors (price, unit economics, terms, restrictions)\n- Expiration/Windows\n- Gotchas (fees, bundles, exclusions)\n- Uncertainty",
     "userPrompt": "Analyze the deal on '{{PAGE.TITLE}}' for value as of {{CURRENT_DATE}}. Call out pricing factors, expirations, and any gotchas.",
     "status": "active",
-    "features": { "pageContent": true, "mcp": false, "autoThink": false, "noBaseSystemPrompt": false, "browserTools": false, "autoExecuteTools": false }
+    "features": {
+      "pageContent": true,
+      "mcp": false,
+      "autoThink": false,
+      "noBaseSystemPrompt": false,
+      "browserTools": false,
+      "autoExecuteTools": false
+    }
   }
 }

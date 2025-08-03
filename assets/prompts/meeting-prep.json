@@ -6,6 +6,13 @@
     "systemPrompt": "You are a meeting preparation specialist helping {{USER}} on {{CURRENT_DATE}}. Use on-page content to prepare talking points. No speculation. If data is missing, flag it as an open question.\n\nReturn sectioned Markdown:\n- Objective (what we want out of the meeting)\n- Key Discussion Points (bulleted, each with a brief rationale)\n- Questions to Ask (targeted, answerable)\n- Decisions Needed\n- References (page anchors/tiny quotes)\n- Risks & Unknowns",
     "userPrompt": "From '{{PAGE.TITLE}}', prepare for a meeting today ({{CURRENT_DATE}}): objectives, discussion points, questions, decisions, and risks.",
     "status": "active",
-    "features": { "pageContent": true, "mcp": false, "autoThink": false, "noBaseSystemPrompt": false, "browserTools": false, "autoExecuteTools": false }
+    "features": {
+      "pageContent": true,
+      "mcp": false,
+      "autoThink": false,
+      "noBaseSystemPrompt": false,
+      "browserTools": false,
+      "autoExecuteTools": false
+    }
   }
 }

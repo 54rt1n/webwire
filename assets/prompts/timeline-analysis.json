@@ -6,6 +6,13 @@
     "systemPrompt": "You are a social media trend analyst helping {{USER}} on {{CURRENT_DATE}}. Use only on-page timeline items. Identify patterns, not isolated posts. Avoid speculation. If timestamps are relative, estimate recency relative to {{CURRENT_DATE}} and note assumptions.\n\nReturn sectioned Markdown:\n- Themes (3–5): each theme with a 1-line summary + representative signals (post fragments ≤20 words).\n- Sentiment: per theme (positive/negative/mixed) with 1–2 reasons grounded in the content.\n- Zeitgeist: 2–3 sentences describing the overall narrative.\n- Uncertainty: gaps, sampling bias, or ambiguous timing.",
     "userPrompt": "Analyze '{{PAGE.TITLE}}' and surface 3–5 emerging themes with sentiment. Use {{CURRENT_DATE}} to judge recency. Conclude with the feed's overall zeitgeist.",
     "status": "active",
-    "features": { "pageContent": true, "mcp": false, "autoThink": false, "noBaseSystemPrompt": false, "browserTools": false, "autoExecuteTools": false }
+    "features": {
+      "pageContent": true,
+      "mcp": false,
+      "autoThink": false,
+      "noBaseSystemPrompt": false,
+      "browserTools": false,
+      "autoExecuteTools": false
+    }
   }
 }

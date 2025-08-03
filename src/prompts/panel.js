@@ -46,6 +46,7 @@ export class PromptsPanel {
             newPromptBtn: document.getElementById('new-prompt-btn'),
             importPromptsBtn: document.getElementById('import-prompts-btn'),
             exportAllPromptsBtn: document.getElementById('export-all-prompts-btn'),
+            resetPromptsBtn: document.getElementById('reset-prompts-btn'),
             
             // Delete modal
             deleteModal: document.getElementById('delete-confirmation-modal'),
@@ -124,6 +125,12 @@ export class PromptsPanel {
         this.elements.exportAllPromptsBtn.addEventListener('click', () => {
             if (this.handlers.onExportPrompts) {
                 this.handlers.onExportPrompts([]);
+            }
+        });
+
+        this.elements.resetPromptsBtn.addEventListener('click', () => {
+            if (this.handlers.onResetPrompts) {
+                this.handlers.onResetPrompts();
             }
         });
 

@@ -41,6 +41,7 @@ class PromptsPanelApp extends BasePanelApp {
             onSavePrompt: this.savePrompt.bind(this),
             onImportPrompts: this.importPrompts.bind(this),
             onExportPrompts: this.exportPrompts.bind(this),
+            onResetPrompts: this.resetPrompts.bind(this),
             onRefreshPrompts: this.refreshPrompts.bind(this),
             onSearchPrompts: this.searchPrompts.bind(this),
             onReorderPrompt: this.reorderPrompt.bind(this)
@@ -324,6 +325,50 @@ class PromptsPanelApp extends BasePanelApp {
         } catch (error) {
             logger.error('PromptsPanelApp', 'Failed to export prompts:', error);
             alert('Failed to export prompts. Please try again.');
+        }
+    }
+
+    /**
+     * Reset prompts to default bundled versions
+     */
+    async resetPrompts() {
+        if (!this.core.stateService || !this.core.stateService.prompts) {
+            logger.error('PromptsPanelApp', 'No prompts state service available');
+            return;
+        }
+
+        try {
+            // Confirm with user
+            const confirmed = confirm('This will reset all default prompts to their original versions. User-created prompts will not be affected. Continue?');
+            if (!confirmed) {
+                return;
+            }
+
+            logger.log('PromptsPanelApp', 'Resetting prompts to defaults...');
+            
+            // Load bundled prompts
+            const bundledPrompts = await PromptLoader.loadPrompts();
+            
+            // Reset each bundled prompt by ID
+            let resetCount = 0;
+            for (const [promptId, promptData] of Object.entries(bundledPrompts)) {
+                this.core.stateService.prompts.setPrompt(promptId, promptData, { preserveStatus: true, preserveDisplayOrder: true });
+                resetCount++;
+            }
+            
+            // Save state
+            await this.core.stateService.prompts.saveToStorage();
+            
+            logger.log('PromptsPanelApp', `Reset ${resetCount} prompts to defaults`);
+            
+            // Refresh the UI
+            await this.refreshPrompts();
+            
+            alert(`Successfully reset ${resetCount} prompts to their default versions.`);
+            
+        } catch (error) {
+            logger.error('PromptsPanelApp', 'Failed to reset prompts:', error);
+            alert('Failed to reset prompts. Please try again.');
         }
     }
     

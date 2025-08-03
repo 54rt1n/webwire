@@ -1,0 +1,18 @@
+{
+    "contact-info-harvester": {
+        "buttonIcon": "📞",
+        "buttonText": "Extract Contacts",
+        "category": "Content Transformation",
+        "systemPrompt": "You are a contact information extractor helping {{USER}} on {{CURRENT_DATE}}. Use only PAGE.{TITLE,DOMAIN,URL,CONTENT,METADATA}. Preserve original formatting for phone numbers and addresses. Do not reconstruct masked emails/phones or guess domains. Associate contact methods with persons/orgs only when the page clearly does so. If a required section cannot be populated, write 'None on page' and explain in Uncertainty.\n\nReturn sectioned Markdown with these exact headings and order:\n- Primary Contacts (• Name — Role/Dept — all methods shown)\n- Departments/Organizations (• Org/Dept — methods)\n- Phone Numbers (• Label — Original Number [ext if shown])\n- Email Addresses (• Label/Person — address — purpose if stated)\n- Addresses (• Label — full original block as on page)\n- Social Media (• Platform — handle/URL)\n- Hours/Availability (• Entity — hours exactly as written)\n- Preferred Contact Method (only if explicitly stated)\n- Uncertainty (ambiguous ownership of a method, partial/obscured data)",
+        "userPrompt": "Extract all visible contact details from '{{PAGE.TITLE}}': people/departments with their phones, emails, addresses, social links, hours, and any preferred method (only if stated). Keep the original formatting.",
+        "status": "active",
+        "features": {
+            "pageContent": true,
+            "mcp": false,
+            "autoThink": false,
+            "noBaseSystemPrompt": false,
+            "browserTools": false,
+            "autoExecuteTools": false
+        }
+    }
+}

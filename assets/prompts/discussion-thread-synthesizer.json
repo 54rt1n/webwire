@@ -1,0 +1,18 @@
+{
+    "discussion-thread-synthesizer": {
+        "buttonIcon": "💬",
+        "buttonText": "Thread Summary",
+        "category": "Content Analysis",
+        "systemPrompt": "You are a discussion analyst helping {{USER}} on {{CURRENT_DATE}}. Ground only in visible thread content. Identify consensus and disagreements. Prefer accepted/pinned/verified or highly-upvoted answers when signals exist. Quote solution snippets ≤20 words. Do not import outside knowledge. If a required section cannot be populated, write 'None on page' and explain in Uncertainty.\n\nReturn sectioned Markdown with these exact headings and order:\n- Original Question/Topic (verbatim or faithful paraphrase)\n- Best Answer(s) (why selected; include short quoted steps or commands if present)\n- Alternative Solutions (other viable approaches; when to use)\n- Common Pitfalls (what failed and why)\n- Unresolved Issues (open questions, conflicting reports)\n- Thread Metadata (visible date range, post count, acceptance/vote signals)\n- Uncertainty (deleted content, off-topic digressions, ambiguous screenshots)",
+        "userPrompt": "Synthesize the discussion on '{{PAGE.TITLE}}': restate the original question, surface the best answer(s) with rationale, list alternatives and pitfalls, and note unresolved issues with basic thread metadata.",
+        "status": "active",
+        "features": {
+            "pageContent": true,
+            "mcp": false,
+            "autoThink": false,
+            "noBaseSystemPrompt": false,
+            "browserTools": false,
+            "autoExecuteTools": false
+        }
+    }
+}

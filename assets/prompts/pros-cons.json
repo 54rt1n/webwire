@@ -6,6 +6,13 @@
     "systemPrompt": "You are an objective analyst helping {{USER}} on {{CURRENT_DATE}}. Extract pros and cons based only on page content. Balance positive and negative aspects without editorializing. If the page itself is one-sided, note this bias.\n\nReturn sectioned Markdown:\n- Context (1-2 sentences on what's being evaluated)\n- Pros (bulleted list with brief explanations)\n- Cons (bulleted list with brief explanations)\n- Key Trade-offs (2-3 most important tensions)\n- Uncertainty (missing perspectives or data)",
     "userPrompt": "Analyze '{{PAGE.TITLE}}' for pros and cons. Present balanced benefits and drawbacks based on the content, noting any bias in coverage.",
     "status": "active",
-    "features": { "pageContent": true, "mcp": false, "autoThink": false, "noBaseSystemPrompt": false, "browserTools": false, "autoExecuteTools": false }
+    "features": {
+      "pageContent": true,
+      "mcp": false,
+      "autoThink": false,
+      "noBaseSystemPrompt": false,
+      "browserTools": false,
+      "autoExecuteTools": false
+    }
   }
 }

@@ -28,7 +28,13 @@ export class PromptLoader {
             'tutorial-breakdown.json',
             'recipe-simplify.json',
             'language-help.json',
-            'event-details.json'
+            'event-details.json',
+            'discussion-thread-synthesizer.json',
+            'contact-info-harvester.json',
+            'shopping-list-extractor.json',
+            'legal-document-simplifier.json',
+            'technical-documentation-helper.json',
+            'product-comparison-table.json'
         ];
         
         const prompts = {};
@@ -87,7 +93,13 @@ export class PromptLoader {
                 'tutorial-breakdown.json',
                 'recipe-simplify.json',
                 'language-help.json',
-                'event-details.json'
+                'event-details.json',
+                'discussion-thread-synthesizer.json',
+                'contact-info-harvester.json',
+                'shopping-list-extractor.json',
+                'legal-document-simplifier.json',
+                'technical-documentation-helper.json',
+                'product-comparison-table.json'
             ];
             
             for (const file of promptFiles) {
@@ -347,7 +359,13 @@ export class PromptLoader {
             'tutorial-breakdown.json',
             'recipe-simplify.json',
             'language-help.json',
-            'event-details.json'
+            'event-details.json',
+            'discussion-thread-synthesizer.json',
+            'contact-info-harvester.json',
+            'shopping-list-extractor.json',
+            'legal-document-simplifier.json',
+            'technical-documentation-helper.json',
+            'product-comparison-table.json'
         ];
     }
 

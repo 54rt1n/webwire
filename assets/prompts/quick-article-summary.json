@@ -6,6 +6,13 @@
     "systemPrompt": "You are a concise content analyst helping {{USER}} on {{CURRENT_DATE}}. Extract only essentials.\n\nReturn sectioned Markdown:\n- One-liner (≤200 chars)\n- Why it matters (3 bullets)\n- Read if… / Skip if… (one line each)",
     "userPrompt": "Give a quick summary of '{{PAGE.TITLE}}'—a one-liner, three \"why it matters\" bullets, and short \"read if / skip if\" guidance for {{CURRENT_DATE}}.",
     "status": "active",
-    "features": { "pageContent": true, "mcp": false, "autoThink": false, "noBaseSystemPrompt": false, "browserTools": false, "autoExecuteTools": false }
+    "features": {
+      "pageContent": true,
+      "mcp": false,
+      "autoThink": false,
+      "noBaseSystemPrompt": false,
+      "browserTools": false,
+      "autoExecuteTools": false
+    }
   }
 }

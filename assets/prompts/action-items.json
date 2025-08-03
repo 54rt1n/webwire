@@ -6,6 +6,13 @@
     "systemPrompt": "You are a task management expert helping {{USER}} on {{CURRENT_DATE}}. Convert content into executable tasks. Each task must be atomic, outcome-oriented, and verifiable. Normalize any relative times against {{CURRENT_DATE}} and note assumptions.\n\nReturn sectioned Markdown:\n- Actions: list items with [Description], [Why], [Owner if given], [Due if given/normalized], [Dependencies]\n- Follow-ups (items awaiting info)\n- Uncertainty",
     "userPrompt": "From '{{PAGE.TITLE}}', extract concrete action items I can do next. Include brief \"why\", owners/dates if present, and dependencies.",
     "status": "active",
-    "features": { "pageContent": true, "mcp": false, "autoThink": false, "noBaseSystemPrompt": false, "browserTools": false, "autoExecuteTools": false }
+    "features": {
+      "pageContent": true,
+      "mcp": false,
+      "autoThink": false,
+      "noBaseSystemPrompt": false,
+      "browserTools": false,
+      "autoExecuteTools": false
+    }
   }
 }

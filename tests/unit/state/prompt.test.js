@@ -139,6 +139,88 @@ describe('PromptStatePlugin', () => {
             });
         });
 
+        it('should preserve status when preserveStatus option is true', () => {
+            const promptId = 'test-prompt';
+            const originalPrompt = {
+                buttonText: 'Original',
+                status: 'inactive',
+                displayOrder: 5
+            };
+            stateService.state.prompts = { [promptId]: originalPrompt };
+
+            const newPromptData = {
+                buttonText: 'Updated',
+                status: 'active'
+            };
+
+            plugin.setPrompt(promptId, newPromptData, { preserveStatus: true });
+
+            expect(stateService.state.prompts[promptId].status).toBe('inactive');
+            expect(stateService.state.prompts[promptId].buttonText).toBe('Updated');
+        });
+
+        it('should preserve display order when preserveDisplayOrder option is true', () => {
+            const promptId = 'test-prompt';
+            const originalPrompt = {
+                buttonText: 'Original',
+                status: 'active',
+                displayOrder: 5
+            };
+            stateService.state.prompts = { [promptId]: originalPrompt };
+
+            const newPromptData = {
+                buttonText: 'Updated',
+                displayOrder: 10
+            };
+
+            plugin.setPrompt(promptId, newPromptData, { preserveDisplayOrder: true });
+
+            expect(stateService.state.prompts[promptId].displayOrder).toBe(5);
+            expect(stateService.state.prompts[promptId].buttonText).toBe('Updated');
+        });
+
+        it('should preserve both status and display order when both options are true', () => {
+            const promptId = 'test-prompt';
+            const originalPrompt = {
+                buttonText: 'Original',
+                status: 'inactive',
+                displayOrder: 5
+            };
+            stateService.state.prompts = { [promptId]: originalPrompt };
+
+            const newPromptData = {
+                buttonText: 'Updated',
+                status: 'active',
+                displayOrder: 10
+            };
+
+            plugin.setPrompt(promptId, newPromptData, { preserveStatus: true, preserveDisplayOrder: true });
+
+            expect(stateService.state.prompts[promptId].status).toBe('inactive');
+            expect(stateService.state.prompts[promptId].displayOrder).toBe(5);
+            expect(stateService.state.prompts[promptId].buttonText).toBe('Updated');
+        });
+
+        it('should not preserve status when preserveStatus is false or undefined', () => {
+            const promptId = 'test-prompt';
+            const originalPrompt = {
+                buttonText: 'Original',
+                status: 'inactive',
+                displayOrder: 5
+            };
+            stateService.state.prompts = { [promptId]: originalPrompt };
+
+            const newPromptData = {
+                buttonText: 'Updated',
+                status: 'active'
+            };
+
+            plugin.setPrompt(promptId, newPromptData, { preserveStatus: false });
+
+            expect(stateService.state.prompts[promptId].status).toBe('active');
+            expect(stateService.state.prompts[promptId].buttonText).toBe('Updated');
+        });
+
         it('should get specific prompt by ID', () => {
             const promptData = { buttonText: 'Test', status: 'active' };
             stateService.state.prompts = { 'test-prompt': promptData };
@@ -280,6 +362,55 @@ describe('PromptStatePlugin', () => {
                 data => data.promptId === 'prompt1' && 
                        data.oldPosition === 1 && 
                        data.newPosition === 3);
+        });
+
+    });
+
+    describe('Display Order Reindexing', () => {
+        beforeEach(() => {
+            stateService.state.prompts = {
+                'prompt1': { buttonText: 'Prompt 1', status: 'active', displayOrder: 1 },
+                'prompt2': { buttonText: 'Prompt 2', status: 'active', displayOrder: 3 },
+                'prompt3': { buttonText: 'Prompt 3', status: 'active', displayOrder: 5 },
+                'prompt4': { buttonText: 'Prompt 4', status: 'active', displayOrder: 7 }
+            };
+        });
+
+        it('should reindex display order to sequential numbers', () => {
+            const reindexedCount = plugin.reindexDisplayOrder();
+            
+            expect(reindexedCount).toBe(4);
+            expect(stateService.state.prompts.prompt1.displayOrder).toBe(1);
+            expect(stateService.state.prompts.prompt2.displayOrder).toBe(2);
+            expect(stateService.state.prompts.prompt3.displayOrder).toBe(3);
+            expect(stateService.state.prompts.prompt4.displayOrder).toBe(4);
+        });
+
+        it('should handle prompts without display order', () => {
+            stateService.state.prompts.noOrder = { buttonText: 'No Order', status: 'active' };
+            
+            const reindexedCount = plugin.reindexDisplayOrder();
+            
+            expect(reindexedCount).toBe(4); // Only the 4 with display order
+            expect(stateService.state.prompts.noOrder.displayOrder).toBeUndefined();
+        });
+
+        it('should handle empty prompts collection', () => {
+            stateService.state.prompts = {};
+            
+            const reindexedCount = plugin.reindexDisplayOrder();
+            
+            expect(reindexedCount).toBe(0);
+        });
+
+        it('should automatically reindex after prompt deletion', () => {
+            // Delete prompt2 (which had displayOrder 3)
+            plugin.deletePrompt('prompt2');
+            
+            // Check that display orders are now sequential
+            expect(stateService.state.prompts.prompt1.displayOrder).toBe(1);
+            expect(stateService.state.prompts.prompt3.displayOrder).toBe(2); // Was 5, now 2
+            expect(stateService.state.prompts.prompt4.displayOrder).toBe(3); // Was 7, now 3
         });
 
     });

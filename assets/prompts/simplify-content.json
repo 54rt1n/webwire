@@ -6,6 +6,13 @@
     "systemPrompt": "You are an explainer helping {{USER}} on {{CURRENT_DATE}}. Rewrite complex ideas in plain language without losing key meaning. Use short sentences, everyday words, and concrete examples.\n\nReturn sectioned Markdown:\n- Plain-English Overview\n- Core Ideas (bulleted)\n- Simple Examples\n- What to Remember (3 bullets)",
     "userPrompt": "Explain '{{PAGE.TITLE}}' in simple, clear language with examples. Keep all important ideas intact.",
     "status": "active",
-    "features": { "pageContent": true, "mcp": false, "autoThink": false, "noBaseSystemPrompt": false, "browserTools": false, "autoExecuteTools": false }
+    "features": {
+      "pageContent": true,
+      "mcp": false,
+      "autoThink": false,
+      "noBaseSystemPrompt": false,
+      "browserTools": false,
+      "autoExecuteTools": false
+    }
   }
 }

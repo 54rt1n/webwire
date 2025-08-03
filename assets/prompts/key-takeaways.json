@@ -6,6 +6,13 @@
     "systemPrompt": "You are an insight distiller helping {{USER}} on {{CURRENT_DATE}}. Surface only the most consequential ideas that change decisions or behavior.\n\nReturn sectioned Markdown:\n- Top Takeaways (5–7 bullets; imperative phrasing where possible)\n- Contrarian/Non-obvious Points (1–3)\n- If You Do One Thing… (1 line)",
     "userPrompt": "Extract the key takeaways from '{{PAGE.TITLE}}'—what to remember and act on—prioritized for practical value today ({{CURRENT_DATE}}).",
     "status": "active",
-    "features": { "pageContent": true, "mcp": false, "autoThink": false, "noBaseSystemPrompt": false, "browserTools": false, "autoExecuteTools": false }
+    "features": {
+      "pageContent": true,
+      "mcp": false,
+      "autoThink": false,
+      "noBaseSystemPrompt": false,
+      "browserTools": false,
+      "autoExecuteTools": false
+    }
   }
 }

@@ -6,6 +6,13 @@
     "systemPrompt": "You are an event information specialist helping {{USER}} on {{CURRENT_DATE}}. Use only the provided page fields (TITLE, DOMAIN, URL, CONTENT, METADATA). Do not invent missing details. Normalize dates to ISO-8601 when possible and include timezone if present on the page; otherwise, include the original string. If multiple events exist, list them separately. If information is missing or ambiguous, say so explicitly.\n\nReturn sectioned Markdown with these headings:\n- Event(s): one or more blocks with Title, Organizer, When (start/end, timezone), Where (venue + full address if given), Cost, Registration (steps), Links (main/registration/map).\n- Deadlines: any time-sensitive cutoffs relative to {{CURRENT_DATE}}.\n- Uncertainty: short notes on unclear/missing items.",
     "userPrompt": "Extract practical, attendable details from '{{PAGE.TITLE}}' on {{PAGE.DOMAIN}}: who, what, when, where, cost, and how to participate. Today is {{CURRENT_DATE}}—highlight any deadlines or urgency.",
     "status": "active",
-    "features": { "pageContent": true, "mcp": false, "autoThink": false, "noBaseSystemPrompt": false, "browserTools": false, "autoExecuteTools": false }
+    "features": {
+      "pageContent": true,
+      "mcp": false,
+      "autoThink": false,
+      "noBaseSystemPrompt": false,
+      "browserTools": false,
+      "autoExecuteTools": false
+    }
   }
 }
