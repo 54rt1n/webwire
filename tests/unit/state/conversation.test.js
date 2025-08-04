@@ -244,6 +244,58 @@ describe('ConversationStatePlugin', () => {
             expect(stateService.state.conversation.history[newThreadId]).toBeDefined();
             expect(stateService.state.conversation.history[newThreadId]).toHaveLength(1);
         });
+
+        it('should apply crossApply properties to stored message', () => {
+            const crossApply = {
+                status: 'error',
+                error: true,
+                customField: 'test-value'
+            };
+            
+            plugin.storeAssistantMessage(threadId, assistantMessage, {}, crossApply);
+            
+            const messages = stateService.state.conversation.history[threadId];
+            expect(messages).toHaveLength(2);
+            
+            const assistant = messages[1];
+            expect(assistant.status).toBe('error');
+            expect(assistant.error).toBe(true);
+            expect(assistant.customField).toBe('test-value');
+            expect(assistant.content).toBe('Test assistant response'); // Original content preserved
+            expect(assistant.role).toBe('assistant'); // Original role preserved
+        });
+
+        it('should store error message exactly like chat-service does', () => {
+            // This simulates exactly what chat-service.js does for error handling
+            const errorMessage = {
+                messageId: 'test-message-id',
+                role: 'assistant',
+                content: 'HTTP 400: Maximum context length exceeded',
+                status: 'error',  // Added by chat-service before calling storeAssistantMessage
+                timestamp: Date.now(),
+                model: 'gpt-4'
+            };
+            
+            const crossApplyOptions = {
+                error: true,
+                status: 'error'
+            };
+            
+            plugin.storeAssistantMessage(threadId, errorMessage, {}, crossApplyOptions);
+            
+            const messages = stateService.state.conversation.history[threadId];
+            expect(messages).toHaveLength(2);
+            
+            const storedMessage = messages[1];
+            console.log('Stored message:', storedMessage);
+            
+            // The stored message should have status from both assistantMessage AND crossApply
+            expect(storedMessage.status).toBe('error');
+            expect(storedMessage.error).toBe(true);
+            expect(storedMessage.role).toBe('assistant');
+            expect(storedMessage.content).toBe('HTTP 400: Maximum context length exceeded');
+            expect(storedMessage.messageId).toBe('test-message-id');
+        });
     });
 
     describe('storeMessage', () => {
@@ -471,6 +523,91 @@ describe('ConversationStatePlugin', () => {
             const result = plugin.getConversationsFor('PersonaOne');
             expect(result).toHaveLength(1);
             expect(result[0].personaName).toBe('PersonaOne');
+        });
+    });
+
+    describe('markMessage', () => {
+        const threadId = 'thread-1';
+        const sharedMessageId = 'shared-message-id';
+
+        beforeEach(() => {
+            // Create a thread with messages that share the same messageId
+            const state = plugin._safeConversationState();
+            state.history[threadId] = [
+                {
+                    messageId: sharedMessageId,
+                    role: 'user',
+                    content: 'Test user message',
+                    timestamp: Date.now()
+                },
+                {
+                    messageId: sharedMessageId,
+                    role: 'assistant', 
+                    content: 'Test assistant response',
+                    timestamp: Date.now() + 1
+                },
+                {
+                    messageId: 'different-id',
+                    role: 'user',
+                    content: 'Different message',
+                    timestamp: Date.now() + 2
+                }
+            ];
+            eventBus.reset();
+        });
+
+        it('should mark all messages with the same messageId', () => {
+            plugin.markMessage(threadId, sharedMessageId, 'error');
+            
+            const messages = stateService.state.conversation.history[threadId];
+            
+            // Both messages with sharedMessageId should be marked
+            expect(messages[0].status).toBe('error');
+            expect(messages[1].status).toBe('error');
+            
+            // Message with different ID should not be affected
+            expect(messages[2].status).toBeUndefined();
+            
+            // Check event was emitted
+            StateAssertions.assertEventEmitted(eventBus, EVENTS.CONVERSATION.UPDATED,
+                data => data.threadId === threadId);
+        });
+
+        it('should handle non-existent thread gracefully', () => {
+            plugin.markMessage('non-existent-thread', sharedMessageId, 'error');
+            
+            // Should not throw error, just log warning
+            // No events should be emitted
+            expect(eventBus.events).toHaveLength(0);
+        });
+
+        it('should handle non-existent messageId gracefully', () => {
+            plugin.markMessage(threadId, 'non-existent-id', 'error');
+            
+            const messages = stateService.state.conversation.history[threadId];
+            
+            // No messages should be modified
+            expect(messages[0].status).toBeUndefined();
+            expect(messages[1].status).toBeUndefined();
+            expect(messages[2].status).toBeUndefined();
+            
+            // No events should be emitted
+            expect(eventBus.events).toHaveLength(0);
+        });
+
+        it('should mark only matching messageId even if multiple exist', () => {
+            plugin.markMessage(threadId, 'different-id', 'retry');
+            
+            const messages = stateService.state.conversation.history[threadId];
+            
+            // Only the message with 'different-id' should be marked
+            expect(messages[0].status).toBeUndefined();
+            expect(messages[1].status).toBeUndefined();
+            expect(messages[2].status).toBe('retry');
+            
+            // Check event was emitted
+            StateAssertions.assertEventEmitted(eventBus, EVENTS.CONVERSATION.UPDATED,
+                data => data.threadId === threadId);
         });
     });
 });

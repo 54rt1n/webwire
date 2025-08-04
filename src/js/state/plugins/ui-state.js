@@ -156,7 +156,7 @@ export class UiStatePlugin {
     getTrackedThreadId() {
         const tab = this._currentTab();
         if (!tab) return null;
-        return tab.trackedThreadId;
+        return tab.trackedThreadId || null;
     }
     
     /**

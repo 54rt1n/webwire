@@ -105,11 +105,15 @@ export class ConversationStatePlugin {
      * @param {object} userMessage - { role, content, timestamp, title?, url?, model?, saved? }
      * @param {object} options - { userName?, personaName?, mood?, pageUrl?, timestamp? }
      */
-    storePartialUserMessage(threadId, userMessage, { userName, personaName, mood, pageUrl, timestamp, ...options } = {}) {
+    storePartialUserMessage(threadId, userMessage, { userName, personaName, mood, pageUrl, timestamp, tabId, ...options } = {}) {
         const state = this._safeConversationState();
 
         if (!timestamp) {
             timestamp = Date.now();
+        }
+
+        if (!tabId) {
+            tabId = this.stateService.ui.getTabId();
         }
 
         // Ensure history for this conversation exists
@@ -130,12 +134,12 @@ export class ConversationStatePlugin {
         if (!state.metadata[threadId]) {
             state.metadata[threadId] = {
                 threadId: threadId,
-                tabId: this.stateService.ui.getTabId(),  // Associate with current tab
+                tabId: tabId,
                 userName: userName || 'User',
                 personaName: personaName || 'Default',
                 mood: mood,
                 pageUrl: pageUrl,
-                title: userMessage.title, // Include title from user message
+                title: userMessage.title,
                 startTime: timestamp,
                 endTime: undefined,
                 duration: undefined,
@@ -146,6 +150,9 @@ export class ConversationStatePlugin {
             };
         } else {
             // Update existing metadata
+            if (tabId && state.metadata[threadId].tabId !== tabId) {
+                state.metadata[threadId].tabId = tabId;
+            }
             const currentPageUrl = state.metadata[threadId].pageUrl;
             if (pageUrl && currentPageUrl !== pageUrl) {
                 state.metadata[threadId].pageUrl = pageUrl;
@@ -166,12 +173,16 @@ export class ConversationStatePlugin {
      * @param {object} assistantMessage - { role, content, think?, timestamp, url?, title?, model?, saved? }
      * @param {object} options - { userName?, personaName?, mood?, pageUrl?, timestamp?, toolResults?, toolCalls?, parseErrors? }
      */
-    storeAssistantMessage(threadId, assistantMessage, { userName, personaName, mood, pageUrl, timestamp,
+    storeAssistantMessage(threadId, assistantMessage, { userName, personaName, mood, pageUrl, timestamp, tabId,
         toolResults = [], toolCalls = [], parseErrors = [], ...options } = {}, crossApply = {}) {
         const state = this._safeConversationState();
 
         if (!timestamp) {
             timestamp = Date.now();
+        }
+
+        if (!tabId) {
+            tabId = this.stateService.ui.getTabId();
         }
 
         // Ensure history for this conversation exists
@@ -208,6 +219,9 @@ export class ConversationStatePlugin {
 
         // Update metadata
         if (state.metadata[threadId]) {
+            if (tabId && state.metadata[threadId].tabId !== tabId) {
+                state.metadata[threadId].tabId = tabId;
+            }
             state.metadata[threadId].endTime = timestamp;
             state.metadata[threadId].duration = timestamp - state.metadata[threadId].startTime;
             
@@ -229,12 +243,16 @@ export class ConversationStatePlugin {
      * @param {object} assistantMessage - { role, content, think?, timestamp, url?, title?, model?, saved? }
      * @param {object} options - { userName?, personaName?, mood?, pageUrl?, timestamp?, toolResults?, toolCalls?, parseErrors? }
      */
-    storeMessage(threadId, userMessage, assistantMessage, { userName, personaName, mood, pageUrl, timestamp,
+    storeMessage(threadId, userMessage, assistantMessage, { userName, personaName, mood, pageUrl, timestamp, tabId,
         toolResults = [], toolCalls = [], parseErrors = [], ...options } = {}) {
         const state = this._safeConversationState();
 
         if (!timestamp) {
             timestamp = Date.now();
+        }
+
+        if (!tabId) {
+            tabId = this.stateService.ui.getTabId();
         }
 
         // Ensure history for this conversation exists
@@ -271,12 +289,12 @@ export class ConversationStatePlugin {
             const initialTitle = userMessage.title || assistantMessage?.title;
             state.metadata[threadId] = {
                 threadId: threadId,
-                tabId: this.stateService.ui.getTabId(),  // Associate with current tab
+                tabId: tabId,
                 userName: userName || 'User',
                 personaName: personaName || 'Default',
                 mood: mood,
                 pageUrl: pageUrl,
-                title: initialTitle, // Include title from either message
+                title: initialTitle,
                 startTime: timestamp,
                 endTime: undefined,
                 duration: undefined,
@@ -286,7 +304,9 @@ export class ConversationStatePlugin {
                 errorType: undefined,
             };
         } else {
-            // Update existing metadata
+            if (tabId && state.metadata[threadId].tabId !== tabId) {
+                state.metadata[threadId].tabId = tabId;
+            }
             const currentPageUrl = state.metadata[threadId].pageUrl;
             if (pageUrl && currentPageUrl !== pageUrl) {
                 state.metadata[threadId].pageUrl = pageUrl;
@@ -783,10 +803,10 @@ export class ConversationStatePlugin {
     }
 
     /**
-     * Marks a message as a specific status
+     * Marks all messages with the same messageId as a specific status
      * @param {string} threadId - The thread ID
-     * @param {string} messageId - The message ID to mark as retried
-     * @param {string} status - The status to mark the message as
+     * @param {string} messageId - The message ID to mark (marks all messages with this ID)
+     * @param {string} status - The status to mark the messages as
      */
     markMessage(threadId, messageId, status) {
         const state = this._safeConversationState();
@@ -797,14 +817,16 @@ export class ConversationStatePlugin {
         }
         
         const messages = state.history[threadId];
-        const message = messages.find(m => m.messageId === messageId);
+        const matchingMessages = messages.filter(m => m.messageId === messageId);
         
-        if (message) {
-            message.status = status;
-            logger.log(this, `Marked message ${messageId} as ${status}`);
+        if (matchingMessages.length > 0) {
+            matchingMessages.forEach(message => {
+                message.status = status;
+            });
+            logger.log(this, `Marked ${matchingMessages.length} message(s) with ID ${messageId} as ${status}`);
             this.eventBus.emit(EVENTS.CONVERSATION.UPDATED, { threadId });
         } else {
-            logger.warn(this, `Message ${messageId} not found in thread ${threadId}`);
+            logger.warn(this, `No messages with ID ${messageId} found in thread ${threadId}`);
         }
     }
 

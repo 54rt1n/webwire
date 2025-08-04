@@ -360,7 +360,9 @@ export class ChatUIRenderer {
         } = options;
 
         const messageEl = document.createElement('div');
-        messageEl.className = `ww-message ${isThinking ? 'ww-thinking' : 'ww-' + message.role}`;
+        const roleClass = isThinking ? 'ww-thinking' : 
+                         (message.status === 'error' ? 'ww-error' : 'ww-' + message.role);
+        messageEl.className = `ww-message ${roleClass}`;
         
         if (message.messageId || message.id) {
             messageEl.id = message.messageId || message.id;
@@ -398,8 +400,6 @@ export class ChatUIRenderer {
         
         if (isThinking) {
             contentHTML = this.createThinkingContentHTML();
-        //} else if (message.role === 'error') {
-        //    contentHTML = this.createErrorContentHTML(message.content);
         } else {
             contentHTML = this.createMessageContentHTML(message.content);
         }

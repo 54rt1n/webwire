@@ -141,6 +141,10 @@ export class ConversationModal extends EventBindableComponent {
                         </div>
                     </div>
                     <div class="ww-modal-header-actions">
+                        <label class="ww-checkbox-label" style="margin-right: 12px;">
+                            <input type="checkbox" id="filter-non-success" class="ww-checkbox" />
+                            <span>Show All</span>
+                        </label>
                         <button class="${isActive ? 'ww-btn-complete' : 'ww-btn-set-active'}" id="set-active-btn" title="${isActive ? 'Complete this active conversation' : 'Set as Active Conversation'}">
                             ${isActive ? '✅ Complete' : '➕ Set Active'}
                         </button>
@@ -161,18 +165,48 @@ export class ConversationModal extends EventBindableComponent {
     /**
      * Renders all messages for the conversation
      * @param {string} threadId - The conversation thread ID
+     * @param {boolean} showAll - Whether to show all messages (true) or filter to success only (false)
      * @returns {string} HTML for messages
      * @private
      */
-    _renderMessages(threadId) {
+    _renderMessages(threadId, showAll = false) {
         if (!this.stateService || !this.stateService.conversation) {
             return this._renderEmptyState('Unable to load messages - no state service available');
         }
 
-        const messages = this.stateService.conversation.getConversationMessages(threadId);
+        let messages = this.stateService.conversation.getConversationMessages(threadId);
         
         if (!messages || messages.length === 0) {
             return this._renderEmptyState('No messages in this conversation yet');
+        }
+
+        // Filter to success messages only if "Show All" is NOT checked
+        if (!showAll) {
+            messages = messages.filter(message => {
+                // Check message-level status field first
+                if (message.status !== undefined) {
+                    return message.status === 'success';
+                }
+                
+                // Keep user messages if no status is set
+                if (message.role === 'user') {
+                    return true;
+                }
+                
+                // For assistant messages, check if they have successful tool operations
+                // If no tools were used, consider it successful
+                if (!message.toolResults || message.toolResults.length === 0) {
+                    return true;
+                }
+                
+                // Check if all tool calls were successful
+                const toolMessages = buildToolMessages(message.toolCalls, message.toolResults);
+                return toolMessages.every(toolMessage => toolMessage.success !== false && !toolMessage.error);
+            });
+            
+            if (messages.length === 0) {
+                return this._renderEmptyState('No successful messages in this conversation');
+            }
         }
 
         return messages.map(message => this._renderMessage(message, this.currentConversation)).join('');
@@ -541,6 +575,14 @@ export class ConversationModal extends EventBindableComponent {
             });
         }
 
+        // Filter non-success checkbox
+        const filterCheckbox = this.modal.querySelector('#filter-non-success');
+        if (filterCheckbox) {
+            filterCheckbox.addEventListener('change', () => {
+                this._refreshMessages();
+            });
+        }
+
         // Close on overlay click
         this.modal.addEventListener('click', (e) => {
             if (e.target === this.modal) {
@@ -611,6 +653,28 @@ export class ConversationModal extends EventBindableComponent {
             setActiveBtn.title = 'Set as Active Conversation';
             setActiveBtn.disabled = false;
         }
+    }
+
+    /**
+     * Refreshes the messages display based on current filter settings
+     * @private
+     */
+    _refreshMessages() {
+        if (!this.modal || !this.currentConversation) return;
+        
+        const messagesContainer = this.modal.querySelector('#messages-container');
+        const filterCheckbox = this.modal.querySelector('#filter-non-success');
+        
+        if (!messagesContainer || !filterCheckbox) return;
+        
+        // Get current filter state (checked = show all, unchecked = filter to success only)
+        const showAll = filterCheckbox.checked;
+        
+        // Re-render messages with current filter
+        messagesContainer.innerHTML = this._renderMessages(this.currentConversation.threadId, showAll);
+        
+        // Re-attach message action listeners
+        this._attachMessageActionListeners();
     }
 
     /**

@@ -566,7 +566,7 @@ export class WebChatPanel {
 
         let userMessage = false;
 
-        conversation.messages.forEach(message => {
+        conversation.messages.forEach((message, index) => {
             if (message.role === 'system') return;
 
             if (message.role === 'user') {
@@ -575,6 +575,10 @@ export class WebChatPanel {
             
             // Skip messages marked as retried or dropped
             if (message.status === 'retried' || message.status === 'dropped') return;
+            
+            // Filter out non-success messages, except the last message
+            const isLastMessage = index === conversation.messages.length - 1;
+            if (!isLastMessage && message.status && message.status !== 'success') return;
 
             const toolMessages = buildToolMessages(message.toolCalls, message.toolResults);
             logger.log(this, 'displayConversation toolMessages:', message.role, toolMessages);
@@ -614,7 +618,7 @@ export class WebChatPanel {
 
         let userMessage = false;
 
-        conversation.messages.forEach(message => {
+        conversation.messages.forEach((message, index) => {
             if (message.role === 'system') return;
             
             if (message.role === 'user') {
@@ -623,6 +627,10 @@ export class WebChatPanel {
             
             // Skip messages marked as retried or dropped
             if (message.status === 'retried' || message.status === 'dropped') return;
+            
+            // Filter out non-success messages, except the last message
+            const isLastMessage = index === conversation.messages.length - 1;
+            if (!isLastMessage && message.status && message.status !== 'success') return;
             
             const toolMessages = buildToolMessages(message.toolCalls, message.toolResults);
             logger.log(this, 'loadConversation:', toolMessages);

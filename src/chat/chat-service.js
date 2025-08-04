@@ -454,17 +454,22 @@ export class ChatService extends EventBindableComponent {
             
             if (error.message.includes("Error: Empty response from AI provider")) {
                 logger.log(this, 'Empty response from AI provider, skipping');
-                this.panel.displayError(error.message, streamingState.currentMessage?.messageId);
             } else {
                 logger.error(this, 'Error handling user message:', error);
-                this.panel.displayError(error.message, streamingState.currentMessage?.messageId);
             }
 
             // Store the error message in conversation state
             assistantMessage = { 
                 ...assistantMessage,
                 content: error.message,
+                status: 'error'
             };
+            
+            // Remove any thinking message and display the error message consistently
+            if (streamingState.currentMessage?.messageId) {
+                this.panel.removeMessage(streamingState.currentMessage.messageId);
+            }
+            this.panel.displayMessage(assistantMessage);
                     
             this.stateService.conversation.storeAssistantMessage(threadId, assistantMessage, {
                 ...persona,
@@ -483,19 +488,33 @@ export class ChatService extends EventBindableComponent {
             if (userMessage && assistantMessage) {
                 logger.log(this, 'Persisting conversation (including errors/cancellations)');
                 
-                this.eventBus.emit(EVENTS.CHAT.SAVE_MESSAGE, {
-                    threadId: threadId,
-                    userMessage: userMessage,
-                    assistantMessage: assistantMessage,
-                    options: {
-                        ...persona,
-                        pageUrl: pageUrl,
-                        title: document.title,
-                        isRetry: isRetry,
-                        error: assistantMessage.error,
-                        cancelled: assistantMessage.cancelled
-                    }
-                }, { target: EVENT_CONTEXT.BACKGROUND });
+                // Fetch the actual stored messages from conversation state to ensure consistency
+                const messages = this.stateService.conversation.getConversationMessages(threadId);
+                const storedUserMessage = messages.filter(msg => msg.role === 'user' && msg.messageId === userMessage.messageId).pop();
+                const storedAssistantMessage = messages.filter(msg => msg.role === 'assistant' && msg.messageId === assistantMessage.messageId).pop();
+                
+                if (storedUserMessage && storedAssistantMessage) {
+                    this.eventBus.emit(EVENTS.CHAT.SAVE_MESSAGE, {
+                        threadId: threadId,
+                        userMessage: storedUserMessage,
+                        assistantMessage: storedAssistantMessage,
+                        options: {
+                            ...persona,
+                            pageUrl: pageUrl,
+                            title: document.title,
+                            isRetry: isRetry,
+                            error: storedAssistantMessage.error,
+                            cancelled: storedAssistantMessage.cancelled
+                        }
+                    }, { target: EVENT_CONTEXT.BACKGROUND });
+                } else {
+                    logger.warn(this, 'Could not find stored messages for persistence', {
+                        userMessageId: userMessage.messageId,
+                        assistantMessageId: assistantMessage.messageId,
+                        foundUser: !!storedUserMessage,
+                        foundAssistant: !!storedAssistantMessage
+                    });
+                }
             }
         }
     }
@@ -776,16 +795,24 @@ export class ChatService extends EventBindableComponent {
             return;
         }
 
-        // Mark the user message as retried
-        this.stateService.conversation.markMessage(threadId, lastUserMessage.messageId, 'retried');
+        // Mark the user message as retried with persistence
+        await this.emitAsync(EVENTS.CHAT.UPDATE_MESSAGE, {
+            threadId: threadId,
+            messageId: lastUserMessage.messageId,
+            status: 'retried'
+        }, { target: 'background' });
 
         // Check if the last message in the panel is an AI message before removing
         const messages = this.stateService.conversation.getConversationMessages(threadId);
         const lastMessage = messages[messages.length - 1];
         
-        // Mark the last assistant message as retried too
+        // Mark the last assistant message as retried too with persistence
         if (lastMessage && lastMessage.role === 'assistant') {
-            this.stateService.conversation.markMessage(threadId, lastMessage.messageId, 'retried');
+            await this.emitAsync(EVENTS.CHAT.UPDATE_MESSAGE, {
+                threadId: threadId,
+                messageId: lastMessage.messageId,
+                status: 'retried'
+            }, { target: 'background' });
             this.panel.removeLastMessage();
         }
         

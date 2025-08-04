@@ -200,11 +200,15 @@ class WebWireBackground {
         });
 
         this.eventBus.onAsync(BACKGROUND_ACTIONS.SAVE_THREAD_MESSAGE, async (data, options) => {
+            const messageOptions = data.options || {};
+            const tabId = messageOptions.tabId || options.sender?.tab?.id;
+            messageOptions.tabId = tabId;
+
             this.stateService.conversation.storeMessage(
                 data.threadId,
                 data.userMessage,
                 data.assistantMessage,
-                data.options || {}
+                messageOptions
             );
             
             // Auto-save state
