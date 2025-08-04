@@ -48,8 +48,8 @@ class WebWireBackground {
      */
     setupEventBusListeners() {
         // Handle state and settings requests
-        this.eventBus.on(BACKGROUND_ACTIONS.GET_WEBWIRE_SETTINGS, (data, options) => {
-            const settings = this.stateService?.state?.settings || {};
+        this.eventBus.onAsync(BACKGROUND_ACTIONS.GET_WEBWIRE_SETTINGS, async (data, options) => {
+            const settings = await this.stateService.settings.getSettingsAsync({ decrypt: true });
             return { success: true, settings: settings };
         });
 
@@ -68,6 +68,7 @@ class WebWireBackground {
             const { sender } = options;
             const tabId = await this.resolveTabId(sender, data);
             const state = await this.getWebWireState(tabId, data.contentState);
+            logger.log(this, 'GET_WEBWIRE_STATE', state);
             return state;
         });
 

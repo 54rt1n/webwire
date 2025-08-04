@@ -579,11 +579,11 @@ export class ConversationStatePlugin {
         if (!tabId) {
             tabId = this.stateService.ui.getTabId();
         }
-        logger.log(this, 'Recovering active conversation for tab:', tabId);
+        logger.log(this, 'Recovering active conversation for tab:', {tabId}, this.stateService.state.conversation.metadata);
 
         // Find conversations for this tab only
         const tabConversations = Object.values(this.stateService.state.conversation.metadata)
-            .filter(meta => meta.tabId === tabId && this.stateService.state.conversation.history[meta.threadId]?.length > 0)
+            .filter(meta => meta.tabId?.toString() === tabId?.toString())
             .sort((a, b) => {
                 // Sort by most recent activity
                 const timeA = a.endTime || a.startTime || 0;

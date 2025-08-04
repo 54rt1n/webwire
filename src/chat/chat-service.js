@@ -482,6 +482,7 @@ export class ChatService extends EventBindableComponent {
             
             // Re-enable retry button after error
             this.panel.updateRetryButton(true);
+            this.panel.hideCancelButton();
         } finally {
             // Always save the conversation to persistent storage
             // This ensures error/cancelled messages are persisted
