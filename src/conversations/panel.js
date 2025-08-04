@@ -265,6 +265,9 @@ export class ConversationsPanel {
                     <span class="ww-stat-icon">📌</span>
                     <span>${status}</span>
                 </div>
+                <div class="ww-stat">
+                    <span class="ww-thread-id">${conversation.threadId}</span>
+                </div>
                 <div class="ww-debug-info" title="threadId: ${conversation.threadId}, title: ${conversation.title || 'none'}, pageUrl: ${conversation.pageUrl || 'none'}">
                     <span class="ww-debug-icon">ℹ️</span>
                 </div>

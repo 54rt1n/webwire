@@ -140,6 +140,7 @@ export class ConversationModal extends EventBindableComponent {
                             ${urlDisplay ? `<br><span class="ww-conversation-url">${urlDisplay}</span>` : ''}
                         </div>
                     </div>
+                    <span class="ww-thread-id-corner">${conversationData.threadId}</span>
                     <div class="ww-modal-header-actions">
                         <label class="ww-checkbox-label" style="margin-right: 12px;">
                             <input type="checkbox" id="filter-non-success" class="ww-checkbox" />

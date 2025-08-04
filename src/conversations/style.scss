@@ -404,6 +404,12 @@
           background: var(--color-gray-100);
           border-radius: var(--radius-md);
 
+          .ww-thread-id {
+            opacity: 0.6;
+            font-family: var(--font-family-mono);
+            font-size: var(--font-size-xs);
+          }
+
           .ww-stat-icon {
             width: 12px;
             height: 12px;
