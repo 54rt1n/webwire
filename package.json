@@ -1,6 +1,7 @@
 {
   "name": "webwire",
   "version": "0.9.0",
+  "license": "PolyForm-Noncommercial-1.0.0",
   "description": "WebWire - AI-powered web application framework",
   "type": "module",
   "scripts": {
