@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="240" viewBox="0 0 800 240" role="img" aria-labelledby="title desc">
+  <title id="title">WebWire Lite</title>
+  <desc id="desc">An interwoven double W inside a connected ring, beside the WebWire Lite wordmark. Chat, page context, and prompts.</desc>
+  <defs>
+    <linearGradient id="surface" x2="1" y2="1">
+      <stop stop-color="#15232e"/>
+      <stop offset="1" stop-color="#0b1018"/>
+    </linearGradient>
+    <linearGradient id="wire" x2="1" y2="1">
+      <stop stop-color="#b9f6ec"/>
+      <stop offset="1" stop-color="#6dbbdf"/>
+    </linearGradient>
+  </defs>
+  <rect width="800" height="240" rx="24" fill="url(#surface)"/>
+  <rect x=".5" y=".5" width="799" height="239" rx="23.5" fill="none" stroke="#293c49"/>
+  <g fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="133" cy="120" r="77" stroke="#294552" stroke-width="1.5"/>
+    <path d="M70 76a77 77 0 0 1 126 0M70 164a77 77 0 0 0 126 0" stroke="url(#wire)" stroke-width="2"/>
+    <path d="m88 93 23 67 23-67 23 67 23-67M105 81l28 79 28-79" stroke="url(#wire)" stroke-width="5"/>
+    <path d="M210 120h31m-186 0H29" stroke="#426473" stroke-width="1.5"/>
+  </g>
+  <g fill="#b9f6ec">
+    <circle cx="56" cy="120" r="3.5"/>
+    <circle cx="210" cy="120" r="3.5"/>
+    <circle cx="133" cy="43" r="3"/>
+    <circle cx="133" cy="197" r="3"/>
+  </g>
+  <text x="273" y="126" fill="#eff7fb" font-family="Inter, ui-sans-serif, system-ui, -apple-system, sans-serif" font-size="56" font-weight="650" letter-spacing="-2">WebWire Lite</text>
+  <text x="277" y="163" fill="#91b6c7" font-family="ui-monospace, SFMono-Regular, Consolas, monospace" font-size="13" letter-spacing="2.1">CHAT / PAGE CONTEXT / PROMPTS</text>
+</svg>
